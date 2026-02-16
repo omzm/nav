@@ -1,0 +1,44 @@
+# robots.txt for 我的导航网
+# 更新日期: 2026-02-16
+
+# 允许所有搜索引擎爬取
+User-agent: *
+Allow: /
+
+# 禁止爬取管理页面（如果有）
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login/
+
+# 爬取延迟（秒）- 避免过度请求
+Crawl-delay: 1
+
+# Sitemap 位置
+Sitemap: https://www.yournavsite.com/sitemap.xml
+
+# 特定搜索引擎爬虫配置
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# 禁止图片搜索引擎爬取（可选）
+# User-agent: Googlebot-Image
+# Disallow: /
+
+# 禁止恶意爬虫
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /

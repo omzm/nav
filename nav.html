@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <!-- 基本 SEO Meta 标签 -->
+    <title>我的导航网 - 精选网站导航 | 优质网站推荐</title>
+    <meta name="description" content="我的导航网是一个精心整理的网站导航平台，收录了搜索引擎、社交媒体、视频网站、购物平台、开发工具等优质网站，帮助您快速找到所需的在线资源。">
+    <meta name="keywords" content="网站导航,网址导航,网址大全,常用网站,搜索引擎,社交媒体,视频网站,购物网站,开发工具,导航网站">
+    <meta name="author" content="我的导航网">
+    <meta name="robots" content="index, follow">
+    <meta name="googlebot" content="index, follow">
+    <meta name="bingbot" content="index, follow">
+
+    <!-- 网站图标 -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+
+    <!-- 规范链接 -->
+    <link rel="canonical" href="https://www.yournavsite.com/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.yournavsite.com/">
+    <meta property="og:title" content="我的导航网 - 精选网站导航">
+    <meta property="og:description" content="精心整理的网站导航平台，收录搜索引擎、社交媒体、视频网站、购物平台、开发工具等优质网站。">
+    <meta property="og:image" content="https://www.yournavsite.com/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:site_name" content="我的导航网">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://www.yournavsite.com/">
+    <meta name="twitter:title" content="我的导航网 - 精选网站导航">
+    <meta name="twitter:description" content="精心整理的网站导航平台，收录搜索引擎、社交媒体、视频网站、购物平台、开发工具等优质网站。">
+    <meta name="twitter:image" content="https://www.yournavsite.com/og-image.jpg">
+
+    <!-- 移动设备优化 -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="导航网">
+    <meta name="theme-color" content="#3b82f6">
+
+    <!-- 防止搜索引擎缓存敏感信息 -->
+    <meta name="referrer" content="no-referrer-when-downgrade">
+
+    <!-- 百度搜索资源平台 -->
+    <meta name="baidu-site-verification" content="your-baidu-verification-code">
+
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="your-google-verification-code">
+
+    <!-- 必应网站管理员 -->
+    <meta name="msvalidate.01" content="your-bing-verification-code">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Favicon 容器样式 */
+        .site-link:hover .favicon-fallback {
+            background: white !important;
+            color: #3b82f6 !important;
+        }
+
+        /* 图标圆角优化 */
+        .favicon-img {
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        /* 搜索高亮样式 */
+        mark {
+            background-color: #fef08a;
+            padding: 0 0.25rem;
+            border-radius: 0.25rem;
+        }
+
+        .site-link:hover mark {
+            background-color: #fde047;
+            color: inherit;
+        }
+
+        /* 自定义滚动条样式 - 适用于现代浏览器 */
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: transparent;
+            border-radius: 3px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        /* Firefox 滚动条样式 */
+        .scrollbar-thin {
+            scrollbar-width: thin;
+            scrollbar-color: #d1d5db transparent;
+        }
+
+        /* 侧边栏激活链接样式 */
+        #sidebar a.active {
+            background-color: #eff6ff;
+            color: #2563eb;
+            font-weight: 500;
+        }
+
+        /* 平滑滚动 */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* 确保侧边栏固定定位正确 */
+        #sidebar {
+            max-height: calc(100vh - 4rem);
+            transition: top 0.3s ease-in-out, max-height 0.3s ease-in-out;
+        }
+
+        /* 当导航栏隐藏时，侧边栏扩展到顶部 */
+        #sidebar.header-hidden {
+            top: 0 !important;
+            max-height: 100vh;
+        }
+
+        /* 防止body滚动时侧边栏抖动 */
+        body {
+            overflow-x: hidden;
+        }
+    </style>
+
+    <!-- 结构化数据 (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "我的导航网",
+        "alternateName": "导航网站",
+        "url": "https://www.yournavsite.com/",
+        "description": "精心整理的网站导航平台，收录搜索引擎、社交媒体、视频网站、购物平台、开发工具等优质网站。",
+        "inLanguage": "zh-CN",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://www.yournavsite.com/?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "我的导航网",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://www.yournavsite.com/logo.png"
+            }
+        }
+    }
+    </script>
+
+    <!-- 面包屑导航结构化数据 -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [{
+            "@type": "ListItem",
+            "position": 1,
+            "name": "首页",
+            "item": "https://www.yournavsite.com/"
+        }]
+    }
+    </script>
+
+    <!-- Google Analytics (替换为你的跟踪ID) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX');
+    </script>
+
+    <!-- 百度统计 (替换为你的统计代码) -->
+    <script>
+        var _hmt = _hmt || [];
+        (function() {
+            var hm = document.createElement("script");
+            hm.src = "https://hm.baidu.com/hm.js?your-baidu-analytics-id";
+            var s = document.getElementsByTagName("script")[0];
+            s.parentNode.insertBefore(hm, s);
+        })();
+    </script>
+</head>
+<body class="bg-gray-100">
+    <!-- 顶部导航栏 -->
+    <header id="header" class="fixed top-0 left-0 right-0 bg-white shadow-md z-50 transition-transform duration-300">
+        <div class="flex items-center justify-between px-4 py-4 lg:px-8">
+            <!-- 菜单按钮 -->
+            <button id="menuBtn" class="p-2 hover:bg-gray-100 rounded-lg transition lg:hidden">
+                <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+
+            <!-- 标题 -->
+            <h1 class="text-2xl lg:text-3xl font-bold text-gray-800 flex-1 text-center lg:text-left">我的导航网</h1>
+
+            <!-- 添加网站按钮 -->
+            <button id="addSiteBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm lg:text-base">
+                <span class="hidden sm:inline">+ 添加</span>
+                <span class="sm:hidden">+</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 添加/编辑网站模态框 -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 id="modalTitle" class="text-xl font-bold text-gray-800 mb-4">添加新网站</h3>
+            <form id="siteForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">网站名称</label>
+                    <input type="text" id="siteName" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="例如：百度">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">网站地址</label>
+                    <input type="url" id="siteUrl" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="https://www.example.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">分类</label>
+                    <select id="siteCategory" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="search">搜索引擎</option>
+                        <option value="social">社交媒体</option>
+                        <option value="video">视频网站</option>
+                        <option value="shopping">购物网站</option>
+                        <option value="dev">开发工具</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" id="cancelBtn" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 设置模态框 -->
+    <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">设置</h3>
+
+            <!-- 密码验证 -->
+            <div id="passwordAuth" class="space-y-4">
+                <p class="text-sm text-gray-600">请输入密码以进入编辑模式</p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <input type="password" id="authPassword" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="输入密码">
+                    <p id="authError" class="text-sm text-red-600 mt-1 hidden">密码错误</p>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" id="cancelSettingsBtn" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">取消</button>
+                    <button type="button" id="verifyPasswordBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">确认</button>
+                </div>
+            </div>
+
+            <!-- 设置面板 -->
+            <div id="settingsPanel" class="space-y-4 hidden">
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span class="text-sm font-medium text-gray-700">编辑模式</span>
+                        <span class="text-sm text-green-600">已启用</span>
+                    </div>
+
+                    <button id="changePasswordBtn" class="w-full px-4 py-2 text-left text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        修改密码
+                    </button>
+
+                    <button id="exitEditModeBtn" class="w-full px-4 py-2 text-left text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">
+                        退出编辑模式
+                    </button>
+                </div>
+            </div>
+
+            <!-- 修改密码面板 -->
+            <div id="changePasswordPanel" class="space-y-4 hidden">
+                <button id="backToSettingsBtn" class="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    返回
+                </button>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">当前密码</label>
+                    <input type="password" id="currentPassword" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">新密码</label>
+                    <input type="password" id="newPassword" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">确认新密码</label>
+                    <input type="password" id="confirmPassword" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <p id="passwordError" class="text-sm text-red-600 hidden"></p>
+                <div class="flex justify-end gap-2">
+                    <button type="button" id="cancelChangePasswordBtn" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">取消</button>
+                    <button type="button" id="savePasswordBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 移动端遮罩层 -->
+    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
+
+    <div class="flex pt-16 lg:pt-16">
+        <!-- 侧边栏 -->
+        <aside id="sidebar" class="fixed lg:fixed top-16 bottom-0 left-0 z-40 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col">
+            <!-- 侧边栏头部 - 固定 -->
+            <div class="p-6 pb-3 flex-shrink-0 border-b border-gray-100 lg:border-0">
+                <h2 class="text-xl font-bold text-gray-800 hidden lg:block">导航分类</h2>
+                <!-- 移动端显示标题 -->
+                <h2 class="text-xl font-bold text-gray-800 lg:hidden">导航分类</h2>
+            </div>
+
+            <!-- 导航链接区域 - 可滚动 -->
+            <nav class="flex-1 overflow-y-auto px-6 py-4 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent min-h-0">
+                <a href="#search" class="block px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition">🔍 搜索引擎</a>
+                <a href="#social" class="block px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition">💬 社交媒体</a>
+                <a href="#video" class="block px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition">🎬 视频网站</a>
+                <a href="#shopping" class="block px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition">🛒 购物网站</a>
+                <a href="#dev" class="block px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition">💻 开发工具</a>
+            </nav>
+
+            <!-- 设置按钮 - 固定在底部 -->
+            <div class="flex-shrink-0 border-t border-gray-200 p-4 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                <button id="settingsBtn" class="w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span>设置</span>
+                    <span id="editModeIndicator" class="ml-auto hidden">
+                        <span class="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
+                    </span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="flex-1 p-4 lg:p-8 lg:ml-64">
+            <div class="max-w-6xl mx-auto">
+                <!-- 站内搜索 -->
+                <div class="mb-6">
+                    <div class="relative max-w-2xl mx-auto">
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="搜索网站..."
+                            class="w-full px-4 py-3 pl-12 pr-10 bg-white rounded-lg shadow-md border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        >
+                        <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <button id="clearSearch" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition hidden">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <!-- 搜索结果统计 -->
+                    <div id="searchStats" class="text-center mt-2 text-sm text-gray-600 hidden"></div>
+                </div>
+
+                <!-- 无搜索结果提示 -->
+                <div id="noResults" class="hidden text-center py-12">
+                    <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-gray-500 text-lg">没有找到相关网站</p>
+                    <p class="text-gray-400 text-sm mt-2">尝试使用其他关键词</p>
+                </div>
+
+                <!-- 网站分类列表 -->
+                <div id="categoriesContainer">
+                <!-- 搜索引擎 -->
+                <section id="search" class="bg-white rounded-lg shadow-md p-6 mb-6 category-section" data-category="search">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4 pb-2 border-b-2 border-blue-500">搜索引擎</h2>
+                    <div id="search-links" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <!-- 网站链接将通过 JS 动态生成 -->
+                    </div>
+                </section>
+
+                <!-- 社交媒体 -->
+                <section id="social" class="bg-white rounded-lg shadow-md p-6 mb-6 category-section" data-category="social">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4 pb-2 border-b-2 border-blue-500">社交媒体</h2>
+                    <div id="social-links" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <!-- 网站链接将通过 JS 动态生成 -->
+                    </div>
+                </section>
+
+                <!-- 视频网站 -->
+                <section id="video" class="bg-white rounded-lg shadow-md p-6 mb-6 category-section" data-category="video">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4 pb-2 border-b-2 border-blue-500">视频网站</h2>
+                    <div id="video-links" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <!-- 网站链接将通过 JS 动态生成 -->
+                    </div>
+                </section>
+
+                <!-- 购物网站 -->
+                <section id="shopping" class="bg-white rounded-lg shadow-md p-6 mb-6 category-section" data-category="shopping">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4 pb-2 border-b-2 border-blue-500">购物网站</h2>
+                    <div id="shopping-links" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <!-- 网站链接将通过 JS 动态生成 -->
+                    </div>
+                </section>
+
+                <!-- 开发工具 -->
+                <section id="dev" class="bg-white rounded-lg shadow-md p-6 mb-6 category-section" data-category="dev">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4 pb-2 border-b-2 border-blue-500">开发工具</h2>
+                    <div id="dev-links" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <!-- 网站链接将通过 JS 动态生成 -->
+                    </div>
+                </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ========== API 配置 ==========
+        // 部署时请修改为你的实际 API 地址
+        const API_BASE_URL = window.location.origin + '/api';  // 自动检测，也可以手动设置为 'https://yourdomain.com/api'
+
+        // ========== DOM 元素 ==========
+        const menuBtn = document.getElementById('menuBtn');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        const header = document.getElementById('header');
+        const modal = document.getElementById('modal');
+        const addSiteBtn = document.getElementById('addSiteBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const siteForm = document.getElementById('siteForm');
+        const modalTitle = document.getElementById('modalTitle');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const editModeIndicator = document.getElementById('editModeIndicator');
+
+        let lastScrollTop = 0;
+        let scrollTimeout;
+        let editingIndex = null;
+        let isEditMode = false;
+        let currentSearchTerm = '';
+        let sitesCache = null;  // 缓存网站数据
+
+        // Favicon API 配置（支持多个备选）
+        const faviconAPIs = [
+            (domain) => `https://www.faviconextractor.com/favicon/${domain}?larger=true`,
+            (domain) => `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
+            (domain) => `https://api.faviconkit.com/${domain}/64`,
+            (domain) => `https://${domain}/favicon.ico`
+        ];
+
+        // 从URL提取域名
+        function extractDomain(url) {
+            try {
+                const urlObj = new URL(url);
+                return urlObj.hostname.replace('www.', '');
+            } catch (e) {
+                return '';
+            }
+        }
+
+        // 获取 Favicon URL
+        function getFaviconUrl(url, apiIndex = 0) {
+            const domain = extractDomain(url);
+            if (!domain || apiIndex >= faviconAPIs.length) {
+                return null;
+            }
+            return faviconAPIs[apiIndex](domain);
+        }
+
+        // 生成图标 HTML（带有错误处理）
+        function generateFaviconHTML(url, siteName) {
+            const domain = extractDomain(url);
+            const faviconUrl = getFaviconUrl(url, 0);
+
+            if (!faviconUrl) {
+                return `<div class="favicon-fallback w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0">${siteName.charAt(0).toUpperCase()}</div>`;
+            }
+
+            return `
+                <img
+                    src="${faviconUrl}"
+                    alt="${siteName}"
+                    class="favicon-img w-8 h-8 rounded-lg object-cover flex-shrink-0"
+                    onerror="this.onerror=null; handleFaviconError(this, '${url}', '${siteName.replace(/'/g, "\\'")}', 1);"
+                    loading="lazy"
+                >
+            `;
+        }
+
+        // 处理 Favicon 加载失败
+        window.handleFaviconError = function(img, url, siteName, apiIndex) {
+            const nextUrl = getFaviconUrl(url, apiIndex);
+
+            if (nextUrl) {
+                // 尝试下一个 API
+                img.onerror = function() {
+                    handleFaviconError(this, url, siteName, apiIndex + 1);
+                };
+                img.src = nextUrl;
+            } else {
+                // 所有 API 都失败，显示默认图标
+                const fallback = document.createElement('div');
+                fallback.className = 'favicon-fallback w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0';
+                fallback.textContent = siteName.charAt(0).toUpperCase();
+                img.parentNode.replaceChild(fallback, img);
+            }
+        };
+
+        // ========== API 请求函数 ==========
+
+        // 通用 API 请求函数
+        async function apiRequest(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                if (data && method !== 'GET') {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(API_BASE_URL + endpoint, options);
+                const result = await response.json();
+
+                return result;
+            } catch (error) {
+                console.error('API请求失败:', error);
+                // 如果 API 不可用，回退到 localStorage
+                return { success: false, message: '连接服务器失败，使用本地缓存', error: error.message };
+            }
+        }
+
+        // 从 API 或 localStorage 读取数据
+        async function loadSites() {
+            // 首先尝试从 API 加载
+            const result = await apiRequest('/sites.php');
+
+            if (result.success && result.data) {
+                sitesCache = result.data;
+                // 同时保存到 localStorage 作为备份
+                localStorage.setItem('navSites', JSON.stringify(result.data));
+                return result.data;
+            } else {
+                // API 失败，从 localStorage 读取
+                const stored = localStorage.getItem('navSites');
+                if (stored) {
+                    sitesCache = JSON.parse(stored);
+                    return sitesCache;
+                }
+                // 如果 localStorage 也没有，返回默认数据
+                return defaultSites;
+            }
+        }
+
+        // 保存到 API
+        async function saveSite(action, siteData) {
+            let method, endpoint, data;
+
+            switch (action) {
+                case 'add':
+                    method = 'POST';
+                    endpoint = '/sites.php';
+                    data = siteData;
+                    break;
+                case 'update':
+                    method = 'PUT';
+                    endpoint = '/sites.php';
+                    data = siteData;
+                    break;
+                case 'delete':
+                    method = 'DELETE';
+                    endpoint = '/sites.php';
+                    data = { id: siteData.id };
+                    break;
+            }
+
+            const result = await apiRequest(endpoint, method, data);
+
+            if (!result.success) {
+                alert('操作失败: ' + result.message);
+                return false;
+            }
+
+            // 刷新缓存
+            await loadSites();
+            return true;
+        }
+
+        // 验证密码
+        async function verifyPassword(password) {
+            const result = await apiRequest('/auth.php?action=verify', 'POST', { password });
+
+            if (result.success) {
+                return true;
+            } else {
+                // API 不可用时，使用 localStorage 的密码
+                const localPassword = localStorage.getItem('navPassword') || DEFAULT_PASSWORD;
+                return password === localPassword;
+            }
+        }
+
+        // 修改密码
+        async function changePassword(currentPassword, newPassword) {
+            const result = await apiRequest('/auth.php?action=change', 'POST', {
+                currentPassword,
+                newPassword
+            });
+
+            if (result.success) {
+                // 同时更新 localStorage
+                localStorage.setItem('navPassword', newPassword);
+                return { success: true };
+            } else {
+                // API 不可用时，使用 localStorage
+                const localPassword = localStorage.getItem('navPassword') || DEFAULT_PASSWORD;
+                if (currentPassword === localPassword) {
+                    localStorage.setItem('navPassword', newPassword);
+                    return { success: true };
+                }
+                return { success: false, message: '当前密码错误' };
+            }
+        }
+
+        // 分类名称映射（用于搜索结果显示）
+        const categoryNames = {
+            search: '搜索引擎',
+            social: '社交媒体',
+            video: '视频网站',
+            shopping: '购物网站',
+            dev: '开发工具'
+        };
+
+        // 默认密码（首次使用）
+        const DEFAULT_PASSWORD = 'admin123';
+
+        // 默认网站数据（仅在 API 和 localStorage 都不可用时使用）
+        const defaultSites = {
+            search: [
+                { name: '百度', url: 'https://www.baidu.com' },
+                { name: '谷歌', url: 'https://www.google.com' },
+                { name: '必应', url: 'https://www.bing.com' }
+            ],
+            social: [
+                { name: '微博', url: 'https://www.weibo.com' },
+                { name: '知乎', url: 'https://www.zhihu.com' },
+                { name: '哔哩哔哩', url: 'https://www.bilibili.com' }
+            ],
+            video: [
+                { name: 'YouTube', url: 'https://www.youtube.com' },
+                { name: 'B站', url: 'https://www.bilibili.com' },
+                { name: '腾讯视频', url: 'https://v.qq.com' }
+            ],
+            shopping: [
+                { name: '淘宝', url: 'https://www.taobao.com' },
+                { name: '京东', url: 'https://www.jd.com' },
+                { name: '亚马逊', url: 'https://www.amazon.cn' }
+            ],
+            dev: [
+                { name: 'GitHub', url: 'https://github.com' },
+                { name: 'Stack Overflow', url: 'https://stackoverflow.com' },
+                { name: '菜鸟教程', url: 'https://www.runoob.com' }
+            ]
+        };
+
+        // 更新编辑模式UI
+        async function updateEditModeUI() {
+            if (isEditMode) {
+                addSiteBtn.classList.remove('hidden');
+                editModeIndicator.classList.remove('hidden');
+            } else {
+                addSiteBtn.classList.add('hidden');
+                editModeIndicator.classList.add('hidden');
+            }
+            await renderSites();
+        }
+
+        // 搜索功能
+        async function searchSites(searchTerm) {
+            currentSearchTerm = searchTerm.toLowerCase().trim();
+
+            if (currentSearchTerm === '') {
+                clearSearchState();
+                return;
+            }
+
+            // 从缓存或重新加载数据
+            const sites = sitesCache || await loadSites();
+            const results = {};
+            let totalResults = 0;
+
+            // 搜索逻辑
+            Object.keys(sites).forEach(category => {
+                const filtered = sites[category].filter(site => {
+                    return site.name.toLowerCase().includes(currentSearchTerm) ||
+                           site.url.toLowerCase().includes(currentSearchTerm);
+                });
+
+                if (filtered.length > 0) {
+                    results[category] = filtered;
+                    totalResults += filtered.length;
+                }
+            });
+
+            displaySearchResults(results, totalResults);
+        }
+
+        // 显示搜索结果
+        function displaySearchResults(results, totalResults) {
+            const categoriesContainer = document.getElementById('categoriesContainer');
+            const noResults = document.getElementById('noResults');
+            const searchStats = document.getElementById('searchStats');
+            const clearSearch = document.getElementById('clearSearch');
+
+            clearSearch.classList.remove('hidden');
+
+            if (totalResults === 0) {
+                categoriesContainer.classList.add('hidden');
+                noResults.classList.remove('hidden');
+                searchStats.classList.add('hidden');
+            } else {
+                categoriesContainer.classList.remove('hidden');
+                noResults.classList.add('hidden');
+                searchStats.classList.remove('hidden');
+                searchStats.textContent = `找到 ${totalResults} 个相关网站`;
+
+                // 渲染搜索结果
+                Object.keys(categoryNames).forEach(category => {
+                    const section = document.getElementById(category);
+                    const container = document.getElementById(`${category}-links`);
+
+                    if (results[category] && results[category].length > 0) {
+                        section.classList.remove('hidden');
+                        container.innerHTML = '';
+
+                        results[category].forEach((site, index) => {
+                            const linkDiv = document.createElement('div');
+                            linkDiv.className = 'relative group';
+
+                            // 高亮匹配的关键词
+                            const highlightedName = highlightText(site.name, currentSearchTerm);
+                            const faviconHTML = generateFaviconHTML(site.url, site.name);
+
+                            linkDiv.innerHTML = `
+                                <a href="${site.url}" target="_blank" class="site-link flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-blue-500 hover:text-white hover:-translate-y-1 transition-all duration-300">
+                                    ${faviconHTML}
+                                    <span class="flex-1 truncate">${highlightedName}</span>
+                                </a>
+                                ${isEditMode ? `
+                                <div class="absolute top-2 right-2 hidden group-hover:flex gap-1">
+                                    <button onclick="editSiteFromSearch('${category}', '${site.name.replace(/'/g, "\\'")}', '${site.url}')" class="p-1.5 bg-white text-blue-600 rounded shadow-md hover:bg-blue-50 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                        </svg>
+                                    </button>
+                                    <button onclick="deleteSiteFromSearch('${category}', '${site.name.replace(/'/g, "\\'")}')" class="p-1.5 bg-white text-red-600 rounded shadow-md hover:bg-red-50 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                ` : ''}
+                            `;
+
+                            container.appendChild(linkDiv);
+                        });
+                    } else {
+                        section.classList.add('hidden');
+                    }
+                });
+            }
+        }
+
+        // 高亮文本
+        function highlightText(text, searchTerm) {
+            if (!searchTerm) return text;
+            const regex = new RegExp(`(${searchTerm})`, 'gi');
+            return text.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
+        }
+
+        // 搜索框事件监听
+        const searchInput = document.getElementById('searchInput');
+        const clearSearchBtn = document.getElementById('clearSearch');
+
+        searchInput.addEventListener('input', (e) => {
+            searchSites(e.target.value);
+        });
+
+        clearSearchBtn.addEventListener('click', () => {
+            clearSearchState();
+        });
+
+        // 从搜索结果编辑网站
+        window.editSiteFromSearch = function(category, name, url) {
+            if (!isEditMode) return;
+
+            const sites = loadSites();
+            const index = sites[category].findIndex(site => site.name === name && site.url === url);
+
+            if (index !== -1) {
+                editSite(category, index);
+            }
+        };
+
+        // 从搜索结果删除网站
+        window.deleteSiteFromSearch = async function(category, name) {
+            if (!isEditMode) return;
+
+            if (confirm('确定要删除这个网站吗？')) {
+                const sites = sitesCache || await loadSites();
+                const site = sites[category].find(s => s.name === name);
+
+                if (site && site.id) {
+                    const success = await saveSite('delete', { id: site.id });
+
+                    if (success) {
+                        // 重新搜索
+                        const updatedSites = sitesCache || await loadSites();
+                        let totalResults = 0;
+
+                        Object.keys(updatedSites).forEach(cat => {
+                            const filtered = updatedSites[cat].filter(s => {
+                                return s.name.toLowerCase().includes(currentSearchTerm) ||
+                                       s.url.toLowerCase().includes(currentSearchTerm);
+                            });
+                            totalResults += filtered.length;
+                        });
+
+                        if (totalResults > 0) {
+                            searchSites(currentSearchTerm);
+                        } else {
+                            clearSearchState();
+                        }
+                    }
+                }
+            }
+        };
+
+        // 渲染网站链接
+        async function renderSites() {
+            const sites = sitesCache || await loadSites();
+
+            // 显示所有分类
+            document.querySelectorAll('.category-section').forEach(section => {
+                section.classList.remove('hidden');
+            });
+
+            Object.keys(sites).forEach(category => {
+                const container = document.getElementById(`${category}-links`);
+                container.innerHTML = '';
+
+                sites[category].forEach((site, index) => {
+                    const linkDiv = document.createElement('div');
+                    linkDiv.className = 'relative group';
+
+                    const faviconHTML = generateFaviconHTML(site.url, site.name);
+
+                    linkDiv.innerHTML = `
+                        <a href="${site.url}" target="_blank" class="site-link flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-blue-500 hover:text-white hover:-translate-y-1 transition-all duration-300">
+                            ${faviconHTML}
+                            <span class="flex-1 truncate">${site.name}</span>
+                        </a>
+                        ${isEditMode ? `
+                        <div class="absolute top-2 right-2 hidden group-hover:flex gap-1">
+                            <button onclick="editSite('${category}', ${index})" class="p-1.5 bg-white text-blue-600 rounded shadow-md hover:bg-blue-50 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="deleteSite('${category}', ${index})" class="p-1.5 bg-white text-red-600 rounded shadow-md hover:bg-red-50 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        ` : ''}
+                    `;
+
+                    container.appendChild(linkDiv);
+                });
+            });
+        }
+
+        // 清空搜索状态
+        async function clearSearchState() {
+            currentSearchTerm = '';
+            searchInput.value = '';
+            document.getElementById('searchStats').classList.add('hidden');
+            document.getElementById('noResults').classList.add('hidden');
+            document.getElementById('categoriesContainer').classList.remove('hidden');
+            document.getElementById('clearSearch').classList.add('hidden');
+            await renderSites();
+        }
+
+        // 打开设置模态框
+        settingsBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('hidden');
+            if (isEditMode) {
+                document.getElementById('passwordAuth').classList.add('hidden');
+                document.getElementById('settingsPanel').classList.remove('hidden');
+            } else {
+                document.getElementById('passwordAuth').classList.remove('hidden');
+                document.getElementById('settingsPanel').classList.add('hidden');
+                document.getElementById('authPassword').value = '';
+                document.getElementById('authError').classList.add('hidden');
+            }
+            document.getElementById('changePasswordPanel').classList.add('hidden');
+        });
+
+        // 关闭设置模态框
+        document.getElementById('cancelSettingsBtn').addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+        });
+
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                settingsModal.classList.add('hidden');
+            }
+        });
+
+        // 验证密码
+        document.getElementById('verifyPasswordBtn').addEventListener('click', async () => {
+            const password = document.getElementById('authPassword').value;
+            const isValid = await verifyPassword(password);
+
+            if (isValid) {
+                isEditMode = true;
+                await updateEditModeUI();
+                document.getElementById('passwordAuth').classList.add('hidden');
+                document.getElementById('settingsPanel').classList.remove('hidden');
+                document.getElementById('authError').classList.add('hidden');
+            } else {
+                document.getElementById('authError').classList.remove('hidden');
+            }
+        });
+
+        // 回车键验证密码
+        document.getElementById('authPassword').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('verifyPasswordBtn').click();
+            }
+        });
+
+        // 退出编辑模式
+        document.getElementById('exitEditModeBtn').addEventListener('click', async () => {
+            isEditMode = false;
+            await updateEditModeUI();
+            settingsModal.classList.add('hidden');
+        });
+
+        // 打开修改密码面板
+        document.getElementById('changePasswordBtn').addEventListener('click', () => {
+            document.getElementById('settingsPanel').classList.add('hidden');
+            document.getElementById('changePasswordPanel').classList.remove('hidden');
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('passwordError').classList.add('hidden');
+        });
+
+        // 返回设置面板
+        document.getElementById('backToSettingsBtn').addEventListener('click', () => {
+            document.getElementById('changePasswordPanel').classList.add('hidden');
+            document.getElementById('settingsPanel').classList.remove('hidden');
+        });
+
+        document.getElementById('cancelChangePasswordBtn').addEventListener('click', () => {
+            document.getElementById('changePasswordPanel').classList.add('hidden');
+            document.getElementById('settingsPanel').classList.remove('hidden');
+        });
+
+        // 保存新密码
+        document.getElementById('savePasswordBtn').addEventListener('click', async () => {
+            const current = document.getElementById('currentPassword').value;
+            const newPwd = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const errorEl = document.getElementById('passwordError');
+
+            if (newPwd.length < 6) {
+                errorEl.textContent = '新密码至少需要6个字符';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            if (newPwd !== confirm) {
+                errorEl.textContent = '两次输入的密码不一致';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            const result = await changePassword(current, newPwd);
+
+            if (result.success) {
+                errorEl.classList.add('hidden');
+                alert('密码修改成功！');
+                document.getElementById('changePasswordPanel').classList.add('hidden');
+                document.getElementById('settingsPanel').classList.remove('hidden');
+            } else {
+                errorEl.textContent = result.message || '修改失败';
+                errorEl.classList.remove('hidden');
+            }
+        });
+
+        // 打开添加模态框
+        addSiteBtn.addEventListener('click', () => {
+            if (!isEditMode) {
+                alert('请先在设置中启用编辑模式');
+                return;
+            }
+            modalTitle.textContent = '添加新网站';
+            siteForm.reset();
+            editingIndex = null;
+            modal.classList.remove('hidden');
+        });
+
+        // 关闭模态框
+        cancelBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+
+        // 提交表单
+        siteForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('siteName').value;
+            const url = document.getElementById('siteUrl').value;
+            const category = document.getElementById('siteCategory').value;
+
+            const sites = sitesCache || await loadSites();
+            let success = false;
+
+            if (editingIndex !== null) {
+                // 编辑模式
+                const [editCategory, editIdx] = editingIndex.split('-');
+                const site = sites[editCategory][editIdx];
+
+                if (site && site.id) {
+                    success = await saveSite('update', {
+                        id: site.id,
+                        name,
+                        url,
+                        category
+                    });
+                }
+            } else {
+                // 添加模式
+                success = await saveSite('add', { name, url, category });
+            }
+
+            if (success) {
+                modal.classList.add('hidden');
+
+                // 如果正在搜索，重新执行搜索
+                if (currentSearchTerm) {
+                    searchInput.value = currentSearchTerm;
+                    await searchSites(currentSearchTerm);
+                } else {
+                    await renderSites();
+                }
+            }
+        });
+
+        // 编辑网站
+        window.editSite = async function(category, index) {
+            if (!isEditMode) return;
+
+            const sites = sitesCache || await loadSites();
+            const site = sites[category][index];
+
+            modalTitle.textContent = '编辑网站';
+            document.getElementById('siteName').value = site.name;
+            document.getElementById('siteUrl').value = site.url;
+            document.getElementById('siteCategory').value = category;
+
+            editingIndex = `${category}-${index}`;
+            modal.classList.remove('hidden');
+        };
+
+        // 删除网站
+        window.deleteSite = async function(category, index) {
+            if (!isEditMode) return;
+
+            if (confirm('确定要删除这个网站吗？')) {
+                const sites = sitesCache || await loadSites();
+                const site = sites[category][index];
+
+                if (site && site.id) {
+                    const success = await saveSite('delete', { id: site.id });
+
+                    if (success) {
+                        // 如果正在搜索，重新执行搜索并检查结果
+                        if (currentSearchTerm) {
+                            const updatedSites = sitesCache || await loadSites();
+                            let totalResults = 0;
+
+                            Object.keys(updatedSites).forEach(cat => {
+                                const filtered = updatedSites[cat].filter(s => {
+                                    return s.name.toLowerCase().includes(currentSearchTerm) ||
+                                           s.url.toLowerCase().includes(currentSearchTerm);
+                                });
+                                totalResults += filtered.length;
+                            });
+
+                            if (totalResults > 0) {
+                                await searchSites(currentSearchTerm);
+                            } else {
+                                await clearSearchState();
+                            }
+                        } else {
+                            await renderSites();
+                        }
+                    }
+                }
+            }
+        };
+
+        // 切换侧边栏
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        // 点击菜单按钮
+        menuBtn.addEventListener('click', toggleSidebar);
+
+        // 点击遮罩层关闭侧边栏
+        overlay.addEventListener('click', toggleSidebar);
+
+        // 点击侧边栏链接后在移动端自动关闭
+        document.querySelectorAll('#sidebar a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 1024) {
+                    toggleSidebar();
+                }
+            });
+        });
+
+        // 侧边栏链接激活状态高亮
+        function updateActiveSidebarLink() {
+            const sections = document.querySelectorAll('.category-section');
+            const sidebarLinks = document.querySelectorAll('#sidebar nav a');
+
+            let currentSection = '';
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - 100;
+                const sectionHeight = section.offsetHeight;
+                const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+
+                if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                    currentSection = section.getAttribute('id');
+                }
+            });
+
+            sidebarLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${currentSection}`) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        // 监听滚动事件更新激活链接
+        window.addEventListener('scroll', updateActiveSidebarLink);
+
+        // 页面加载时初始化激活链接
+        document.addEventListener('DOMContentLoaded', updateActiveSidebarLink);
+
+        // 滚动时隐藏/显示顶部导航栏
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+            // 清除之前的延时
+            clearTimeout(scrollTimeout);
+
+            if (scrollTop > lastScrollTop && scrollTop > 100) {
+                // 向下滚动且超过100px - 隐藏导航栏
+                header.style.transform = 'translateY(-100%)';
+                // 同时让侧边栏向上扩展
+                sidebar.classList.add('header-hidden');
+            } else {
+                // 向上滚动或在顶部 - 显示导航栏
+                header.style.transform = 'translateY(0)';
+                // 恢复侧边栏正常位置
+                sidebar.classList.remove('header-hidden');
+            }
+
+            // 停止滚动后，如果在顶部附近则显示导航栏
+            scrollTimeout = setTimeout(() => {
+                if (scrollTop < 100) {
+                    header.style.transform = 'translateY(0)';
+                    sidebar.classList.remove('header-hidden');
+                }
+            }, 150);
+
+            lastScrollTop = scrollTop;
+        });
+
+        // 页面加载时渲染网站
+        (async function init() {
+            await renderSites();
+            updateEditModeUI();
+        })();
+    </script>
+</body>
+</html>

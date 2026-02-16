@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+    <!-- 主页 -->
+    <url>
+        <loc>https://www.yournavsite.com/</loc>
+        <lastmod>2026-02-16</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+
+    <!-- 搜索引擎分类 -->
+    <url>
+        <loc>https://www.yournavsite.com/#search</loc>
+        <lastmod>2026-02-16</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+
+    <!-- 社交媒体分类 -->
+    <url>
+        <loc>https://www.yournavsite.com/#social</loc>
+        <lastmod>2026-02-16</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+
+    <!-- 视频网站分类 -->
+    <url>
+        <loc>https://www.yournavsite.com/#video</loc>
+        <lastmod>2026-02-16</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+
+    <!-- 购物网站分类 -->
+    <url>
+        <loc>https://www.yournavsite.com/#shopping</loc>
+        <lastmod>2026-02-16</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+
+    <!-- 开发工具分类 -->
+    <url>
+        <loc>https://www.yournavsite.com/#dev</loc>
+        <lastmod>2026-02-16</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+
+</urlset>
