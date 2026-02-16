@@ -1,0 +1,8 @@
+# Vercel 部署时忽略这些文件
+*.md
+!README.md
+.git
+.gitignore
+*.log
+.env.local
+.DS_Store
