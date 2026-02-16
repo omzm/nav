@@ -9,7 +9,7 @@ export default function ThemeToggle() {
   useEffect(() => {
     setMounted(true);
 
-    // 只检查本地存储，不检查系统偏好
+    // 检查本地存储
     const savedTheme = localStorage.getItem('theme');
     const shouldBeDark = savedTheme === 'dark';
 
@@ -18,7 +18,9 @@ export default function ThemeToggle() {
     // 应用主题
     if (shouldBeDark) {
       document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
     } else {
+      document.documentElement.classList.add('light');
       document.documentElement.classList.remove('dark');
     }
   }, []);
@@ -27,13 +29,17 @@ export default function ThemeToggle() {
     const newIsDark = !isDark;
     setIsDark(newIsDark);
 
+    console.log('Toggling theme to:', newIsDark ? 'dark' : 'light');
+
     // 保存到本地存储
     localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
 
     // 更新 DOM
     if (newIsDark) {
       document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
     } else {
+      document.documentElement.classList.add('light');
       document.documentElement.classList.remove('dark');
     }
   };
@@ -48,6 +54,7 @@ export default function ThemeToggle() {
       onClick={toggleTheme}
       className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-50 w-10 h-10 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center group"
       aria-label="切换主题"
+      type="button"
     >
       <div className="relative w-5 h-5">
         {/* 太阳图标 */}

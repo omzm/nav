@@ -161,64 +161,81 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* 顶部导航 */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            🎛️ 后台管理
-          </h1>
-          <div className="flex items-center space-x-4">
-            <a
-              href="/"
-              target="_blank"
-              className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-            >
-              查看网站 →
-            </a>
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              {user?.email}
-            </span>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-sm"
-            >
-              退出登录
-            </button>
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <span>🎛️</span>
+              <span className="hidden sm:inline">后台管理</span>
+              <span className="sm:hidden">管理</span>
+            </h1>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <a
+                href="/"
+                target="_blank"
+                className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <span>👁️</span>
+                <span className="hidden md:inline">查看网站</span>
+              </a>
+              <span className="hidden lg:inline text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-[150px] truncate">
+                {user?.email}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-xs sm:text-sm font-medium"
+              >
+                <span className="hidden sm:inline">退出登录</span>
+                <span className="sm:hidden">退出</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {/* 标签页 */}
-        <div className="flex space-x-4 mb-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex gap-2 sm:gap-4 mb-4 sm:mb-6 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
           <button
             onClick={() => setActiveTab('stats')}
-            className={`px-4 py-2 font-medium transition-colors ${
+            className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
               activeTab === 'stats'
                 ? 'text-gray-900 dark:text-gray-100 border-b-2 border-gray-800 dark:border-gray-300'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
-            📊 统计
+            <span className="flex items-center gap-1.5">
+              <span>📊</span>
+              <span className="hidden sm:inline">统计</span>
+            </span>
           </button>
           <button
             onClick={() => setActiveTab('categories')}
-            className={`px-4 py-2 font-medium transition-colors ${
+            className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
               activeTab === 'categories'
                 ? 'text-gray-900 dark:text-gray-100 border-b-2 border-gray-800 dark:border-gray-300'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
-            分类管理 ({categories.length})
+            <span className="flex items-center gap-1.5">
+              <span>📁</span>
+              <span className="hidden sm:inline">分类</span>
+              <span className="text-xs opacity-75">({categories.length})</span>
+            </span>
           </button>
           <button
             onClick={() => setActiveTab('links')}
-            className={`px-4 py-2 font-medium transition-colors ${
+            className={`px-3 sm:px-4 py-2 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
               activeTab === 'links'
                 ? 'text-gray-900 dark:text-gray-100 border-b-2 border-gray-800 dark:border-gray-300'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
-            链接管理 ({links.length})
+            <span className="flex items-center gap-1.5">
+              <span>🔗</span>
+              <span className="hidden sm:inline">链接</span>
+              <span className="text-xs opacity-75">({links.length})</span>
+            </span>
           </button>
         </div>
 
@@ -329,66 +346,67 @@ export default function AdminDashboard() {
         {/* 分类管理 */}
         {activeTab === 'categories' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center mb-4">
               <input
                 type="text"
                 placeholder="搜索分类..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                className="w-full sm:flex-1 sm:max-w-md px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm"
               />
               <button
                 onClick={() => router.push('/admin/dashboard/category/new')}
-                className="px-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                className="w-full sm:w-auto px-4 py-2.5 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors font-medium text-sm flex items-center justify-center gap-2"
               >
-                + 添加分类
+                <span>➕</span>
+                <span>添加分类</span>
               </button>
             </div>
 
-            <div className="grid gap-4">
+            <div className="grid gap-3 sm:gap-4">
               {filteredCategories.map((category) => (
                 <div
                   key={category.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+                  className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-2xl">{category.icon}</span>
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <span className="text-2xl flex-shrink-0">{category.icon}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base truncate">
                             {category.name}
                           </h3>
                           {category.is_private && (
-                            <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded">
+                            <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded flex-shrink-0">
                               🔒 私密
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          排序: {category.order} | {links.filter(l => l.category_id === category.id).length} 个链接
+                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                          排序: {category.order} · {links.filter(l => l.category_id === category.id).length} 个链接
                         </p>
                       </div>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex gap-2 sm:flex-shrink-0">
                       <button
                         onClick={() => viewCategoryLinks(category.id)}
-                        className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                        className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
                         title="查看该分类下的所有链接"
                       >
-                        👁️ 查看链接
+                        👁️ 查看
                       </button>
                       <button
                         onClick={() => router.push(`/admin/dashboard/category/${category.id}`)}
-                        className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                        className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
                       >
-                        编辑
+                        ✏️ 编辑
                       </button>
                       <button
                         onClick={() => deleteCategory(category.id)}
-                        className="px-3 py-1.5 text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50"
+                        className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors font-medium"
                       >
-                        删除
+                        🗑️ 删除
                       </button>
                     </div>
                   </div>
@@ -401,21 +419,19 @@ export default function AdminDashboard() {
         {/* 链接管理 */}
         {activeTab === 'links' && (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-              <div className="flex-1 w-full sm:w-auto">
-                <input
-                  type="text"
-                  placeholder="搜索链接..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                />
-              </div>
-              <div className="flex items-center space-x-2 w-full sm:w-auto">
+            <div className="flex flex-col gap-3 mb-4">
+              <input
+                type="text"
+                placeholder="搜索链接..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm"
+              />
+              <div className="flex gap-2">
                 <select
                   value={selectedCategoryFilter || ''}
                   onChange={(e) => setSelectedCategoryFilter(e.target.value || null)}
-                  className="flex-1 sm:flex-initial px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm"
                 >
                   <option value="">所有分类</option>
                   {categories.map((cat) => (
@@ -426,20 +442,22 @@ export default function AdminDashboard() {
                 </select>
                 <button
                   onClick={() => router.push('/admin/dashboard/link/new')}
-                  className="px-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors whitespace-nowrap"
+                  className="px-4 py-2.5 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors whitespace-nowrap font-medium text-sm flex items-center gap-2"
                 >
-                  + 添加链接
+                  <span>➕</span>
+                  <span className="hidden sm:inline">添加链接</span>
+                  <span className="sm:hidden">添加</span>
                 </button>
               </div>
             </div>
 
             {selectedCategoryFilter && (
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                     正在筛选：
                   </span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">
                     {categories.find(c => c.id === selectedCategoryFilter)?.icon}{' '}
                     {categories.find(c => c.id === selectedCategoryFilter)?.name}
                   </span>
@@ -449,62 +467,62 @@ export default function AdminDashboard() {
                 </div>
                 <button
                   onClick={() => setSelectedCategoryFilter(null)}
-                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                  className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 font-medium"
                 >
                   ✕ 清除筛选
                 </button>
               </div>
             )}
 
-            <div className="grid gap-4">
+            <div className="grid gap-3 sm:gap-4">
               {filteredLinks.map((link) => {
                 const category = categories.find(c => c.id === link.category_id);
                 return (
                   <div
                     key={link.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+                    className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base">
                             {link.title}
                           </h3>
                           {link.is_private && (
-                            <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded">
+                            <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded flex-shrink-0">
                               🔒 私密
                             </span>
                           )}
                           {category && (
-                            <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+                            <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded flex-shrink-0">
                               {category.icon} {category.name}
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
                           {link.description}
                         </p>
                         <a
                           href={link.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-gray-500 dark:text-gray-500 hover:underline"
+                          className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 hover:underline break-all"
                         >
                           {link.url}
                         </a>
                       </div>
-                      <div className="flex space-x-2 ml-4">
+                      <div className="flex gap-2">
                         <button
                           onClick={() => router.push(`/admin/dashboard/link/${link.id}`)}
-                          className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                          className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
                         >
-                          编辑
+                          ✏️ 编辑
                         </button>
                         <button
                           onClick={() => deleteLink(link.id)}
-                          className="px-3 py-1.5 text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50"
+                          className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors font-medium"
                         >
-                          删除
+                          🗑️ 删除
                         </button>
                       </div>
                     </div>
