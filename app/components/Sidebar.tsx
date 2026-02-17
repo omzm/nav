@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { NavCategory } from '../types';
 
 interface SidebarProps {
@@ -17,6 +18,33 @@ export default function Sidebar({
   isOpen,
   onToggle,
 }: SidebarProps) {
+  const [runTime, setRunTime] = useState('');
+
+  // 网站启动时间
+  const startDate = new Date('2026-02-16T00:00:00');
+
+  useEffect(() => {
+    const calculateRunTime = () => {
+      const now = new Date();
+      const diff = now.getTime() - startDate.getTime();
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setRunTime(`${days}天 ${hours}时 ${minutes}分 ${seconds}秒`);
+    };
+
+    // 立即计算一次
+    calculateRunTime();
+
+    // 每秒更新一次
+    const timer = setInterval(calculateRunTime, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   // 处理分类点击，移动端自动收回侧边栏
   const handleCategoryClick = (categoryId: string | null) => {
     onSelectCategory(categoryId);
@@ -110,9 +138,15 @@ export default function Sidebar({
         </nav>
 
         {/* 侧边栏底部装饰 */}
-        <div className="p-2.5 sm:p-3 border-t border-gray-200 dark:border-gray-700/50">
+        <div className="p-2.5 sm:p-3 border-t border-gray-200 dark:border-gray-700/50 space-y-2">
           <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
             共 {categories.length} 个分类
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+            <div className="flex items-center justify-center gap-1">
+              <span>⏱️</span>
+              <span>已运行: {runTime}</span>
+            </div>
           </div>
         </div>
       </aside>
