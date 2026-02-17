@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase, Category } from '@/app/lib/supabase';
 import { useRouter, useParams } from 'next/navigation';
 import { getFaviconUrl, getFallbackFaviconUrl } from '@/app/utils/favicon';
+import { toast } from '@/app/components/Toast';
 
 export default function LinkForm() {
   const [categoryId, setCategoryId] = useState('');
@@ -61,6 +62,31 @@ export default function LinkForm() {
     }
   };
 
+  // 当分类改变时自动填充排序顺序
+  const handleCategoryChange = async (newCategoryId: string) => {
+    setCategoryId(newCategoryId);
+
+    // 如果是编辑模式，不自动更新排序
+    if (isEdit) return;
+
+    if (newCategoryId) {
+      try {
+        // 查询该分类下的链接数量
+        const { count, error } = await supabase
+          .from('links')
+          .select('*', { count: 'exact', head: true })
+          .eq('category_id', newCategoryId);
+
+        if (error) throw error;
+
+        // 设置排序为当前数量 + 1
+        setOrder((count || 0) + 1);
+      } catch (error) {
+        console.error('获取分类链接数量失败:', error);
+      }
+    }
+  };
+
   const loadLink = async (id: string) => {
     try {
       const { data, error } = await supabase
@@ -81,7 +107,7 @@ export default function LinkForm() {
       }
     } catch (error) {
       console.error('加载失败:', error);
-      alert('加载失败');
+      toast.error('加载链接失败');
     }
   };
 
@@ -143,18 +169,22 @@ export default function LinkForm() {
           .eq('id', params.id);
 
         if (error) throw error;
+        toast.success('链接更新成功！');
       } else {
         const { error } = await supabase
           .from('links')
           .insert([linkData]);
 
         if (error) throw error;
+        toast.success('链接添加成功！');
       }
 
-      router.push('/admin/dashboard');
+      setTimeout(() => {
+        router.push('/admin/dashboard');
+      }, 1000);
     } catch (error) {
       console.error('保存失败:', error);
-      alert('保存失败');
+      toast.error('保存失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -179,7 +209,7 @@ export default function LinkForm() {
               </label>
               <select
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
+                onChange={(e) => handleCategoryChange(e.target.value)}
                 required
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
               >
@@ -322,7 +352,7 @@ export default function LinkForm() {
                 placeholder="0"
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                数字越小越靠前
+                {isEdit ? '数字越小越靠前' : '选择分类后自动填充，数字越小越靠前'}
               </p>
             </div>
 

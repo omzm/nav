@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { useRouter, useParams } from 'next/navigation';
+import { toast } from '@/app/components/Toast';
 
 export default function CategoryForm() {
   const [name, setName] = useState('');
@@ -38,7 +39,7 @@ export default function CategoryForm() {
       }
     } catch (error) {
       console.error('加载失败:', error);
-      alert('加载失败');
+      toast.error('加载分类失败');
     }
   };
 
@@ -57,6 +58,7 @@ export default function CategoryForm() {
           console.error('更新错误详情:', error);
           throw error;
         }
+        toast.success('分类更新成功！');
       } else {
         const { data, error } = await supabase
           .from('categories')
@@ -65,17 +67,20 @@ export default function CategoryForm() {
 
         if (error) {
           console.error('插入错误详情:', error);
-          alert(`保存失败: ${error.message}\n\n请检查:\n1. Supabase 配置是否正确\n2. 数据库表是否已创建\n3. 是否已登录\n\n详细错误: ${JSON.stringify(error, null, 2)}`);
+          toast.error(`保存失败: ${error.message}`);
           throw error;
         }
         console.log('插入成功:', data);
+        toast.success('分类添加成功！');
       }
 
-      router.push('/admin/dashboard');
+      setTimeout(() => {
+        router.push('/admin/dashboard');
+      }, 1000);
     } catch (error: any) {
       console.error('保存失败:', error);
       if (!error.message) {
-        alert('保存失败: 未知错误，请检查浏览器控制台');
+        toast.error('保存失败: 未知错误');
       }
     } finally {
       setLoading(false);

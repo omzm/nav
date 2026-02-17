@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase, Category, Link } from '@/app/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { toast } from '@/app/components/Toast';
 
 export default function AdminDashboard() {
   const [user, setUser] = useState<any>(null);
@@ -27,6 +28,33 @@ export default function AdminDashboard() {
   useEffect(() => {
     checkUser();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // 订阅实时数据更新
+    const categoriesChannel = supabase
+      .channel('admin-categories-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        console.log('分类数据已更新，重新加载...');
+        loadData();
+      })
+      .subscribe();
+
+    const linksChannel = supabase
+      .channel('admin-links-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'links' }, () => {
+        console.log('链接数据已更新，重新加载...');
+        loadData();
+      })
+      .subscribe();
+
+    // 清理订阅
+    return () => {
+      supabase.removeChannel(categoriesChannel);
+      supabase.removeChannel(linksChannel);
+    };
+  }, [user]);
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -92,10 +120,11 @@ export default function AdminDashboard() {
         .eq('id', id);
 
       if (error) throw error;
+      toast.success('分类删除成功！');
       loadData();
     } catch (error) {
       console.error('删除失败:', error);
-      alert('删除失败');
+      toast.error('删除失败，请重试');
     }
   };
 
@@ -109,10 +138,11 @@ export default function AdminDashboard() {
         .eq('id', id);
 
       if (error) throw error;
+      toast.success('链接删除成功！');
       loadData();
     } catch (error) {
       console.error('删除失败:', error);
-      alert('删除失败');
+      toast.error('删除失败，请重试');
     }
   };
 

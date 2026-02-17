@@ -24,6 +24,29 @@ export default function Home() {
     loadData();
     loadBingWallpaper();
     loadDailyQuote();
+
+    // 订阅实时数据更新
+    const categoriesChannel = supabase
+      .channel('categories-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        console.log('分类数据已更新，重新加载...');
+        loadData();
+      })
+      .subscribe();
+
+    const linksChannel = supabase
+      .channel('links-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'links' }, () => {
+        console.log('链接数据已更新，重新加载...');
+        loadData();
+      })
+      .subscribe();
+
+    // 清理订阅
+    return () => {
+      supabase.removeChannel(categoriesChannel);
+      supabase.removeChannel(linksChannel);
+    };
   }, []);
 
   const loadBingWallpaper = async () => {
