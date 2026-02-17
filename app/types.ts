@@ -3,6 +3,7 @@ export interface NavLink {
   url: string;
   description: string;
   icon?: string;
+  isPrivate?: boolean;
 }
 
 export interface NavCategory {
@@ -10,4 +11,5 @@ export interface NavCategory {
   name: string;
   icon: string;
   links: NavLink[];
+  isPrivate?: boolean;
 }

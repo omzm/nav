@@ -1,111 +1,113 @@
-# 收藏夹 - 一些常用的工具
+# 收藏夹 - 导航网站
 
-一个基于 Next.js 构建的现代化导航网站，支持分类导航、搜索功能、深色模式和响应式设计。
+一个基于 Next.js 构建的现代化导航网站，支持分类导航、搜索功能、深色模式、隐私分组和响应式设计。
 
-## 功能特点
+## ✨ 功能特点
 
-- ✨ 分类导航 - 将网站按类别组织（开发工具、设计资源、学习平台等）
-- 🔍 搜索功能 - 快速搜索和过滤导航链接
-- 🌓 深色模式 - 支持亮色/深色主题切换，并保存用户偏好
-- 📱 响应式设计 - 完美适配各种设备（手机、平板、电脑）
-- ⚡ 性能优化 - 基于 Next.js 构建，快速加载
+- 📂 **分类导航** - 将网站按类别组织管理
+- 🔍 **搜索功能** - 快速搜索和过滤导航链接
+- 🔐 **隐私模式** - 输入"开门"显示隐藏的分类和链接
+- 🌓 **深色模式** - 支持亮色/深色主题切换
+- 📱 **响应式设计** - 完美适配手机、平板、电脑
+- 🗄️ **数据库驱动** - 使用 Supabase 存储数据
+- 📥 **书签导入** - 支持从浏览器导入书签
+- 🎨 **管理后台** - 方便的数据管理界面
 
-## 技术栈
+## 🚀 快速开始
 
-- **框架**: Next.js 16 (App Router)
-- **语言**: TypeScript
-- **样式**: Tailwind CSS
-- **部署**: Vercel
-
-## 本地开发
-
-1. 安装依赖:
+### 1. 安装依赖
 ```bash
 npm install
 ```
 
-2. 启动开发服务器:
+### 2. 配置环境变量
+创建 `.env.local` 文件：
+```env
+NEXT_PUBLIC_SUPABASE_URL=你的_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=你的_supabase_key
+```
+
+### 3. 初始化数据库
+在 Supabase SQL 编辑器中运行 `supabase/schema.sql`
+
+### 4. 启动开发服务器
 ```bash
 npm run dev
 ```
+访问 [http://localhost:3000](http://localhost:3000)
 
-3. 在浏览器中打开 [http://localhost:3000](http://localhost:3000)
+## 🔐 隐私模式功能
 
-## 部署到 Vercel
+在搜索框输入 **`开门`** 即可显示隐藏的分类和链接！
 
-### 方法一：使用 Vercel CLI
+### 设置隐私内容
+**方法一**：访问 `/admin/dashboard`，编辑时勾选"私密"选项
 
-1. 安装 Vercel CLI:
+**方法二**：直接修改数据库
+```sql
+UPDATE categories SET is_private = TRUE WHERE id = 'category-id';
+UPDATE links SET is_private = TRUE WHERE id = 'link-id';
+```
+
+⚠️ 注意：隐私模式仅是前端过滤，不适合存储敏感信息。
+
+## 📥 导入浏览器书签
+
+1. **导出书签**：浏览器 → 书签管理器 → 导出书签（HTML）
+2. **安装依赖**：`npm install cheerio`
+3. **配置脚本**：编辑 `import-bookmarks.js`，填入 Supabase 配置
+4. **运行导入**：`node import-bookmarks.js`
+
+## 🎨 管理后台
+
+访问 `/admin/dashboard` 可以添加/编辑/删除分类和链接，设置隐私选项和显示顺序。
+
+## 📦 部署到 Vercel
+
+**方法一 - GitHub自动部署（推荐）**：
+1. 推送代码到 GitHub
+2. 访问 [Vercel](https://vercel.com) 导入仓库
+3. 配置环境变量
+4. 点击部署
+
+**方法二 - CLI部署**：
 ```bash
 npm install -g vercel
-```
-
-2. 登录 Vercel:
-```bash
 vercel login
-```
-
-3. 部署项目:
-```bash
-vercel
-```
-
-4. 生产环境部署:
-```bash
 vercel --prod
 ```
 
-### 方法二：使用 GitHub + Vercel
+## 🛠️ 技术栈
 
-1. 将代码推送到 GitHub 仓库
-2. 访问 [Vercel](https://vercel.com)
-3. 点击 "New Project"
-4. 导入你的 GitHub 仓库
-5. Vercel 会自动识别 Next.js 项目并配置构建设置
-6. 点击 "Deploy" 即可完成部署
+Next.js 16 + TypeScript + Tailwind CSS + Supabase
 
-## 自定义导航内容
-
-编辑 `app/data.ts` 文件来修改导航分类和链接:
-
-```typescript
-export const categories: NavCategory[] = [
-  {
-    id: 'your-category',
-    name: '你的分类名称',
-    icon: '🎯',
-    links: [
-      {
-        title: '网站名称',
-        url: 'https://example.com',
-        description: '网站描述',
-      },
-    ],
-  },
-];
-```
-
-## 项目结构
+## 📁 项目结构
 
 ```
 nav-website/
 ├── app/
-│   ├── components/       # React 组件
-│   │   ├── CategorySection.tsx  # 分类区域
-│   │   ├── NavCard.tsx          # 导航卡片
-│   │   ├── SearchBar.tsx        # 搜索栏
-│   │   └── ThemeToggle.tsx      # 主题切换
-│   ├── data.ts          # 导航数据
-│   ├── types.ts         # TypeScript 类型定义
-│   ├── layout.tsx       # 根布局
-│   ├── page.tsx         # 首页
-│   └── globals.css      # 全局样式
-├── public/              # 静态资源
-├── vercel.json          # Vercel 配置
+│   ├── components/      # React 组件
+│   ├── admin/          # 管理后台
+│   ├── lib/            # Supabase 客户端
+│   ├── page.tsx        # 首页
+│   └── types.ts        # 类型定义
+├── supabase/
+│   └── schema.sql      # 数据库结构
 └── package.json
 ```
 
-## 许可证
+## 📝 数据库表结构
+
+### categories 表
+`id`, `name`, `icon`, `order`, `is_private`, `created_at`
+
+### links 表
+`id`, `category_id`, `title`, `url`, `description`, `icon`, `order`, `is_private`, `created_at`
+
+## 📄 许可证
 
 MIT
 
+---
+
+**版本**: v1.1.0 | **更新**: 2026-02-17

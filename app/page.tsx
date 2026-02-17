@@ -19,6 +19,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [bingWallpaper, setBingWallpaper] = useState('');
   const [dailyQuote, setDailyQuote] = useState('');
+  const [showPrivate, setShowPrivate] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -95,6 +96,7 @@ export default function Home() {
         id: cat.id,
         name: cat.name,
         icon: cat.icon,
+        isPrivate: cat.is_private || false,
         links: (linksData || [])
           .filter((link: DBLink) => link.category_id === cat.id)
           .map((link: DBLink) => ({
@@ -102,6 +104,7 @@ export default function Home() {
             url: link.url,
             description: link.description,
             icon: link.icon || undefined,
+            isPrivate: link.is_private || false,
           })),
       }));
 
@@ -139,13 +142,38 @@ export default function Home() {
   const filteredCategories = useMemo(() => {
     let result = categories;
 
+    // 检查是否输入了"开门"来显示隐私内容
+    const isOpenDoorCommand = searchQuery.trim() === '开门';
+
+    // 如果输入"开门"，则显示所有隐私内容并清空搜索
+    if (isOpenDoorCommand) {
+      if (!showPrivate) {
+        setShowPrivate(true);
+        // 延迟清空搜索框，让用户看到效果
+        setTimeout(() => setSearchQuery(''), 100);
+      }
+      // 只返回隐私分类和链接
+      result = result.filter(cat => cat.isPrivate || cat.links.some(link => link.isPrivate));
+      return result;
+    }
+
+    // 过滤隐私内容（除非已开启showPrivate）
+    if (!showPrivate) {
+      result = result
+        .filter(cat => !cat.isPrivate)
+        .map(cat => ({
+          ...cat,
+          links: cat.links.filter(link => !link.isPrivate),
+        }));
+    }
+
     // 按分类筛选
     if (selectedCategory) {
       result = result.filter((cat) => cat.id === selectedCategory);
     }
 
     // 按搜索词筛选
-    if (searchQuery.trim()) {
+    if (searchQuery.trim() && !isOpenDoorCommand) {
       const query = searchQuery.toLowerCase();
       result = result
         .map((category) => ({
@@ -160,7 +188,7 @@ export default function Home() {
     }
 
     return result;
-  }, [searchQuery, selectedCategory, categories]);
+  }, [searchQuery, selectedCategory, categories, showPrivate]);
 
   if (loading) {
     return (
@@ -278,6 +306,32 @@ export default function Home() {
         {/* 主内容 */}
         <main className="flex-1 overflow-y-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
           <div className="max-w-[1600px] mx-auto">
+            {/* 隐私模式提示 */}
+            {showPrivate && (
+              <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-700 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🔓</span>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                      隐私模式已开启
+                    </p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      正在显示隐藏的分类和链接
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowPrivate(false);
+                    setSearchQuery('');
+                  }}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  退出隐私模式
+                </button>
+              </div>
+            )}
+
             {filteredCategories.length > 0 ? (
               filteredCategories.map((category) => (
                 <CategorySection key={category.id} category={category} />
