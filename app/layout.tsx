@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "导航网站 - 精选实用网站导航",
+  title: "收藏夹 - 一些常用的工具",
   description: "收录了开发工具、设计资源、学习平台、效率工具等精选网站",
 };
 

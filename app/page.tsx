@@ -18,10 +18,12 @@ export default function Home() {
   const [categories, setCategories] = useState<NavCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [bingWallpaper, setBingWallpaper] = useState('');
+  const [dailyQuote, setDailyQuote] = useState('');
 
   useEffect(() => {
     loadData();
     loadBingWallpaper();
+    loadDailyQuote();
   }, []);
 
   const loadBingWallpaper = async () => {
@@ -31,6 +33,19 @@ export default function Home() {
       setBingWallpaper(wallpaperUrl);
     } catch (error) {
       console.error('加载壁纸失败:', error);
+    }
+  };
+
+  const loadDailyQuote = async () => {
+    try {
+      const response = await fetch('https://v.api.aa1.cn/api/yiyan/index.php');
+      const text = await response.text();
+      // 去除 HTML 标签
+      const cleanText = text.replace(/<[^>]*>/g, '').trim();
+      setDailyQuote(cleanText);
+    } catch (error) {
+      console.error('加载每日一言失败:', error);
+      setDailyQuote('生活总会给你答案，但不会马上把一切都告诉你。');
     }
   };
 
@@ -203,15 +218,15 @@ export default function Home() {
 
           {/* 内容 */}
           <div className="relative px-4 py-3">
-            {/* 顶部：菜单按钮 */}
-            <div className="flex items-center justify-start mb-2 lg:hidden">
+            {/* 顶部：菜单按钮 - 移到右边 */}
+            <div className="flex items-center justify-end mb-2 lg:hidden">
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 rounded-lg bg-white/95 dark:bg-gray-800/80 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 shadow-md backdrop-blur-sm"
+                className="p-2 transition-all duration-300"
                 aria-label="打开侧边栏"
               >
-                <svg className="w-5 h-5 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                <svg className="w-6 h-6 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
             </div>
@@ -226,6 +241,13 @@ export default function Home() {
             {/* 搜索框 - 居中 */}
             <div className="flex justify-center px-2 sm:px-0">
               <SearchBar value={searchQuery} onChange={setSearchQuery} />
+            </div>
+
+            {/* 每日一言 - 居中 */}
+            <div className="flex justify-center px-2 sm:px-0 mt-3 sm:mt-4">
+              <div className="w-full max-w-md px-3 py-1 rounded-full bg-white/60 dark:bg-gray-800/60 backdrop-blur-md text-gray-500 dark:text-gray-500 text-[10px] sm:text-xs text-center shadow-sm transition-all duration-300 hover:bg-white/70 dark:hover:bg-gray-800/70 hover:shadow-md leading-tight">
+                {dailyQuote || '加载中...'}
+              </div>
             </div>
           </div>
         </header>
@@ -259,7 +281,7 @@ export default function Home() {
         <footer className="bg-white/80 dark:bg-gray-900/50 backdrop-blur-xl border-t border-gray-200 dark:border-gray-700/50">
           <div className="px-4 lg:px-6 py-4 sm:py-5 lg:py-6 text-center">
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              © 2026 导航网站 | 使用 <span className="font-semibold text-gray-900 dark:text-gray-100">Next.js</span> 构建
+              © 2026 收藏夹 - 一些常用的工具 | 使用 <span className="font-semibold text-gray-900 dark:text-gray-100">Next.js</span> 构建
             </p>
           </div>
         </footer>

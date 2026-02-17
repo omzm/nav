@@ -17,6 +17,15 @@ export default function Sidebar({
   isOpen,
   onToggle,
 }: SidebarProps) {
+  // 处理分类点击，移动端自动收回侧边栏
+  const handleCategoryClick = (categoryId: string | null) => {
+    onSelectCategory(categoryId);
+    // 在移动端点击后自动关闭侧边栏
+    if (window.innerWidth < 1024) {
+      onToggle();
+    }
+  };
+
   return (
     <>
       {/* 移动端遮罩 */}
@@ -40,7 +49,7 @@ export default function Sidebar({
               <span className="text-sm sm:text-base">📑</span>
             </div>
             <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">
-              分类导航
+              分类
             </h2>
           </div>
           <button
@@ -57,7 +66,7 @@ export default function Sidebar({
         {/* 分类列表 */}
         <nav className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-1">
           <button
-            onClick={() => onSelectCategory(null)}
+            onClick={() => handleCategoryClick(null)}
             className={`w-full text-left px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all duration-300 group ${
               selectedCategory === null
                 ? 'bg-gray-100 dark:bg-gray-800/50'
@@ -79,7 +88,7 @@ export default function Sidebar({
           {categories.map((category) => (
             <button
               key={category.id}
-              onClick={() => onSelectCategory(category.id)}
+              onClick={() => handleCategoryClick(category.id)}
               className={`w-full text-left px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all duration-300 group ${
                 selectedCategory === category.id
                   ? 'bg-gray-100 dark:bg-gray-800/50'
