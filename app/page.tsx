@@ -139,7 +139,8 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  const filteredCategories = useMemo(() => {
+  // 侧边栏分类列表：只过滤私密内容，不受分类筛选和搜索影响
+  const sidebarCategories = useMemo(() => {
     let result = categories;
 
     // 检查是否输入了"开门"来显示隐私内容
@@ -152,8 +153,6 @@ export default function Home() {
         // 延迟清空搜索框，让用户看到效果
         setTimeout(() => setSearchQuery(''), 100);
       }
-      // 只返回隐私分类和链接
-      result = result.filter(cat => cat.isPrivate || cat.links.some(link => link.isPrivate));
       return result;
     }
 
@@ -167,13 +166,29 @@ export default function Home() {
         }));
     }
 
+    return result;
+  }, [categories, showPrivate, searchQuery]);
+
+  // 主内容区分类列表：在侧边栏分类基础上，再按分类筛选和搜索词筛选
+  const filteredCategories = useMemo(() => {
+    let result = sidebarCategories;
+
+    // 检查是否输入了"开门"
+    const isOpenDoorCommand = searchQuery.trim() === '开门';
+
+    if (isOpenDoorCommand) {
+      // 只返回隐私分类和链接
+      result = result.filter(cat => cat.isPrivate || cat.links.some(link => link.isPrivate));
+      return result;
+    }
+
     // 按分类筛选
     if (selectedCategory) {
       result = result.filter((cat) => cat.id === selectedCategory);
     }
 
     // 按搜索词筛选
-    if (searchQuery.trim() && !isOpenDoorCommand) {
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result
         .map((category) => ({
@@ -188,7 +203,7 @@ export default function Home() {
     }
 
     return result;
-  }, [searchQuery, selectedCategory, categories, showPrivate]);
+  }, [searchQuery, selectedCategory, sidebarCategories]);
 
   if (loading) {
     return (
@@ -244,7 +259,7 @@ export default function Home() {
 
       {/* 侧边栏 */}
       <Sidebar
-        categories={filteredCategories}
+        categories={sidebarCategories}
         selectedCategory={selectedCategory}
         onSelectCategory={setSelectedCategory}
         isOpen={isSidebarOpen}
