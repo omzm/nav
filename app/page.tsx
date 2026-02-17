@@ -244,7 +244,7 @@ export default function Home() {
 
       {/* 侧边栏 */}
       <Sidebar
-        categories={categories}
+        categories={filteredCategories}
         selectedCategory={selectedCategory}
         onSelectCategory={setSelectedCategory}
         isOpen={isSidebarOpen}
