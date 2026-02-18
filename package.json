@@ -11,9 +11,11 @@
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.14.0",
     "@supabase/supabase-js": "^2.95.3",
+    "@types/react-window": "^1.8.8",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-window": "^2.2.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

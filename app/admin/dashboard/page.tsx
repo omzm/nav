@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase, Category, Link } from '@/app/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/app/components/Toast';
+import { loadAdminCache, saveAdminCache } from '@/app/utils/adminCache';
 
 export default function AdminDashboard() {
   const [user, setUser] = useState<any>(null);
@@ -15,15 +16,22 @@ export default function AdminDashboard() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const router = useRouter();
 
-  // 统计数据
-  const [stats, setStats] = useState({
-    totalCategories: 0,
-    totalLinks: 0,
-    publicCategories: 0,
-    privateCategories: 0,
-    publicLinks: 0,
-    privateLinks: 0,
-  });
+  // 使用 useMemo 缓存统计数据计算
+  const stats = useMemo(() => {
+    const publicCats = categories.filter(c => !c.is_private).length;
+    const privateCats = categories.filter(c => c.is_private).length;
+    const publicLnks = links.filter(l => !l.is_private).length;
+    const privateLnks = links.filter(l => l.is_private).length;
+
+    return {
+      totalCategories: categories.length,
+      totalLinks: links.length,
+      publicCategories: publicCats,
+      privateCategories: privateCats,
+      publicLinks: publicLnks,
+      privateLinks: privateLnks,
+    };
+  }, [categories, links]);
 
   useEffect(() => {
     checkUser();
@@ -68,13 +76,22 @@ export default function AdminDashboard() {
 
   const loadData = async () => {
     try {
+      // 先尝试从缓存加载
+      const cached = loadAdminCache();
+      if (cached) {
+        console.log('从缓存加载后台数据');
+        setCategories(cached.categories);
+        setLinks(cached.links);
+        setLoading(false);
+      }
+
+      // 后台加载最新数据
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
         .select('*')
         .order('order', { ascending: true });
 
       if (categoriesError) throw categoriesError;
-      setCategories(categoriesData || []);
 
       const { data: linksData, error: linksError } = await supabase
         .from('links')
@@ -82,22 +99,12 @@ export default function AdminDashboard() {
         .order('order', { ascending: true });
 
       if (linksError) throw linksError;
+
+      // 保存到缓存
+      saveAdminCache(categoriesData || [], linksData || []);
+
+      setCategories(categoriesData || []);
       setLinks(linksData || []);
-
-      // 计算统计数据
-      const publicCats = (categoriesData || []).filter(c => !c.is_private).length;
-      const privateCats = (categoriesData || []).filter(c => c.is_private).length;
-      const publicLnks = (linksData || []).filter(l => !l.is_private).length;
-      const privateLnks = (linksData || []).filter(l => l.is_private).length;
-
-      setStats({
-        totalCategories: (categoriesData || []).length,
-        totalLinks: (linksData || []).length,
-        publicCategories: publicCats,
-        privateCategories: privateCats,
-        publicLinks: publicLnks,
-        privateLinks: privateLnks,
-      });
     } catch (error) {
       console.error('加载数据失败:', error);
     } finally {
@@ -110,7 +117,7 @@ export default function AdminDashboard() {
     router.push('/admin');
   };
 
-  const deleteCategory = async (id: string) => {
+  const deleteCategory = useCallback(async (id: string) => {
     if (!confirm('确定要删除这个分类吗？这将同时删除该分类下的所有链接。')) return;
 
     try {
@@ -126,9 +133,9 @@ export default function AdminDashboard() {
       console.error('删除失败:', error);
       toast.error('删除失败，请重试');
     }
-  };
+  }, []);
 
-  const deleteLink = async (id: string) => {
+  const deleteLink = useCallback(async (id: string) => {
     if (!confirm('确定要删除这个链接吗？')) return;
 
     try {
@@ -144,25 +151,33 @@ export default function AdminDashboard() {
       console.error('删除失败:', error);
       toast.error('删除失败，请重试');
     }
-  };
+  }, []);
 
-  // 搜索过滤
-  const filteredCategories = categories.filter(cat =>
-    cat.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // 使用 useMemo 优化搜索过滤
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return categories;
+    const query = searchQuery.toLowerCase();
+    return categories.filter(cat =>
+      cat.name.toLowerCase().includes(query)
+    );
+  }, [categories, searchQuery]);
 
-  const filteredLinks = links.filter(link => {
-    const matchesSearch = link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      link.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategoryFilter || link.category_id === selectedCategoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredLinks = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return links.filter(link => {
+      const matchesSearch = !searchQuery.trim() ||
+        link.title.toLowerCase().includes(query) ||
+        link.description.toLowerCase().includes(query);
+      const matchesCategory = !selectedCategoryFilter || link.category_id === selectedCategoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [links, searchQuery, selectedCategoryFilter]);
 
-  const viewCategoryLinks = (categoryId: string) => {
+  const viewCategoryLinks = useCallback((categoryId: string) => {
     setActiveTab('links');
     setSelectedCategoryFilter(categoryId);
     setSearchQuery('');
-  };
+  }, []);
 
   if (loading) {
     return (
