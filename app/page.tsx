@@ -4,11 +4,15 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { supabase, Category as DBCategory, Link as DBLink } from './lib/supabase';
 import SearchBar from './components/SearchBar';
 import CategorySection from './components/CategorySection';
+import VirtualCategories from './components/VirtualCategories';
 import ThemeToggle from './components/ThemeToggle';
 import BackToTop from './components/BackToTop';
 import Sidebar from './components/Sidebar';
 import { NavCategory } from './types';
 import { loadFromCache, saveToCache, isCacheValid } from './utils/cache';
+import { throttle } from './utils/throttle';
+import { loadBingWallpaper as loadWallpaper, loadDailyQuote as loadQuote } from './utils/externalApi';
+import { preloadFavicons } from './utils/favicon';
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,8 +28,9 @@ export default function Home() {
 
   useEffect(() => {
     loadData();
-    loadBingWallpaper();
-    loadDailyQuote();
+    // 异步加载外部资源，不阻塞主内容
+    loadWallpaper().then(setBingWallpaper);
+    loadQuote().then(setDailyQuote);
 
     // 订阅实时数据更新
     const categoriesChannel = supabase
@@ -52,26 +57,11 @@ export default function Home() {
   }, []);
 
   const loadBingWallpaper = async () => {
-    try {
-      // 使用必应壁纸 API
-      const wallpaperUrl = 'https://uapis.cn/api/v1/image/bing-daily';
-      setBingWallpaper(wallpaperUrl);
-    } catch (error) {
-      console.error('加载壁纸失败:', error);
-    }
+    // 已移至 utils/externalApi.ts，在 useEffect 中调用
   };
 
   const loadDailyQuote = async () => {
-    try {
-      const response = await fetch('https://v.api.aa1.cn/api/yiyan/index.php');
-      const text = await response.text();
-      // 去除 HTML 标签
-      const cleanText = text.replace(/<[^>]*>/g, '').trim();
-      setDailyQuote(cleanText);
-    } catch (error) {
-      console.error('加载每日一言失败:', error);
-      setDailyQuote('生活总会给你答案，但不会马上把一切都告诉你。');
-    }
+    // 已移至 utils/externalApi.ts，在 useEffect 中调用
   };
 
   const loadData = async (showLoadingState = true) => {
@@ -136,7 +126,7 @@ export default function Home() {
   };
 
   const formatCategories = (categoriesData: DBCategory[], linksData: DBLink[]): NavCategory[] => {
-    return categoriesData.map((cat: DBCategory) => ({
+    const formatted = categoriesData.map((cat: DBCategory) => ({
       id: cat.id,
       name: cat.name,
       icon: cat.icon,
@@ -151,6 +141,12 @@ export default function Home() {
           isPrivate: link.is_private || false,
         })),
     }));
+
+    // 预加载所有链接的 favicon
+    const allUrls = linksData.map(link => link.url);
+    preloadFavicons(allUrls);
+
+    return formatted;
   };
 
   useEffect(() => {
@@ -169,8 +165,11 @@ export default function Home() {
       setLastScrollY(currentScrollY);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    // 使用节流优化，每 100ms 最多执行一次
+    const throttledScroll = throttle(handleScroll, 100);
+
+    window.addEventListener('scroll', throttledScroll, { passive: true });
+    return () => window.removeEventListener('scroll', throttledScroll);
   }, [lastScrollY]);
 
   // 侧边栏分类列表：只过滤私密内容，不受分类筛选和搜索影响
@@ -382,9 +381,7 @@ export default function Home() {
             )}
 
             {filteredCategories.length > 0 ? (
-              filteredCategories.map((category) => (
-                <CategorySection key={category.id} category={category} />
-              ))
+              <VirtualCategories categories={filteredCategories} />
             ) : (
               <div className="text-center py-20">
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">

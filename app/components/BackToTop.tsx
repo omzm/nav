@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { throttle } from '../utils/throttle';
 
 export default function BackToTop() {
   const [isVisible, setIsVisible] = useState(false);
@@ -15,9 +16,12 @@ export default function BackToTop() {
       }
     };
 
-    window.addEventListener('scroll', toggleVisibility);
+    // 使用节流优化，每 200ms 最多执行一次
+    const throttledToggle = throttle(toggleVisibility, 200);
 
-    return () => window.removeEventListener('scroll', toggleVisibility);
+    window.addEventListener('scroll', throttledToggle, { passive: true });
+
+    return () => window.removeEventListener('scroll', throttledToggle);
   }, []);
 
   const scrollToTop = () => {
