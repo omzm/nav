@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { supabase, Category as DBCategory, Link as DBLink } from './lib/supabase';
 import SearchBar from './components/SearchBar';
 import CategorySection from './components/CategorySection';
@@ -8,6 +8,7 @@ import ThemeToggle from './components/ThemeToggle';
 import BackToTop from './components/BackToTop';
 import Sidebar from './components/Sidebar';
 import { NavCategory } from './types';
+import { loadFromCache, saveToCache, isCacheValid } from './utils/cache';
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +32,7 @@ export default function Home() {
       .channel('categories-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
         console.log('分类数据已更新，重新加载...');
-        loadData();
+        loadData(false); // 后台更新，不显示loading
       })
       .subscribe();
 
@@ -39,7 +40,7 @@ export default function Home() {
       .channel('links-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'links' }, () => {
         console.log('链接数据已更新，重新加载...');
-        loadData();
+        loadData(false); // 后台更新，不显示loading
       })
       .subscribe();
 
@@ -73,7 +74,37 @@ export default function Home() {
     }
   };
 
-  const loadData = async () => {
+  const loadData = async (showLoadingState = true) => {
+    try {
+      // 1. 首先尝试从缓存加载
+      const cachedData = loadFromCache();
+      if (cachedData && showLoadingState) {
+        console.log('从缓存加载数据');
+        // 先显示缓存的数据
+        const formattedCategories = formatCategories(cachedData.categories, cachedData.links);
+        setCategories(formattedCategories);
+        setLoading(false);
+
+        // 如果缓存有效，检查是否需要后台更新
+        if (isCacheValid()) {
+          // 缓存有效，但仍然在后台加载最新数据
+          loadFreshData(false);
+          return;
+        }
+      }
+
+      // 2. 加载新数据
+      await loadFreshData(showLoadingState);
+    } catch (error) {
+      console.error('加载数据失败:', error);
+      // 如果加载失败，使用本地数据作为后备
+      const { categories: localCategories } = await import('./data');
+      setCategories(localCategories);
+      setLoading(false);
+    }
+  };
+
+  const loadFreshData = async (showLoadingState = true) => {
     try {
       // 加载分类
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -91,32 +122,35 @@ export default function Home() {
 
       if (linksError) throw linksError;
 
-      // 转换数据格式
-      const formattedCategories: NavCategory[] = (categoriesData || []).map((cat: DBCategory) => ({
-        id: cat.id,
-        name: cat.name,
-        icon: cat.icon,
-        isPrivate: cat.is_private || false,
-        links: (linksData || [])
-          .filter((link: DBLink) => link.category_id === cat.id)
-          .map((link: DBLink) => ({
-            title: link.title,
-            url: link.url,
-            description: link.description,
-            icon: link.icon || undefined,
-            isPrivate: link.is_private || false,
-          })),
-      }));
+      // 保存到缓存
+      saveToCache(categoriesData || [], linksData || []);
 
+      // 转换数据格式
+      const formattedCategories = formatCategories(categoriesData || [], linksData || []);
       setCategories(formattedCategories);
-    } catch (error) {
-      console.error('加载数据失败:', error);
-      // 如果加载失败，使用本地数据作为后备
-      const { categories: localCategories } = await import('./data');
-      setCategories(localCategories);
     } finally {
-      setLoading(false);
+      if (showLoadingState) {
+        setLoading(false);
+      }
     }
+  };
+
+  const formatCategories = (categoriesData: DBCategory[], linksData: DBLink[]): NavCategory[] => {
+    return categoriesData.map((cat: DBCategory) => ({
+      id: cat.id,
+      name: cat.name,
+      icon: cat.icon,
+      isPrivate: cat.is_private || false,
+      links: linksData
+        .filter((link: DBLink) => link.category_id === cat.id)
+        .map((link: DBLink) => ({
+          title: link.title,
+          url: link.url,
+          description: link.description,
+          icon: link.icon || undefined,
+          isPrivate: link.is_private || false,
+        })),
+    }));
   };
 
   useEffect(() => {

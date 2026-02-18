@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { NavLink } from '../types';
 import { getFaviconUrl, getFallbackFaviconUrl } from '../utils/favicon';
 
@@ -8,7 +8,7 @@ interface NavCardProps {
   link: NavLink;
 }
 
-export default function NavCard({ link }: NavCardProps) {
+function NavCard({ link }: NavCardProps) {
   const [imgError, setImgError] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
 
@@ -73,3 +73,12 @@ export default function NavCard({ link }: NavCardProps) {
     </a>
   );
 }
+
+// 使用 React.memo 优化，只在 link 改变时重新渲染
+export default memo(NavCard, (prevProps, nextProps) => {
+  return (
+    prevProps.link.url === nextProps.link.url &&
+    prevProps.link.title === nextProps.link.title &&
+    prevProps.link.description === nextProps.link.description
+  );
+});

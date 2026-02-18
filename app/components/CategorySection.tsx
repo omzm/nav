@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { NavCategory } from '../types';
 import NavCard from './NavCard';
 
@@ -5,7 +6,7 @@ interface CategorySectionProps {
   category: NavCategory;
 }
 
-export default function CategorySection({ category }: CategorySectionProps) {
+function CategorySection({ category }: CategorySectionProps) {
   return (
     <section className="mb-8 sm:mb-10 lg:mb-12 animate-fade-in">
       <div className="flex items-center space-x-2 sm:space-x-2.5 mb-3 sm:mb-4 group">
@@ -23,9 +24,17 @@ export default function CategorySection({ category }: CategorySectionProps) {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5 sm:gap-3">
         {category.links.map((link, index) => (
-          <NavCard key={index} link={link} />
+          <NavCard key={`${link.url}-${index}`} link={link} />
         ))}
       </div>
     </section>
   );
 }
+
+// 使用 React.memo 优化，只在 category 改变时重新渲染
+export default memo(CategorySection, (prevProps, nextProps) => {
+  return (
+    prevProps.category.id === nextProps.category.id &&
+    prevProps.category.links.length === nextProps.category.links.length
+  );
+});
