@@ -11,6 +11,7 @@ export default function AdminDashboard() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // 添加刷新状态
   const [activeTab, setActiveTab] = useState<'categories' | 'links' | 'stats'>('categories');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
@@ -74,15 +75,22 @@ export default function AdminDashboard() {
     loadData();
   };
 
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
     try {
-      // 先尝试从缓存加载
-      const cached = loadAdminCache();
-      if (cached) {
-        console.log('从缓存加载后台数据');
-        setCategories(cached.categories);
-        setLinks(cached.links);
-        setLoading(false);
+      // 如果是强制刷新，显示刷新状态
+      if (forceRefresh) {
+        setRefreshing(true);
+      }
+
+      // 先尝试从缓存加载（非强制刷新时）
+      if (!forceRefresh) {
+        const cached = loadAdminCache();
+        if (cached) {
+          console.log('从缓存加载后台数据');
+          setCategories(cached.categories);
+          setLinks(cached.links);
+          setLoading(false);
+        }
       }
 
       // 后台加载最新数据
@@ -105,10 +113,17 @@ export default function AdminDashboard() {
 
       setCategories(categoriesData || []);
       setLinks(linksData || []);
+
+      // 刷新成功提示
+      if (forceRefresh) {
+        toast.success('数据已刷新！');
+      }
     } catch (error) {
       console.error('加载数据失败:', error);
+      toast.error('加载数据失败');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -377,11 +392,14 @@ export default function AdminDashboard() {
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">查看网站</div>
                 </button>
                 <button
-                  onClick={loadData}
-                  className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all text-center active:scale-95 active:opacity-90"
+                  onClick={() => loadData(true)}
+                  disabled={refreshing}
+                  className={`p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all text-center active:scale-95 active:opacity-90 ${refreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <div className="text-2xl mb-2">🔄</div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">刷新数据</div>
+                  <div className={`text-2xl mb-2 ${refreshing ? 'animate-spin' : ''}`}>🔄</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {refreshing ? '刷新中...' : '刷新数据'}
+                  </div>
                 </button>
               </div>
             </div>
