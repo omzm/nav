@@ -209,7 +209,7 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex">
         {/* 侧边栏骨架屏 */}
-        <aside className="hidden lg:block w-72 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-gray-200 dark:border-gray-700/50">
+        <aside className="hidden lg:block w-64 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-gray-200 dark:border-gray-700/50">
           <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
             <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           </div>

@@ -276,7 +276,7 @@ export default function AdminDashboard() {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">总分类数</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">📂 总分类数</p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
                       {stats.totalCategories}
                     </p>
@@ -298,7 +298,7 @@ export default function AdminDashboard() {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">总链接数</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">🔗 总链接数</p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
                       {stats.totalLinks}
                     </p>
@@ -320,7 +320,7 @@ export default function AdminDashboard() {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">平均每分类</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">📊 平均每分类</p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
                       {stats.totalCategories > 0 ? Math.round(stats.totalLinks / stats.totalCategories) : 0}
                     </p>
@@ -330,7 +330,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="mt-4 text-xs text-gray-600 dark:text-gray-400">
-                  个链接
+                  {stats.totalCategories > 0 ? Math.round(stats.totalLinks / stats.totalCategories) : 0} 个链接
                 </div>
               </div>
             </div>
