@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { supabase, Category as DBCategory, Link as DBLink } from './lib/supabase';
 import SearchBar from './components/SearchBar';
 import CategorySection from './components/CategorySection';
@@ -10,7 +10,6 @@ import BackToTop from './components/BackToTop';
 import Sidebar from './components/Sidebar';
 import { NavCategory } from './types';
 import { loadFromCache, saveToCache, isCacheValid } from './utils/cache';
-import { throttle } from './utils/throttle';
 import { loadBingWallpaper as loadWallpaper, loadDailyQuote as loadQuote } from './utils/externalApi';
 import { preloadFavicons } from './utils/favicon';
 
@@ -18,13 +17,13 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
   const [categories, setCategories] = useState<NavCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [bingWallpaper, setBingWallpaper] = useState('');
   const [dailyQuote, setDailyQuote] = useState('');
   const [showPrivate, setShowPrivate] = useState(false);
+  const [scrolledPastHeader, setScrolledPastHeader] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     loadData();
@@ -54,6 +53,19 @@ export default function Home() {
       supabase.removeChannel(categoriesChannel);
       supabase.removeChannel(linksChannel);
     };
+  }, []);
+
+  // 监听滚动，header 完全滚出视口才触发
+  useEffect(() => {
+    const handleScroll = () => {
+      if (headerRef.current) {
+        const headerBottom = headerRef.current.getBoundingClientRect().bottom;
+        setScrolledPastHeader(headerBottom <= 0);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const loadBingWallpaper = async () => {
@@ -148,29 +160,6 @@ export default function Home() {
 
     return formatted;
   };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-
-      // 向下滚动且滚动距离大于50px时隐藏
-      if (currentScrollY > lastScrollY && currentScrollY > 50) {
-        setIsHeaderVisible(false);
-      }
-      // 向上滚动时显示
-      else if (currentScrollY < lastScrollY) {
-        setIsHeaderVisible(true);
-      }
-
-      setLastScrollY(currentScrollY);
-    };
-
-    // 使用节流优化，每 100ms 最多执行一次
-    const throttledScroll = throttle(handleScroll, 100);
-
-    window.addEventListener('scroll', throttledScroll, { passive: true });
-    return () => window.removeEventListener('scroll', throttledScroll);
-  }, [lastScrollY]);
 
   // 侧边栏分类列表：只过滤私密内容，不受分类筛选和搜索影响
   const sidebarCategories = useMemo(() => {
@@ -301,10 +290,25 @@ export default function Home() {
 
       {/* 主内容区 */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* 顶部标题栏和搜索框合并 */}
-        <header className={`sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700/50 shadow-sm transition-transform duration-300 ${
-          isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
-        } relative overflow-hidden`}>
+        {/* 移动端：滚动超过 header 后从顶部滑入的固定栏 */}
+        <div className={`fixed top-0 left-0 right-0 z-10 lg:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700/50 shadow-sm transition-transform duration-300 ${
+          scrolledPastHeader ? 'translate-y-0' : '-translate-y-full'
+        }`}>
+          <div className="flex items-center justify-end px-4 py-2">
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="打开侧边栏"
+            >
+              <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* 顶部标题栏和搜索框 */}
+        <header ref={headerRef} className="relative overflow-hidden border-b border-gray-200 dark:border-gray-700/50 shadow-sm">
           {/* 背景壁纸 */}
           {bingWallpaper && (
             <div
@@ -317,7 +321,7 @@ export default function Home() {
 
           {/* 内容 */}
           <div className="relative px-4 py-3">
-            {/* 顶部：菜单按钮 - 移到右边 */}
+            {/* 顶部：菜单按钮 - 在壁纸上占一行 */}
             <div className="flex items-center justify-end mb-2 lg:hidden">
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
