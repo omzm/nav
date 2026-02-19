@@ -12,7 +12,7 @@ export default function AdminDashboard() {
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false); // 添加刷新状态
-  const [activeTab, setActiveTab] = useState<'categories' | 'links' | 'stats'>('categories');
+  const [activeTab, setActiveTab] = useState<'categories' | 'links' | 'stats'>('stats');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const router = useRouter();
