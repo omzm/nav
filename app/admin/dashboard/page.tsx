@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { supabase, Category, Link, ADMIN_EMAIL } from '@/app/lib/supabase';
+import { supabase, Category, Link } from '@/app/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/app/components/Toast';
 import { loadAdminCache, saveAdminCache } from '@/app/utils/adminCache';
-import type { User } from '@supabase/supabase-js';
+import ConfirmDialog from '@/app/components/ConfirmDialog';
 
 export default function AdminDashboard() {
-  const [user, setUser] = useState<User | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,9 +15,14 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'categories' | 'links' | 'stats'>('stats');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ open: false, title: '', message: '', onConfirm: () => {} });
   const router = useRouter();
 
-  // 使用 useMemo 缓存统计数据计算
   const stats = useMemo(() => {
     const publicCats = categories.filter(c => !c.is_private).length;
     const privateCats = categories.filter(c => c.is_private).length;
@@ -36,17 +40,13 @@ export default function AdminDashboard() {
   }, [categories, links]);
 
   useEffect(() => {
-    checkUser();
+    loadData();
   }, []);
 
   useEffect(() => {
-    if (!user) return;
-
-    // 订阅实时数据更新
     const categoriesChannel = supabase
       .channel('admin-categories-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
-        console.log('分类数据已更新，重新加载...');
         loadData();
       })
       .subscribe();
@@ -54,34 +54,49 @@ export default function AdminDashboard() {
     const linksChannel = supabase
       .channel('admin-links-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'links' }, () => {
-        console.log('链接数据已更新，重新加载...');
         loadData();
       })
       .subscribe();
 
-    // 清理订阅
     return () => {
       supabase.removeChannel(categoriesChannel);
       supabase.removeChannel(linksChannel);
     };
-  }, [user]);
+  }, []);
 
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push('/admin');
-      return;
-    }
+  const exportData = () => {
+    const exportCategories = categories.map(cat => ({
+      name: cat.name,
+      icon: cat.icon,
+      order: cat.order,
+      is_private: cat.is_private,
+      links: links
+        .filter(l => l.category_id === cat.id)
+        .map(l => ({
+          title: l.title,
+          url: l.url,
+          description: l.description,
+          icon: l.icon || null,
+          order: l.order,
+          is_private: l.is_private,
+        })),
+    }));
 
-    // 管理员邮箱校验
-    if (ADMIN_EMAIL && user.email !== ADMIN_EMAIL) {
-      await supabase.auth.signOut();
-      router.push('/admin');
-      return;
-    }
+    const data = {
+      exported_at: new Date().toISOString(),
+      total_categories: categories.length,
+      total_links: links.length,
+      categories: exportCategories,
+    };
 
-    setUser(user);
-    loadData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nav-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('导出成功！');
   };
 
   const loadData = async (forceRefresh = false) => {
@@ -90,18 +105,15 @@ export default function AdminDashboard() {
         setRefreshing(true);
       }
 
-      // 先尝试从缓存加载（非强制刷新时）
       if (!forceRefresh) {
         const cached = loadAdminCache();
         if (cached) {
-          console.log('从缓存加载后台数据');
           setCategories(cached.categories);
           setLinks(cached.links);
           setLoading(false);
         }
       }
 
-      // 并行加载最新数据
       const [categoriesResult, linksResult] = await Promise.all([
         supabase
           .from('categories')
@@ -116,13 +128,11 @@ export default function AdminDashboard() {
       if (categoriesResult.error) throw categoriesResult.error;
       if (linksResult.error) throw linksResult.error;
 
-      // 保存到缓存
       saveAdminCache(categoriesResult.data || [], linksResult.data || []);
 
       setCategories(categoriesResult.data || []);
       setLinks(linksResult.data || []);
 
-      // 刷新成功提示
       if (forceRefresh) {
         toast.success('数据已刷新！');
       }
@@ -135,48 +145,54 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/admin');
+  const deleteCategory = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: '删除分类',
+      message: '确定要删除这个分类吗？这将同时删除该分类下的所有链接。',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+        try {
+          const { error } = await supabase
+            .from('categories')
+            .delete()
+            .eq('id', id);
+
+          if (error) throw error;
+          toast.success('分类删除成功！');
+          loadData();
+        } catch (error) {
+          console.error('删除失败:', error);
+          toast.error('删除失败，请重试');
+        }
+      },
+    });
   };
 
-  const deleteCategory = async (id: string) => {
-    if (!confirm('确定要删除这个分类吗？这将同时删除该分类下的所有链接。')) return;
+  const deleteLink = (id: string) => {
+    setConfirmDialog({
+      open: true,
+      title: '删除链接',
+      message: '确定要删除这个链接吗？',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, open: false }));
+        try {
+          const { error } = await supabase
+            .from('links')
+            .delete()
+            .eq('id', id);
 
-    try {
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      toast.success('分类删除成功！');
-      loadData();
-    } catch (error) {
-      console.error('删除失败:', error);
-      toast.error('删除失败，请重试');
-    }
+          if (error) throw error;
+          toast.success('链接删除成功！');
+          loadData();
+        } catch (error) {
+          console.error('删除失败:', error);
+          toast.error('删除失败，请重试');
+        }
+      },
+    });
   };
 
-  const deleteLink = async (id: string) => {
-    if (!confirm('确定要删除这个链接吗？')) return;
-
-    try {
-      const { error } = await supabase
-        .from('links')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      toast.success('链接删除成功！');
-      loadData();
-    } catch (error) {
-      console.error('删除失败:', error);
-      toast.error('删除失败，请重试');
-    }
-  };
-
-  // 使用 useMemo 优化搜索过滤
   const filteredCategories = useMemo(() => {
     if (!searchQuery.trim()) return categories;
     const query = searchQuery.toLowerCase();
@@ -204,62 +220,33 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
-          </div>
-        </header>
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="flex space-x-4 mb-6 border-b border-gray-200 dark:border-gray-700">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
-            ))}
-          </div>
-          <div className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
-            ))}
-          </div>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex space-x-4 mb-6 border-b border-gray-200 dark:border-gray-700">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+          ))}
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+          ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* 顶部导航 */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <span>🎛️</span>
-              <span className="hidden sm:inline">后台管理</span>
-              <span className="sm:hidden">管理</span>
-            </h1>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <a
-                href="/"
-                target="_blank"
-                className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <span>👁️</span>
-                <span className="hidden md:inline">查看网站</span>
-              </a>
-              <span className="hidden lg:inline text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-[150px] truncate">
-                {user?.email}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-all text-xs sm:text-sm font-medium active:scale-95 active:opacity-90"
-              >
-                <span className="hidden sm:inline">退出登录</span>
-                <span className="sm:hidden">退出</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <>
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText="删除"
+        cancelText="取消"
+        variant="danger"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+      />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {/* 标签页 */}
@@ -377,7 +364,7 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 快速操作
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <button
                   onClick={() => router.push('/admin/dashboard/category/new')}
                   className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all text-center active:scale-95 active:opacity-90"
@@ -398,6 +385,13 @@ export default function AdminDashboard() {
                 >
                   <div className="text-2xl mb-2">👁️</div>
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">查看网站</div>
+                </button>
+                <button
+                  onClick={exportData}
+                  className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all text-center active:scale-95 active:opacity-90"
+                >
+                  <div className="text-2xl mb-2">📥</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">导出备份</div>
                 </button>
                 <button
                   onClick={() => loadData(true)}
@@ -434,56 +428,73 @@ export default function AdminDashboard() {
               </button>
             </div>
 
-            <div className="grid gap-3 sm:gap-4">
-              {filteredCategories.map((category) => (
-                <div
-                  key={category.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <span className="text-2xl flex-shrink-0">{category.icon}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base truncate">
-                            {category.name}
-                          </h3>
-                          {category.is_private && (
-                            <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded flex-shrink-0">
-                              🔒 私密
-                            </span>
-                          )}
+            {filteredCategories.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-12 border border-gray-200 dark:border-gray-700 text-center">
+                <div className="text-4xl mb-4">📁</div>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  {searchQuery ? '没有找到匹配的分类' : '暂无分类，点击添加第一个分类'}
+                </p>
+                {!searchQuery && (
+                  <button
+                    onClick={() => router.push('/admin/dashboard/category/new')}
+                    className="px-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-all text-sm font-medium active:scale-95"
+                  >
+                    ➕ 添加分类
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:gap-4">
+                {filteredCategories.map((category) => (
+                  <div
+                    key={category.id}
+                    className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <span className="text-2xl flex-shrink-0">{category.icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base truncate">
+                              {category.name}
+                            </h3>
+                            {category.is_private && (
+                              <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded flex-shrink-0">
+                                🔒 私密
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                            排序: {category.order} · {links.filter(l => l.category_id === category.id).length} 个链接
+                          </p>
                         </div>
-                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                          排序: {category.order} · {links.filter(l => l.category_id === category.id).length} 个链接
-                        </p>
+                      </div>
+                      <div className="flex gap-2 sm:flex-shrink-0">
+                        <button
+                          onClick={() => viewCategoryLinks(category.id)}
+                          className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium active:scale-95 active:opacity-90"
+                          title="查看该分类下的所有链接"
+                        >
+                          👁️ 查看
+                        </button>
+                        <button
+                          onClick={() => router.push(`/admin/dashboard/category/${category.id}`)}
+                          className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium active:scale-95 active:opacity-90"
+                        >
+                          ✏️ 编辑
+                        </button>
+                        <button
+                          onClick={() => deleteCategory(category.id)}
+                          className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-all font-medium active:scale-95 active:opacity-90"
+                        >
+                          🗑️ 删除
+                        </button>
                       </div>
                     </div>
-                    <div className="flex gap-2 sm:flex-shrink-0">
-                      <button
-                        onClick={() => viewCategoryLinks(category.id)}
-                        className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium active:scale-95 active:opacity-90"
-                        title="查看该分类下的所有链接"
-                      >
-                        👁️ 查看
-                      </button>
-                      <button
-                        onClick={() => router.push(`/admin/dashboard/category/${category.id}`)}
-                        className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium active:scale-95 active:opacity-90"
-                      >
-                        ✏️ 编辑
-                      </button>
-                      <button
-                        onClick={() => deleteCategory(category.id)}
-                        className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-all font-medium active:scale-95 active:opacity-90"
-                      >
-                        🗑️ 删除
-                      </button>
-                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -545,65 +556,82 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            <div className="grid gap-3 sm:gap-4">
-              {filteredLinks.map((link) => {
-                const category = categories.find(c => c.id === link.category_id);
-                return (
-                  <div
-                    key={link.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+            {filteredLinks.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-12 border border-gray-200 dark:border-gray-700 text-center">
+                <div className="text-4xl mb-4">🔗</div>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  {searchQuery || selectedCategoryFilter ? '没有找到匹配的链接' : '暂无链接，点击添加第一个链接'}
+                </p>
+                {!searchQuery && !selectedCategoryFilter && (
+                  <button
+                    onClick={() => router.push('/admin/dashboard/link/new')}
+                    className="px-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-all text-sm font-medium active:scale-95"
                   >
-                    <div className="flex flex-col gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base">
-                            {link.title}
-                          </h3>
-                          {link.is_private && (
-                            <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded flex-shrink-0">
-                              🔒 私密
-                            </span>
-                          )}
-                          {category && (
-                            <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded flex-shrink-0">
-                              {category.icon} {category.name}
-                            </span>
-                          )}
+                    ➕ 添加链接
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:gap-4">
+                {filteredLinks.map((link) => {
+                  const category = categories.find(c => c.id === link.category_id);
+                  return (
+                    <div
+                      key={link.id}
+                      className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex flex-col gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base">
+                              {link.title}
+                            </h3>
+                            {link.is_private && (
+                              <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded flex-shrink-0">
+                                🔒 私密
+                              </span>
+                            )}
+                            {category && (
+                              <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded flex-shrink-0">
+                                {category.icon} {category.name}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
+                            {link.description}
+                          </p>
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 hover:underline break-all"
+                          >
+                            {link.url}
+                          </a>
                         </div>
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
-                          {link.description}
-                        </p>
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 hover:underline break-all"
-                        >
-                          {link.url}
-                        </a>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => router.push(`/admin/dashboard/link/${link.id}`)}
-                          className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium active:scale-95 active:opacity-90"
-                        >
-                          ✏️ 编辑
-                        </button>
-                        <button
-                          onClick={() => deleteLink(link.id)}
-                          className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-all font-medium active:scale-95 active:opacity-90"
-                        >
-                          🗑️ 删除
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => router.push(`/admin/dashboard/link/${link.id}`)}
+                            className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium active:scale-95 active:opacity-90"
+                          >
+                            ✏️ 编辑
+                          </button>
+                          <button
+                            onClick={() => deleteLink(link.id)}
+                            className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-all font-medium active:scale-95 active:opacity-90"
+                          >
+                            🗑️ 删除
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
