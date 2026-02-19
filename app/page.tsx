@@ -401,10 +401,38 @@ export default function Home() {
 
         {/* 页脚 */}
         <footer className="bg-white/80 dark:bg-gray-900/50 backdrop-blur-xl border-t border-gray-200 dark:border-gray-700/50">
-          <div className="px-4 lg:px-6 py-4 sm:py-5 lg:py-6 text-center">
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              © 2026 收藏夹 - 一些常用的工具 | 使用 <span className="font-semibold text-gray-900 dark:text-gray-100">Next.js</span> 构建
-            </p>
+          <div className="px-4 lg:px-6 py-4 sm:py-5 lg:py-6">
+            <div className="max-w-4xl mx-auto space-y-3">
+              {/* 统计信息 */}
+              <div className="text-center">
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">
+                  已收录 <span className="font-semibold text-gray-700 dark:text-gray-300">{sidebarCategories.length}</span> 个分类，
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">{sidebarCategories.reduce((acc, cat) => acc + cat.links.length, 0)}</span> 个网站
+                </p>
+              </div>
+
+              {/* Slogan */}
+              <div className="text-center">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 italic">
+                  精选实用工具，提升工作效率 ✨
+                </p>
+              </div>
+
+              {/* 版权与链接 */}
+              <div className="text-center">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                  © 2026 收藏夹 - 一些常用的工具 |
+                  <a
+                    href="https://github.com/omzm/nav"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  >
+                    GitHub
+                  </a>
+                </p>
+              </div>
+            </div>
           </div>
         </footer>
       </div>
