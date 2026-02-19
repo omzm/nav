@@ -1,15 +1,42 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/app/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 export default function EnvCheck() {
-  const [showKeys, setShowKeys] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const router = useRouter();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   const hasUrl = !!supabaseUrl;
   const hasKey = !!supabaseKey;
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/admin');
+        return;
+      }
+      setAuthenticated(true);
+      setChecking(false);
+    };
+    checkAuth();
+  }, [router]);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-pulse text-gray-500">验证中...</div>
+      </div>
+    );
+  }
+
+  if (!authenticated) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
@@ -29,11 +56,6 @@ export default function EnvCheck() {
                 {hasUrl ? '✅ 已配置' : '❌ 未配置'}
               </span>
             </div>
-            {showKeys && supabaseUrl && (
-              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700 rounded text-sm font-mono break-all">
-                {supabaseUrl}
-              </div>
-            )}
           </div>
 
           {/* Key 检查 */}
@@ -46,21 +68,10 @@ export default function EnvCheck() {
                 {hasKey ? '✅ 已配置' : '❌ 未配置'}
               </span>
             </div>
-            {showKeys && supabaseKey && (
-              <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700 rounded text-sm font-mono break-all">
-                {supabaseKey.substring(0, 50)}...
-              </div>
-            )}
           </div>
 
           {/* 操作按钮 */}
           <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setShowKeys(!showKeys)}
-              className="px-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-sm"
-            >
-              {showKeys ? '隐藏密钥' : '显示密钥'}
-            </button>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"

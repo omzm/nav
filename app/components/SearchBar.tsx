@@ -6,9 +6,6 @@ interface SearchBarProps {
 }
 
 export default function SearchBar({ value, onChange }: SearchBarProps) {
-  // 检测是否正在输入"开门"
-  const isTypingOpenDoor = value === '开' || value === '开门';
-
   return (
     <div className="relative w-full max-w-md group">
       <input
@@ -36,14 +33,6 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-      )}
-
-      {/* 隐私模式提示 */}
-      {isTypingOpenDoor && (
-        <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-amber-50 dark:bg-amber-900/90 backdrop-blur-md border border-amber-200 dark:border-amber-700 rounded-lg shadow-lg text-xs text-amber-900 dark:text-amber-100 flex items-center gap-2 animate-fadeIn">
-          <span>🔑</span>
-          <span>输入"开门"可显示隐藏内容</span>
-        </div>
       )}
     </div>
   );

@@ -1,17 +1,19 @@
 // 后台管理缓存工具
+import type { Category, Link } from '../lib/supabase';
+
 const ADMIN_CACHE_KEY = 'admin_data_cache';
 const ADMIN_CACHE_EXPIRY = 2 * 60 * 1000; // 2分钟过期（后台更新频繁，缓存时间短）
 
 interface AdminCacheData {
   timestamp: number;
-  categories: any[];
-  links: any[];
+  categories: Category[];
+  links: Link[];
 }
 
 /**
  * 保存后台数据到缓存
  */
-export function saveAdminCache(categories: any[], links: any[]) {
+export function saveAdminCache(categories: Category[], links: Link[]) {
   try {
     const cacheData: AdminCacheData = {
       timestamp: Date.now(),
@@ -27,7 +29,7 @@ export function saveAdminCache(categories: any[], links: any[]) {
 /**
  * 从缓存读取后台数据
  */
-export function loadAdminCache(): { categories: any[]; links: any[] } | null {
+export function loadAdminCache(): { categories: Category[]; links: Link[] } | null {
   try {
     const cached = sessionStorage.getItem(ADMIN_CACHE_KEY);
     if (!cached) return null;

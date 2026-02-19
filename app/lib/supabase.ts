@@ -3,28 +3,24 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// 调试信息
-if (typeof window !== 'undefined') {
-  console.log('Supabase 配置:', {
-    hasUrl: !!supabaseUrl,
-    hasKey: !!supabaseAnonKey,
-    urlPrefix: supabaseUrl.substring(0, 20) + '...',
-  });
-}
+export const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || '';
+
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('⚠️ Supabase 环境变量未配置！');
-  console.error('请确保 .env.local 文件包含:');
-  console.error('NEXT_PUBLIC_SUPABASE_URL=your_url');
-  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key');
+  console.error('Supabase 环境变量未配置！请确保 .env.local 文件包含 NEXT_PUBLIC_SUPABASE_URL 和 NEXT_PUBLIC_SUPABASE_ANON_KEY');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  }
+);
 
 // 数据库类型定义
 export interface Category {

@@ -11,6 +11,7 @@ export function extractDomain(url: string): string {
 }
 
 // Favicon 缓存
+const MAX_FAVICON_CACHE = 500;
 const faviconCache = new Map<string, string>();
 const FAVICON_CACHE_KEY_PREFIX = 'favicon_cache_';
 
@@ -32,8 +33,33 @@ function loadFaviconFromStorage(domain: string): string | null {
 function saveFaviconToStorage(domain: string, url: string) {
   try {
     localStorage.setItem(FAVICON_CACHE_KEY_PREFIX + domain, url);
-  } catch (error) {
-    console.error('保存 favicon 缓存失败:', error);
+  } catch {
+    // localStorage quota exceeded — evict oldest entries
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(FAVICON_CACHE_KEY_PREFIX)) {
+          keysToRemove.push(key);
+        }
+      }
+      // Remove first 50 entries to make room
+      keysToRemove.slice(0, 50).forEach((key) => localStorage.removeItem(key));
+      localStorage.setItem(FAVICON_CACHE_KEY_PREFIX + domain, url);
+    } catch {
+      // Still failing, give up silently
+    }
+  }
+}
+
+/**
+ * 淘汰内存缓存中最旧的条目
+ */
+function evictOldestFromCache() {
+  if (faviconCache.size <= MAX_FAVICON_CACHE) return;
+  const firstKey = faviconCache.keys().next().value;
+  if (firstKey !== undefined) {
+    faviconCache.delete(firstKey);
   }
 }
 
@@ -54,12 +80,14 @@ export function getFaviconUrl(url: string): string {
   const cached = loadFaviconFromStorage(domain);
   if (cached) {
     faviconCache.set(domain, cached);
+    evictOldestFromCache();
     return cached;
   }
 
   // 3. 生成新的 URL
   const faviconUrl = `https://www.faviconextractor.com/favicon/${domain}?larger=true`;
   faviconCache.set(domain, faviconUrl);
+  evictOldestFromCache();
   saveFaviconToStorage(domain, faviconUrl);
 
   return faviconUrl;
@@ -93,4 +121,3 @@ export function preloadFavicons(urls: string[]) {
     });
   }
 }
-

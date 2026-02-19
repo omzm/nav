@@ -74,11 +74,13 @@ function NavCard({ link }: NavCardProps) {
   );
 }
 
-// 使用 React.memo 优化，只在 link 改变时重新渲染
+// 使用 React.memo 优化，完整比较 link 属性
 export default memo(NavCard, (prevProps, nextProps) => {
   return (
     prevProps.link.url === nextProps.link.url &&
     prevProps.link.title === nextProps.link.title &&
-    prevProps.link.description === nextProps.link.description
+    prevProps.link.description === nextProps.link.description &&
+    prevProps.link.icon === nextProps.link.icon &&
+    prevProps.link.isPrivate === nextProps.link.isPrivate
   );
 });

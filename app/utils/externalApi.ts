@@ -77,13 +77,13 @@ export async function loadBingWallpaper(): Promise<string> {
 
   // 2. 加载新壁纸
   try {
-    const wallpaperUrl = 'https://uapis.cn/api/v1/image/bing-daily';
-    // 预加载图片，确保可用
-    await fetchWithTimeout(wallpaperUrl, 3000);
+    const wallpaperApiUrl = 'https://uapis.cn/api/v1/image/bing-daily';
+    const response = await fetchWithTimeout(wallpaperApiUrl, 3000);
 
-    // 保存到缓存
-    saveCache(WALLPAPER_CACHE_KEY, wallpaperUrl);
-    return wallpaperUrl;
+    // 缓存解析后的最终 URL 而非 API 端点
+    const resolvedUrl = response.url;
+    saveCache(WALLPAPER_CACHE_KEY, resolvedUrl);
+    return resolvedUrl;
   } catch (error) {
     console.error('加载壁纸失败:', error);
     // 返回默认渐变背景

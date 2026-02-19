@@ -11,16 +11,9 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-export default function Sidebar({
-  categories,
-  selectedCategory,
-  onSelectCategory,
-  isOpen,
-  onToggle,
-}: SidebarProps) {
+// 独立的计时器组件，隔离每秒重渲染
+function RunTimer() {
   const [runTime, setRunTime] = useState('');
-
-  // 网站启动时间
   const startDate = new Date('2026-02-16T00:00:00');
 
   useEffect(() => {
@@ -36,14 +29,37 @@ export default function Sidebar({
       setRunTime(`${days}天 ${hours}时 ${minutes}分 ${seconds}秒`);
     };
 
-    // 立即计算一次
     calculateRunTime();
-
-    // 每秒更新一次
     const timer = setInterval(calculateRunTime, 1000);
-
     return () => clearInterval(timer);
   }, []);
+
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <span>⏱️</span>
+      <span>已运行: {runTime}</span>
+    </div>
+  );
+}
+
+export default function Sidebar({
+  categories,
+  selectedCategory,
+  onSelectCategory,
+  isOpen,
+  onToggle,
+}: SidebarProps) {
+  // 锁定背景滚动
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   // 处理分类点击，移动端自动收回侧边栏
   const handleCategoryClick = (categoryId: string | null) => {
@@ -73,8 +89,8 @@ export default function Sidebar({
         {/* 侧边栏头部 */}
         <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700/50 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50">
           <div className="flex items-center space-x-2 sm:space-x-2.5">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shadow-lg">
-              <span className="text-sm sm:text-base">📑</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gray-800 dark:bg-gray-700 flex items-center justify-center shadow-lg">
+              <span className="text-xs sm:text-sm font-bold text-white">N</span>
             </div>
             <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">
               分类
@@ -143,10 +159,7 @@ export default function Sidebar({
             共 {categories.length} 个分类
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            <div className="flex items-center justify-center gap-1">
-              <span>⏱️</span>
-              <span>已运行: {runTime}</span>
-            </div>
+            <RunTimer />
           </div>
         </div>
       </aside>

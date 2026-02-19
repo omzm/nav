@@ -23,8 +23,10 @@ CREATE TABLE links (
 
 -- 创建索引
 CREATE INDEX idx_categories_order ON categories("order");
+CREATE INDEX idx_categories_is_private ON categories(is_private);
 CREATE INDEX idx_links_category_id ON links(category_id);
 CREATE INDEX idx_links_order ON links("order");
+CREATE INDEX idx_links_is_private ON links(is_private);
 
 -- 启用行级安全 (RLS)
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
@@ -40,33 +42,33 @@ CREATE POLICY "Allow public read access on public links"
   ON links FOR SELECT
   USING (is_private = FALSE OR auth.uid() IS NOT NULL);
 
--- 创建策略：只有认证用户可以修改
-CREATE POLICY "Allow authenticated users to insert categories"
+-- 创建策略：只有管理员可以修改（请将 'your-admin@example.com' 替换为你的管理员邮箱）
+CREATE POLICY "Allow admin to insert categories"
   ON categories FOR INSERT
   TO authenticated
-  WITH CHECK (true);
+  WITH CHECK (auth.jwt() ->> 'email' = 'your-admin@example.com');
 
-CREATE POLICY "Allow authenticated users to update categories"
+CREATE POLICY "Allow admin to update categories"
   ON categories FOR UPDATE
   TO authenticated
-  USING (true);
+  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
 
-CREATE POLICY "Allow authenticated users to delete categories"
+CREATE POLICY "Allow admin to delete categories"
   ON categories FOR DELETE
   TO authenticated
-  USING (true);
+  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
 
-CREATE POLICY "Allow authenticated users to insert links"
+CREATE POLICY "Allow admin to insert links"
   ON links FOR INSERT
   TO authenticated
-  WITH CHECK (true);
+  WITH CHECK (auth.jwt() ->> 'email' = 'your-admin@example.com');
 
-CREATE POLICY "Allow authenticated users to update links"
+CREATE POLICY "Allow admin to update links"
   ON links FOR UPDATE
   TO authenticated
-  USING (true);
+  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
 
-CREATE POLICY "Allow authenticated users to delete links"
+CREATE POLICY "Allow admin to delete links"
   ON links FOR DELETE
   TO authenticated
-  USING (true);
+  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');

@@ -1,4 +1,6 @@
 // 数据缓存工具
+import type { Category, Link } from '../lib/supabase';
+
 const CACHE_KEY = 'nav_website_cache';
 const CACHE_VERSION = '1.0';
 const CACHE_EXPIRY = 5 * 60 * 1000; // 5分钟过期
@@ -6,14 +8,14 @@ const CACHE_EXPIRY = 5 * 60 * 1000; // 5分钟过期
 interface CacheData {
   version: string;
   timestamp: number;
-  categories: any[];
-  links: any[];
+  categories: Category[];
+  links: Link[];
 }
 
 /**
  * 保存数据到缓存
  */
-export function saveToCache(categories: any[], links: any[]) {
+export function saveToCache(categories: Category[], links: Link[]) {
   try {
     const cacheData: CacheData = {
       version: CACHE_VERSION,
@@ -30,7 +32,7 @@ export function saveToCache(categories: any[], links: any[]) {
 /**
  * 从缓存读取数据
  */
-export function loadFromCache(): { categories: any[]; links: any[] } | null {
+export function loadFromCache(): { categories: Category[]; links: Link[] } | null {
   try {
     const cached = localStorage.getItem(CACHE_KEY);
     if (!cached) return null;

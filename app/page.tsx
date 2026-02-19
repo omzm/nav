@@ -1,17 +1,17 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { supabase, Category as DBCategory, Link as DBLink } from './lib/supabase';
 import SearchBar from './components/SearchBar';
-import CategorySection from './components/CategorySection';
 import VirtualCategories from './components/VirtualCategories';
 import ThemeToggle from './components/ThemeToggle';
 import BackToTop from './components/BackToTop';
 import Sidebar from './components/Sidebar';
 import { NavCategory } from './types';
-import { loadFromCache, saveToCache, isCacheValid } from './utils/cache';
+import { loadFromCache, saveToCache, clearCache } from './utils/cache';
 import { loadBingWallpaper as loadWallpaper, loadDailyQuote as loadQuote } from './utils/externalApi';
 import { preloadFavicons } from './utils/favicon';
+import { debounce } from './utils/throttle';
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,6 +25,14 @@ export default function Home() {
   const [scrolledPastHeader, setScrolledPastHeader] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
 
+  // 防抖实时更新回调
+  const debouncedLoadData = useCallback(
+    debounce(() => {
+      loadFreshData(false);
+    }, 1000),
+    []
+  );
+
   useEffect(() => {
     loadData();
     // 异步加载外部资源，不阻塞主内容
@@ -36,7 +44,7 @@ export default function Home() {
       .channel('categories-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
         console.log('分类数据已更新，重新加载...');
-        loadData(false); // 后台更新，不显示loading
+        debouncedLoadData();
       })
       .subscribe();
 
@@ -44,7 +52,7 @@ export default function Home() {
       .channel('links-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'links' }, () => {
         console.log('链接数据已更新，重新加载...');
-        loadData(false); // 后台更新，不显示loading
+        debouncedLoadData();
       })
       .subscribe();
 
@@ -68,13 +76,13 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const loadBingWallpaper = async () => {
-    // 已移至 utils/externalApi.ts，在 useEffect 中调用
-  };
-
-  const loadDailyQuote = async () => {
-    // 已移至 utils/externalApi.ts，在 useEffect 中调用
-  };
+  // 检测"开门"指令
+  useEffect(() => {
+    if (searchQuery.trim() === '开门' && !showPrivate) {
+      setShowPrivate(true);
+      setTimeout(() => setSearchQuery(''), 100);
+    }
+  }, [searchQuery, showPrivate]);
 
   const loadData = async (showLoadingState = true) => {
     try {
@@ -82,24 +90,19 @@ export default function Home() {
       const cachedData = loadFromCache();
       if (cachedData && showLoadingState) {
         console.log('从缓存加载数据');
-        // 先显示缓存的数据
         const formattedCategories = formatCategories(cachedData.categories, cachedData.links);
         setCategories(formattedCategories);
         setLoading(false);
 
-        // 如果缓存有效，检查是否需要后台更新
-        if (isCacheValid()) {
-          // 缓存有效，但仍然在后台加载最新数据
-          loadFreshData(false);
-          return;
-        }
+        // 缓存有效，后台更新
+        loadFreshData(false);
+        return;
       }
 
       // 2. 加载新数据
       await loadFreshData(showLoadingState);
     } catch (error) {
       console.error('加载数据失败:', error);
-      // 如果加载失败，使用本地数据作为后备
       const { categories: localCategories } = await import('./data');
       setCategories(localCategories);
       setLoading(false);
@@ -108,27 +111,29 @@ export default function Home() {
 
   const loadFreshData = async (showLoadingState = true) => {
     try {
-      // 加载分类
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*')
-        .order('order', { ascending: true });
+      // 并行查询分类和链接
+      const [categoriesResult, linksResult] = await Promise.all([
+        supabase
+          .from('categories')
+          .select('*')
+          .order('order', { ascending: true }),
+        supabase
+          .from('links')
+          .select('*')
+          .order('order', { ascending: true }),
+      ]);
 
-      if (categoriesError) throw categoriesError;
+      if (categoriesResult.error) throw categoriesResult.error;
+      if (linksResult.error) throw linksResult.error;
 
-      // 加载链接
-      const { data: linksData, error: linksError } = await supabase
-        .from('links')
-        .select('*')
-        .order('order', { ascending: true });
-
-      if (linksError) throw linksError;
+      const categoriesData = categoriesResult.data || [];
+      const linksData = linksResult.data || [];
 
       // 保存到缓存
-      saveToCache(categoriesData || [], linksData || []);
+      saveToCache(categoriesData, linksData);
 
       // 转换数据格式
-      const formattedCategories = formatCategories(categoriesData || [], linksData || []);
+      const formattedCategories = formatCategories(categoriesData, linksData);
       setCategories(formattedCategories);
     } finally {
       if (showLoadingState) {
@@ -163,33 +168,17 @@ export default function Home() {
 
   // 侧边栏分类列表：只过滤私密内容，不受分类筛选和搜索影响
   const sidebarCategories = useMemo(() => {
-    let result = categories;
-
-    // 检查是否输入了"开门"来显示隐私内容
-    const isOpenDoorCommand = searchQuery.trim() === '开门';
-
-    // 如果输入"开门"，则显示所有隐私内容并清空搜索
-    if (isOpenDoorCommand) {
-      if (!showPrivate) {
-        setShowPrivate(true);
-        // 延迟清空搜索框，让用户看到效果
-        setTimeout(() => setSearchQuery(''), 100);
-      }
-      return result;
+    if (showPrivate) {
+      return categories;
     }
 
-    // 过滤隐私内容（除非已开启showPrivate）
-    if (!showPrivate) {
-      result = result
-        .filter(cat => !cat.isPrivate)
-        .map(cat => ({
-          ...cat,
-          links: cat.links.filter(link => !link.isPrivate),
-        }));
-    }
-
-    return result;
-  }, [categories, showPrivate, searchQuery]);
+    return categories
+      .filter(cat => !cat.isPrivate)
+      .map(cat => ({
+        ...cat,
+        links: cat.links.filter(link => !link.isPrivate),
+      }));
+  }, [categories, showPrivate]);
 
   // 主内容区分类列表：在侧边栏分类基础上，再按分类筛选和搜索词筛选
   const filteredCategories = useMemo(() => {
@@ -199,7 +188,6 @@ export default function Home() {
     const isOpenDoorCommand = searchQuery.trim() === '开门';
 
     if (isOpenDoorCommand) {
-      // 只返回隐私分类和链接
       result = result.filter(cat => cat.isPrivate || cat.links.some(link => link.isPrivate));
       return result;
     }
@@ -294,7 +282,13 @@ export default function Home() {
         <div className={`fixed top-0 left-0 right-0 z-10 lg:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700/50 shadow-sm transition-transform duration-300 ${
           scrolledPastHeader ? 'translate-y-0' : '-translate-y-full'
         }`}>
-          <div className="flex items-center justify-end px-4 py-2">
+          <div className="flex items-center justify-between px-4 py-2">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-gray-800 dark:bg-gray-700 flex items-center justify-center">
+                <span className="text-xs font-bold text-white">N</span>
+              </div>
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">收藏夹</span>
+            </div>
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -376,6 +370,7 @@ export default function Home() {
                   onClick={() => {
                     setShowPrivate(false);
                     setSearchQuery('');
+                    clearCache();
                   }}
                   className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors"
                 >
@@ -416,4 +411,3 @@ export default function Home() {
     </div>
   );
 }
-

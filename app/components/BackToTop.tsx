@@ -9,7 +9,7 @@ export default function BackToTop() {
   useEffect(() => {
     const toggleVisibility = () => {
       // 滚动超过 300px 时显示按钮
-      if (window.pageYOffset > 300) {
+      if (window.scrollY > 300) {
         setIsVisible(true);
       } else {
         setIsVisible(false);

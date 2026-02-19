@@ -27,15 +27,3 @@ export const VIRTUAL_SCROLL_CONFIG = {
     '2xl': 4,     // >= 1536px
   },
 };
-
-// 性能监控配置
-export const PERFORMANCE_CONFIG = {
-  // 是否启用性能监控
-  ENABLED: process.env.NODE_ENV === 'development',
-
-  // 性能日志
-  LOG_RENDER_TIME: false,
-
-  // FPS 监控
-  MONITOR_FPS: false,
-};

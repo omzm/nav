@@ -31,10 +31,35 @@ function CategorySection({ category }: CategorySectionProps) {
   );
 }
 
-// 使用 React.memo 优化，只在 category 改变时重新渲染
+// 使用 React.memo 优化，完整比较 category 属性
 export default memo(CategorySection, (prevProps, nextProps) => {
-  return (
-    prevProps.category.id === nextProps.category.id &&
-    prevProps.category.links.length === nextProps.category.links.length
-  );
+  const prev = prevProps.category;
+  const next = nextProps.category;
+
+  if (
+    prev.id !== next.id ||
+    prev.name !== next.name ||
+    prev.icon !== next.icon ||
+    prev.isPrivate !== next.isPrivate ||
+    prev.links.length !== next.links.length
+  ) {
+    return false;
+  }
+
+  // 逐项比较链接内容
+  for (let i = 0; i < prev.links.length; i++) {
+    const pLink = prev.links[i];
+    const nLink = next.links[i];
+    if (
+      pLink.url !== nLink.url ||
+      pLink.title !== nLink.title ||
+      pLink.description !== nLink.description ||
+      pLink.icon !== nLink.icon ||
+      pLink.isPrivate !== nLink.isPrivate
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 });

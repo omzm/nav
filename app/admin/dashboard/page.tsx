@@ -1,17 +1,18 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { supabase, Category, Link } from '@/app/lib/supabase';
+import { supabase, Category, Link, ADMIN_EMAIL } from '@/app/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/app/components/Toast';
 import { loadAdminCache, saveAdminCache } from '@/app/utils/adminCache';
+import type { User } from '@supabase/supabase-js';
 
 export default function AdminDashboard() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [links, setLinks] = useState<Link[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false); // 添加刷新状态
+  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'categories' | 'links' | 'stats'>('stats');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
@@ -71,13 +72,20 @@ export default function AdminDashboard() {
       router.push('/admin');
       return;
     }
+
+    // 管理员邮箱校验
+    if (ADMIN_EMAIL && user.email !== ADMIN_EMAIL) {
+      await supabase.auth.signOut();
+      router.push('/admin');
+      return;
+    }
+
     setUser(user);
     loadData();
   };
 
   const loadData = async (forceRefresh = false) => {
     try {
-      // 如果是强制刷新，显示刷新状态
       if (forceRefresh) {
         setRefreshing(true);
       }
@@ -93,26 +101,26 @@ export default function AdminDashboard() {
         }
       }
 
-      // 后台加载最新数据
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*')
-        .order('order', { ascending: true });
+      // 并行加载最新数据
+      const [categoriesResult, linksResult] = await Promise.all([
+        supabase
+          .from('categories')
+          .select('*')
+          .order('order', { ascending: true }),
+        supabase
+          .from('links')
+          .select('*')
+          .order('order', { ascending: true }),
+      ]);
 
-      if (categoriesError) throw categoriesError;
-
-      const { data: linksData, error: linksError } = await supabase
-        .from('links')
-        .select('*')
-        .order('order', { ascending: true });
-
-      if (linksError) throw linksError;
+      if (categoriesResult.error) throw categoriesResult.error;
+      if (linksResult.error) throw linksResult.error;
 
       // 保存到缓存
-      saveAdminCache(categoriesData || [], linksData || []);
+      saveAdminCache(categoriesResult.data || [], linksResult.data || []);
 
-      setCategories(categoriesData || []);
-      setLinks(linksData || []);
+      setCategories(categoriesResult.data || []);
+      setLinks(linksResult.data || []);
 
       // 刷新成功提示
       if (forceRefresh) {
@@ -132,7 +140,7 @@ export default function AdminDashboard() {
     router.push('/admin');
   };
 
-  const deleteCategory = useCallback(async (id: string) => {
+  const deleteCategory = async (id: string) => {
     if (!confirm('确定要删除这个分类吗？这将同时删除该分类下的所有链接。')) return;
 
     try {
@@ -148,9 +156,9 @@ export default function AdminDashboard() {
       console.error('删除失败:', error);
       toast.error('删除失败，请重试');
     }
-  }, []);
+  };
 
-  const deleteLink = useCallback(async (id: string) => {
+  const deleteLink = async (id: string) => {
     if (!confirm('确定要删除这个链接吗？')) return;
 
     try {
@@ -166,7 +174,7 @@ export default function AdminDashboard() {
       console.error('删除失败:', error);
       toast.error('删除失败，请重试');
     }
-  }, []);
+  };
 
   // 使用 useMemo 优化搜索过滤
   const filteredCategories = useMemo(() => {
