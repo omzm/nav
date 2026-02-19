@@ -26,8 +26,9 @@ export default function AdminDashboard() {
   const stats = useMemo(() => {
     const publicCats = categories.filter(c => !c.is_private).length;
     const privateCats = categories.filter(c => c.is_private).length;
-    const publicLnks = links.filter(l => !l.is_private).length;
-    const privateLnks = links.filter(l => l.is_private).length;
+    const privateCatIds = new Set(categories.filter(c => c.is_private).map(c => c.id));
+    const privateLnks = links.filter(l => l.is_private || privateCatIds.has(l.category_id)).length;
+    const publicLnks = links.length - privateLnks;
 
     return {
       totalCategories: categories.length,
@@ -275,7 +276,7 @@ export default function AdminDashboard() {
             <span className="flex items-center gap-1.5">
               <span>📁</span>
               <span className="hidden sm:inline">分类</span>
-              <span className="text-xs opacity-75">({categories.length})</span>
+              <span className="text-xs opacity-75">({categories.length}{stats.privateCategories > 0 && <span className="ml-0.5">🔒{stats.privateCategories}</span>})</span>
             </span>
           </button>
           <button
@@ -289,7 +290,7 @@ export default function AdminDashboard() {
             <span className="flex items-center gap-1.5">
               <span>🔗</span>
               <span className="hidden sm:inline">链接</span>
-              <span className="text-xs opacity-75">({links.length})</span>
+              <span className="text-xs opacity-75">({links.length}{stats.privateLinks > 0 && <span className="ml-0.5">🔒{stats.privateLinks}</span>})</span>
             </span>
           </button>
         </div>
@@ -297,13 +298,16 @@ export default function AdminDashboard() {
         {/* 统计面板 */}
         {activeTab === 'stats' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">📂 总分类数</p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
                       {stats.totalCategories}
+                      {stats.privateCategories > 0 && (
+                        <span className="text-sm font-normal text-amber-600 dark:text-amber-400 ml-2">（🔒{stats.privateCategories}）</span>
+                      )}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
@@ -326,6 +330,9 @@ export default function AdminDashboard() {
                     <p className="text-sm text-gray-600 dark:text-gray-400">🔗 总链接数</p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
                       {stats.totalLinks}
+                      {stats.privateLinks > 0 && (
+                        <span className="text-sm font-normal text-amber-600 dark:text-amber-400 ml-2">（🔒{stats.privateLinks}）</span>
+                      )}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
@@ -339,23 +346,6 @@ export default function AdminDashboard() {
                   <span className="text-gray-600 dark:text-gray-400">
                     私密: {stats.privateLinks}
                   </span>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">📊 平均每分类</p>
-                    <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
-                      {stats.totalCategories > 0 ? Math.round(stats.totalLinks / stats.totalCategories) : 0}
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                    <span className="text-2xl">📊</span>
-                  </div>
-                </div>
-                <div className="mt-4 text-xs text-gray-600 dark:text-gray-400">
-                  {stats.totalCategories > 0 ? Math.round(stats.totalLinks / stats.totalCategories) : 0} 个链接
                 </div>
               </div>
             </div>
@@ -465,7 +455,11 @@ export default function AdminDashboard() {
                             )}
                           </div>
                           <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                            排序: {category.order} · {links.filter(l => l.category_id === category.id).length} 个链接
+                              排序: {category.order} · {(() => {
+                              const catLinks = links.filter(l => l.category_id === category.id);
+                              const privateCount = catLinks.filter(l => l.is_private || category.is_private).length;
+                              return (<>{catLinks.length} 个链接{privateCount > 0 && <span className="text-amber-600 dark:text-amber-400 ml-1">（🔒{privateCount}）</span>}</>);
+                            })()}
                           </p>
                         </div>
                       </div>
