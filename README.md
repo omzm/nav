@@ -2,7 +2,7 @@
 
 一个现代化的个人收藏夹导航网站，支持分类管理、搜索、隐私模式等功能。
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![React](https://img.shields.io/badge/React-19-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
@@ -19,6 +19,7 @@
 - 🎛️ **后台管理** - 可视化管理分类和链接
 - 🖼️ **每日壁纸** - 必应每日壁纸背景
 - 💬 **每日一言** - 随机名言展示
+- 🔥 **今日热门** - 侧边栏展示当日点击排名前 5 的链接
 
 ### 安全特性
 - 🔒 **RLS 策略** - 数据库行级安全，只有管理员邮箱可以写入
@@ -27,11 +28,11 @@
 - 🔑 **密钥保护** - 环境变量不入库，诊断页面不暴露密钥值
 
 ### 性能优化
-- 💾 **智能缓存** - localStorage + sessionStorage 多层缓存
-- 🚀 **虚拟滚动** - 大数据量流畅渲染
 - ⚡ **并行查询** - Promise.all 并行加载数据
 - 🎯 **React.memo** - 完整属性比较，减少不必要的重渲染
 - 📉 **防抖优化** - 实时订阅回调 1s 防抖
+- 🖼️ **壁纸直加载** - 浏览器直接请求壁纸 URL，无 JS 中间层
+- 🔄 **懒加载图标** - Favicon 按需加载，不阻塞首屏
 
 ## 🚀 快速开始
 
@@ -78,26 +79,23 @@ nav-website/
 │   │   └── diagnostic/          # 认证诊断工具
 │   ├── components/
 │   │   ├── ErrorBoundary.tsx    # 错误边界
-│   │   ├── Sidebar.tsx          # 侧边栏（含独立计时器组件）
+│   │   ├── Sidebar.tsx          # 侧边栏（分类导航 + 今日热门）
 │   │   ├── CategorySection.tsx  # 分类区域（完整 memo 比较）
-│   │   ├── NavCard.tsx          # 链接卡片（完整 memo 比较）
+│   │   ├── NavCard.tsx          # 链接卡片（点击上报 + 完整 memo 比较）
 │   │   ├── SearchBar.tsx        # 搜索框
-│   │   ├── VirtualCategories.tsx # 虚拟滚动
 │   │   ├── BackToTop.tsx        # 返回顶部
 │   │   ├── ThemeToggle.tsx      # 主题切换
 │   │   └── Toast.tsx            # Toast 通知
 │   ├── lib/supabase.ts          # Supabase 客户端 + 类型定义
 │   ├── utils/
-│   │   ├── cache.ts             # 前台缓存（5 分钟）
 │   │   ├── adminCache.ts        # 后台缓存（2 分钟）
-│   │   ├── externalApi.ts       # 壁纸/一言 API（24 小时缓存）
-│   │   ├── favicon.ts           # Favicon 缓存（上限 500）
+│   │   ├── externalApi.ts       # 每日一言 API（24 小时缓存）
+│   │   ├── favicon.ts           # Favicon 获取（内存 + localStorage 缓存）
 │   │   └── throttle.ts          # 节流/防抖
-│   ├── config/virtualScroll.ts  # 虚拟滚动配置
 │   ├── data.ts                  # 本地备用数据
-│   ├── types.ts                 # 类型定义
+│   ├── types.ts                 # 类型定义（NavLink、HotLink、NavCategory）
 │   └── globals.css              # 全局样式
-├── supabase/schema.sql          # 数据库建表 + RLS 策略
+├── supabase/schema.sql          # 数据库建表 + RLS 策略 + 点击记录表
 ├── middleware.ts                # Next.js 中间件
 ├── .env.local.example           # 环境变量模板
 ├── vercel.json                  # Vercel 部署配置
@@ -108,7 +106,10 @@ nav-website/
 ## 🎯 功能说明
 
 ### 隐私模式
-在搜索框输入 `开门` 解锁隐藏内容，点击"退出隐私模式"返回（退出时自动清除缓存，防止数据残留）。
+在搜索框输入 `开门` 解锁隐藏内容，点击"退出隐私模式"返回。
+
+### 今日热门
+侧边栏自动展示当日被点击最多的 5 个链接，显示网站图标和点击次数。数据存储在 `link_clicks` 表中，每天自动清理历史记录。
 
 ### 后台管理
 访问 `/admin` 登录，支持分类和链接的增删改查、排序、私密标记、数据统计。
@@ -123,7 +124,6 @@ nav-website/
 - **TypeScript 5** - 类型安全
 - **Tailwind CSS 4** - 样式框架
 - **Supabase** - 数据库 + 认证 + 实时订阅
-- **react-window** - 虚拟滚动
 
 ## 📄 许可证
 
