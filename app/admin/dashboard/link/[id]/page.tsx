@@ -492,7 +492,7 @@ export default function LinkForm() {
               <button
                 type="button"
                 disabled={loading || saveAndContinueLoading}
-                onClick={(e) => handleSubmit(e as any, true)}
+                onClick={(e) => handleSubmit(e as React.FormEvent, true)}
                 className="flex-1 bg-gray-600 dark:bg-gray-500 text-white py-3 rounded-lg font-medium hover:bg-gray-500 dark:hover:bg-gray-400 transition-all disabled:opacity-50 active:scale-95 active:opacity-90"
               >
                 {saveAndContinueLoading ? '保存中...' : '保存并继续'}

@@ -6,11 +6,22 @@ import { supabase, isSupabaseConfigured, ADMIN_EMAIL } from '@/app/lib/supabase'
 export default function AuthDiagnostic() {
   const [results, setResults] = useState<Array<{ label: string; status: 'ok' | 'fail' | 'warn' | 'info'; detail: string }>>([]);
   const [loading, setLoading] = useState(true);
+  const [authed, setAuthed] = useState(false);
   const [cookies, setCookies] = useState<string[]>([]);
 
   useEffect(() => {
-    runDiagnostics();
+    checkAuth();
   }, []);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      window.location.href = '/admin';
+      return;
+    }
+    setAuthed(true);
+    runDiagnostics();
+  };
 
   const runDiagnostics = async () => {
     const checks: Array<{ label: string; status: 'ok' | 'fail' | 'warn' | 'info'; detail: string }> = [];

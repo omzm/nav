@@ -29,8 +29,6 @@ export default function ThemeToggle() {
     const newIsDark = !isDark;
     setIsDark(newIsDark);
 
-    console.log('Toggling theme to:', newIsDark ? 'dark' : 'light');
-
     // 保存到本地存储
     localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
 
@@ -52,7 +50,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="fixed bottom-[8.5rem] sm:bottom-[9.5rem] right-4 sm:right-6 z-50 w-12 h-12 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center group"
+      className="fixed bottom-[5rem] sm:bottom-[5.5rem] right-4 sm:right-6 z-50 w-12 h-12 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center group"
       aria-label="切换主题"
       type="button"
     >

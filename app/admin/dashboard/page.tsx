@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase, Category, Link } from '@/app/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/app/components/Toast';
@@ -42,6 +42,29 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  // 键盘快捷键
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果在输入框中，忽略快捷键
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        router.push('/admin/dashboard/link/new');
+      } else if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        router.push('/admin/dashboard/category/new');
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        loadData(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -219,18 +242,77 @@ export default function AdminDashboard() {
     setSearchQuery('');
   }, []);
 
+  // 拖拽排序
+  const dragItem = useRef<string | null>(null);
+  const dragOverItem = useRef<string | null>(null);
+
+  const handleDragStart = (id: string) => {
+    dragItem.current = id;
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    dragOverItem.current = id;
+  };
+
+  const handleCategoryDrop = async () => {
+    if (!dragItem.current || !dragOverItem.current || dragItem.current === dragOverItem.current) return;
+
+    const items = [...categories];
+    const fromIdx = items.findIndex(c => c.id === dragItem.current);
+    const toIdx = items.findIndex(c => c.id === dragOverItem.current);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const [moved] = items.splice(fromIdx, 1);
+    items.splice(toIdx, 0, moved);
+
+    // 更新本地 order
+    const updated = items.map((item, i) => ({ ...item, order: i }));
+    setCategories(updated);
+
+    dragItem.current = null;
+    dragOverItem.current = null;
+
+    // 批量保存到数据库
+    try {
+      await Promise.all(updated.map(c => supabase.from('categories').update({ order: c.order }).eq('id', c.id)));
+      toast.success('排序已保存');
+    } catch {
+      toast.error('排序保存失败');
+    }
+  };
+
+  const handleLinkDrop = async () => {
+    if (!dragItem.current || !dragOverItem.current || dragItem.current === dragOverItem.current) return;
+
+    const items = [...links];
+    const fromIdx = items.findIndex(l => l.id === dragItem.current);
+    const toIdx = items.findIndex(l => l.id === dragOverItem.current);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const [moved] = items.splice(fromIdx, 1);
+    items.splice(toIdx, 0, moved);
+
+    const updated = items.map((item, i) => ({ ...item, order: i }));
+    setLinks(updated);
+
+    dragItem.current = null;
+    dragOverItem.current = null;
+
+    try {
+      await Promise.all(updated.map(l => supabase.from('links').update({ order: l.order }).eq('id', l.id)));
+      toast.success('排序已保存');
+    } catch {
+      toast.error('排序保存失败');
+    }
+  };
+
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex space-x-4 mb-6 border-b border-gray-200 dark:border-gray-700">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
-          ))}
-        </div>
-        <div className="space-y-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
-          ))}
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400">加载中...</p>
+        <div className="w-48 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-full bg-gray-800 dark:bg-gray-300 rounded-full animate-progress" />
         </div>
       </div>
     );
@@ -395,6 +477,10 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </div>
+
+            <div className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">
+              快捷键：N 添加链接 · C 添加分类 · R 刷新数据
+            </div>
           </div>
         )}
 
@@ -438,7 +524,11 @@ export default function AdminDashboard() {
                 {filteredCategories.map((category) => (
                   <div
                     key={category.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+                    draggable={!searchQuery.trim()}
+                    onDragStart={() => handleDragStart(category.id)}
+                    onDragOver={(e) => handleDragOver(e, category.id)}
+                    onDrop={handleCategoryDrop}
+                    className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -572,11 +662,15 @@ export default function AdminDashboard() {
                   return (
                     <div
                       key={link.id}
-                      className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+                      draggable={!searchQuery.trim()}
+                      onDragStart={() => handleDragStart(link.id)}
+                      onDragOver={(e) => handleDragOver(e, link.id)}
+                      onDrop={handleLinkDrop}
+                      className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
                     >
-                      <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base">
                               {link.title}
                             </h3>
@@ -591,28 +685,28 @@ export default function AdminDashboard() {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-1">
                             {link.description}
                           </p>
                           <a
                             href={link.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 hover:underline break-all"
+                            className="text-xs text-gray-400 dark:text-gray-500 hover:underline break-all line-clamp-1"
                           >
                             {link.url}
                           </a>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-shrink-0">
                           <button
                             onClick={() => router.push(`/admin/dashboard/link/${link.id}`)}
-                            className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium active:scale-95 active:opacity-90"
+                            className="px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium active:scale-95 active:opacity-90"
                           >
                             ✏️ 编辑
                           </button>
                           <button
                             onClick={() => deleteLink(link.id)}
-                            className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-all font-medium active:scale-95 active:opacity-90"
+                            className="px-3 py-1.5 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-all font-medium active:scale-95 active:opacity-90"
                           >
                             🗑️ 删除
                           </button>

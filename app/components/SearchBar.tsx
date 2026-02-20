@@ -12,7 +12,8 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="搜索..."
+        placeholder="搜索... (Ctrl+K)"
+        id="search-input"
         className="w-full px-3 py-2 pl-9 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md text-gray-900 dark:text-gray-100 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:bg-white/90 dark:focus:bg-gray-800/90 focus:ring-2 focus:ring-white/50 dark:focus:ring-gray-700/50 transition-all duration-300 shadow-lg hover:shadow-xl hover:bg-white/90 dark:hover:bg-gray-800/90"
       />
       <svg

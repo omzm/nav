@@ -59,7 +59,6 @@ export default function CategoryForm() {
           .eq('id', params.id);
 
         if (error) {
-          console.error('更新错误详情:', error);
           throw error;
         }
         toast.success('分类更新成功！');
@@ -70,18 +69,16 @@ export default function CategoryForm() {
           .select();
 
         if (error) {
-          console.error('插入错误详情:', error);
           toast.error(`保存失败: ${error.message}`);
           throw error;
         }
-        console.log('插入成功:', data);
         toast.success('分类添加成功！');
       }
 
       router.push('/admin/dashboard');
-    } catch (error: any) {
-      console.error('保存失败:', error);
-      if (!error.message) {
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : '';
+      if (!msg) {
         toast.error('保存失败: 未知错误');
       }
     } finally {

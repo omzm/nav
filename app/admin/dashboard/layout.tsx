@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase, ADMIN_EMAIL } from '@/app/lib/supabase';
 import { useRouter, usePathname } from 'next/navigation';
 import { UserContext } from './context';
+import ConfirmDialog from '@/app/components/ConfirmDialog';
 import type { User } from '@supabase/supabase-js';
 
 function Breadcrumbs() {
@@ -51,6 +52,7 @@ function Breadcrumbs() {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -82,18 +84,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
-          </div>
-        </header>
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
-            ))}
-          </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center gap-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400">验证登录中...</p>
+        <div className="w-48 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-full bg-gray-800 dark:bg-gray-300 rounded-full animate-progress" />
         </div>
       </div>
     );
@@ -128,7 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {user.email}
                 </span>
                 <button
-                  onClick={handleLogout}
+                  onClick={() => setShowLogoutConfirm(true)}
                   className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-all text-xs sm:text-sm font-medium active:scale-95 active:opacity-90"
                 >
                   <span className="hidden sm:inline">退出登录</span>
@@ -138,6 +132,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
         </header>
+        <ConfirmDialog
+          open={showLogoutConfirm}
+          title="退出登录"
+          message="确定要退出登录吗？"
+          confirmText="退出"
+          cancelText="取消"
+          variant="danger"
+          onConfirm={() => { setShowLogoutConfirm(false); handleLogout(); }}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
         {children}
       </div>
     </UserContext.Provider>

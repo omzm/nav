@@ -6,11 +6,20 @@ import { supabase } from '@/app/lib/supabase';
 export default function TestConnection() {
   const [status, setStatus] = useState<'checking' | 'success' | 'error'>('checking');
   const [message, setMessage] = useState('');
-  const [user, setUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<{ email?: string; id: string } | null>(null);
 
   useEffect(() => {
-    testConnection();
+    checkAuth();
   }, []);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      window.location.href = '/admin';
+      return;
+    }
+    testConnection();
+  };
 
   const testConnection = async () => {
     try {
@@ -33,7 +42,7 @@ export default function TestConnection() {
         return;
       }
 
-      setUser(user);
+      setCurrentUser(user);
 
       if (!user) {
         setStatus('error');
@@ -82,9 +91,10 @@ export default function TestConnection() {
 
       setStatus('success');
       setMessage('✅ 所有测试通过！\n\n- 环境变量配置正确\n- 用户已登录\n- 数据库连接正常\n- 可以正常插入数据');
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '未知错误';
       setStatus('error');
-      setMessage(`❌ 测试失败: ${error.message || '未知错误'}`);
+      setMessage(`❌ 测试失败: ${msg}`);
     }
   };
 
@@ -118,16 +128,16 @@ export default function TestConnection() {
             </div>
           )}
 
-          {user && (
+          {currentUser && (
             <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 当前用户信息:
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                邮箱: {user.email}
+                邮箱: {currentUser.email}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                ID: {user.id}
+                ID: {currentUser.id}
               </p>
             </div>
           )}

@@ -28,8 +28,9 @@ export default function AdminLogin() {
       if (data.user) {
         router.push('/admin/dashboard');
       }
-    } catch (err: any) {
-      setError(err.message || '登录失败');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '登录失败';
+      setError(msg);
     } finally {
       setLoading(false);
     }

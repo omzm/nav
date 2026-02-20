@@ -2,6 +2,19 @@
 const QUOTE_CACHE_KEY = 'daily_quote_cache';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24小时
 
+const FALLBACK_QUOTES = [
+  '生活总会给你答案，但不会马上把一切都告诉你。',
+  '保持热爱，奔赴山海。',
+  '日拱一卒，功不唐捐。',
+  '把每一天当作最好的一天来过。',
+  '所有的努力，都不会被辜负。',
+  '慢慢来，比较快。',
+];
+
+function getRandomFallbackQuote(): string {
+  return FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
+}
+
 interface CacheItem {
   data: string;
   timestamp: number;
@@ -69,6 +82,6 @@ export async function loadDailyQuote(): Promise<string> {
     return cleanText;
   } catch (error) {
     console.error('加载每日一言失败:', error);
-    return '生活总会给你答案，但不会马上把一切都告诉你。';
+    return getRandomFallbackQuote();
   }
 }

@@ -42,7 +42,6 @@ export default function Home() {
     const categoriesChannel = supabase
       .channel('categories-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
-        console.log('分类数据已更新，重新加载...');
         debouncedLoadData();
       })
       .subscribe();
@@ -50,7 +49,6 @@ export default function Home() {
     const linksChannel = supabase
       .channel('links-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'links' }, () => {
-        console.log('链接数据已更新，重新加载...');
         debouncedLoadData();
       })
       .subscribe();
@@ -81,6 +79,20 @@ export default function Home() {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Ctrl+K 快捷键聚焦搜索框
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        const input = document.getElementById('search-input');
+        if (input) input.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // 检测"开门"指令
@@ -258,43 +270,12 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex">
-        {/* 侧边栏骨架屏 */}
-        <aside className="hidden lg:block w-64 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-gray-200 dark:border-gray-700/50">
-          <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 animate-spin-slow">
+            <img src="/icon.svg" alt="加载中" className="w-full h-full" />
           </div>
-          <div className="p-4 space-y-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            ))}
-          </div>
-        </aside>
-
-        {/* 主内容骨架屏 */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="bg-white/95 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700/50">
-            <div className="px-4 lg:px-6 py-4">
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse"></div>
-            </div>
-          </header>
-          <div className="px-4 lg:px-6 py-4 border-b border-gray-200 dark:border-gray-700/50 bg-white/95 dark:bg-gray-900/80">
-            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded max-w-md mx-auto animate-pulse"></div>
-          </div>
-          <main className="flex-1 px-4 lg:px-8 py-8">
-            <div className="max-w-[1600px] mx-auto space-y-12">
-              {[1, 2, 3].map((i) => (
-                <div key={i}>
-                  <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-6 animate-pulse"></div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map((j) => (
-                      <div key={j} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </main>
+          <p className="text-sm text-gray-400 dark:text-gray-500 animate-pulse">加载中...</p>
         </div>
       </div>
     );
@@ -350,7 +331,7 @@ export default function Home() {
         <header ref={headerRef} className="relative overflow-hidden border-b border-gray-200 dark:border-gray-700/50 shadow-sm">
           {/* 背景壁纸 */}
           <div
-            className="absolute inset-0 bg-cover bg-center"
+            className="absolute inset-0 bg-cover bg-center bg-gradient-to-br from-blue-400 to-indigo-600"
             style={{
               backgroundImage: 'url(https://bing.img.run/uhd.php)',
             }}
@@ -465,7 +446,7 @@ export default function Home() {
               {/* 版权与链接 */}
               <div className="text-center">
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                  © 2026 收藏夹 - 一些常用的工具 |
+                  © {new Date().getFullYear()} 收藏夹 - 一些常用的工具 |
                   <a
                     href="https://github.com/omzm/nav"
                     target="_blank"

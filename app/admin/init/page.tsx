@@ -100,10 +100,11 @@ export default function DatabaseInit() {
       addLog('6. 粘贴到编辑器并点击 "Run"');
       addLog('7. 刷新本页面重新检查');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : '未知错误';
       setStatus('error');
-      setMessage(`❌ 检查失败: ${error.message}`);
-      addLog(`错误: ${error.message}`);
+      setMessage(`❌ 检查失败: ${msg}`);
+      addLog(`错误: ${msg}`);
     }
   };
 
