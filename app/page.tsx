@@ -3,14 +3,12 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { supabase, Category as DBCategory, Link as DBLink } from './lib/supabase';
 import SearchBar from './components/SearchBar';
-import VirtualCategories from './components/VirtualCategories';
+import CategorySection from './components/CategorySection';
 import ThemeToggle from './components/ThemeToggle';
 import BackToTop from './components/BackToTop';
 import Sidebar from './components/Sidebar';
 import { NavCategory, HotLink } from './types';
-import { loadFromCache, saveToCache, clearCache } from './utils/cache';
-import { loadBingWallpaper as loadWallpaper, loadDailyQuote as loadQuote } from './utils/externalApi';
-import { preloadFavicons } from './utils/favicon';
+import { loadDailyQuote as loadQuote } from './utils/externalApi';
 import { debounce } from './utils/throttle';
 
 export default function Home() {
@@ -19,7 +17,6 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [categories, setCategories] = useState<NavCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bingWallpaper, setBingWallpaper] = useState('');
   const [dailyQuote, setDailyQuote] = useState('');
   const [showPrivate, setShowPrivate] = useState(false);
   const [scrolledPastHeader, setScrolledPastHeader] = useState(false);
@@ -38,7 +35,6 @@ export default function Home() {
     loadData();
     loadHotLinks();
     // 异步加载外部资源，不阻塞主内容
-    loadWallpaper().then(setBingWallpaper);
     loadQuote().then(setDailyQuote);
 
     // 订阅实时数据更新
@@ -96,20 +92,6 @@ export default function Home() {
 
   const loadData = async (showLoadingState = true) => {
     try {
-      // 1. 首先尝试从缓存加载
-      const cachedData = loadFromCache();
-      if (cachedData && showLoadingState) {
-        console.log('从缓存加载数据');
-        const formattedCategories = formatCategories(cachedData.categories, cachedData.links);
-        setCategories(formattedCategories);
-        setLoading(false);
-
-        // 缓存有效，后台更新
-        loadFreshData(false);
-        return;
-      }
-
-      // 2. 加载新数据
       await loadFreshData(showLoadingState);
     } catch (error) {
       console.error('加载数据失败:', error);
@@ -139,9 +121,6 @@ export default function Home() {
       const categoriesData = categoriesResult.data || [];
       const linksData = linksResult.data || [];
 
-      // 保存到缓存
-      saveToCache(categoriesData, linksData);
-
       // 转换数据格式
       const formattedCategories = formatCategories(categoriesData, linksData);
       setCategories(formattedCategories);
@@ -169,10 +148,6 @@ export default function Home() {
           isPrivate: link.is_private || false,
         })),
     }));
-
-    // 预加载所有链接的 favicon
-    const allUrls = linksData.map(link => link.url);
-    preloadFavicons(allUrls);
 
     return formatted;
   };
@@ -370,14 +345,12 @@ export default function Home() {
         {/* 顶部标题栏和搜索框 */}
         <header ref={headerRef} className="relative overflow-hidden border-b border-gray-200 dark:border-gray-700/50 shadow-sm">
           {/* 背景壁纸 */}
-          {bingWallpaper && (
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${bingWallpaper})`,
-              }}
-            />
-          )}
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: 'url(https://bing.img.run/uhd.php)',
+            }}
+          />
 
           {/* 内容 */}
           <div className="relative px-4 py-3">
@@ -436,7 +409,6 @@ export default function Home() {
                   onClick={() => {
                     setShowPrivate(false);
                     setSearchQuery('');
-                    clearCache();
                   }}
                   className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors"
                 >
@@ -446,7 +418,9 @@ export default function Home() {
             )}
 
             {filteredCategories.length > 0 ? (
-              <VirtualCategories categories={filteredCategories} />
+              filteredCategories.map((category) => (
+                <CategorySection key={category.id} category={category} />
+              ))
             ) : (
               <div className="text-center py-20">
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
