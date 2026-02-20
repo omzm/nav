@@ -77,7 +77,7 @@ export async function loadBingWallpaper(): Promise<string> {
 
   // 2. 加载新壁纸
   try {
-    const wallpaperApiUrl = 'https://uapis.cn/api/v1/image/bing-daily';
+    const wallpaperApiUrl = 'https://bing.img.run/uhd.php';
     const response = await fetchWithTimeout(wallpaperApiUrl, 3000);
 
     // 缓存解析后的最终 URL 而非 API 端点

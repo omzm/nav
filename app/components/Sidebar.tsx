@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { NavCategory } from '../types';
+import { NavCategory, HotLink } from '../types';
+import { getFaviconUrl } from '../utils/favicon';
 
 interface SidebarProps {
   categories: NavCategory[];
@@ -9,6 +10,7 @@ interface SidebarProps {
   onSelectCategory: (categoryId: string | null) => void;
   isOpen: boolean;
   onToggle: () => void;
+  hotLinks?: HotLink[];
 }
 
 // 独立的计时器组件，隔离每秒重渲染
@@ -48,6 +50,7 @@ export default function Sidebar({
   onSelectCategory,
   isOpen,
   onToggle,
+  hotLinks,
 }: SidebarProps) {
   // 锁定背景滚动
   useEffect(() => {
@@ -152,6 +155,44 @@ export default function Sidebar({
             </button>
           ))}
         </nav>
+
+        {/* 今日热门 */}
+        {hotLinks && hotLinks.length > 0 && (
+          <div className="px-2 sm:px-3 pb-2 sm:pb-3">
+            <div className="border-t border-gray-200 dark:border-gray-700/50 pt-2 sm:pt-3">
+              <h3 className="px-2.5 sm:px-3 mb-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                今日热门
+              </h3>
+              <div className="space-y-0.5">
+                {hotLinks.map((link, index) => (
+                  <a
+                    key={link.url}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors group"
+                  >
+                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500 w-4 text-center">
+                      {index + 1}
+                    </span>
+                    <img
+                      src={getFaviconUrl(link.url)}
+                      alt=""
+                      className="w-4 h-4 object-contain flex-shrink-0"
+                      loading="lazy"
+                    />
+                    <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 truncate flex-1 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
+                      {link.title}
+                    </span>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 tabular-nums">
+                      {link.clickCount}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 侧边栏底部装饰 */}
         <div className="p-2.5 sm:p-3 border-t border-gray-200 dark:border-gray-700/50 space-y-2">

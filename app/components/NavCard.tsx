@@ -2,6 +2,7 @@
 
 import { useState, memo } from 'react';
 import { NavLink } from '../types';
+import { supabase } from '../lib/supabase';
 import { getFaviconUrl, getFallbackFaviconUrl } from '../utils/favicon';
 
 interface NavCardProps {
@@ -25,11 +26,18 @@ function NavCard({ link }: NavCardProps) {
     }
   };
 
+  const handleClick = () => {
+    if (link.id) {
+      supabase.from('link_clicks').insert({ link_id: link.id }).then();
+    }
+  };
+
   return (
     <a
       href={link.url}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={handleClick}
       className="group relative block p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700/60 bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-gray-500/5 hover:border-gray-300 dark:hover:border-gray-500/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden active:scale-95"
     >
       {/* 背景效果 */}
@@ -77,6 +85,7 @@ function NavCard({ link }: NavCardProps) {
 // 使用 React.memo 优化，完整比较 link 属性
 export default memo(NavCard, (prevProps, nextProps) => {
   return (
+    prevProps.link.id === nextProps.link.id &&
     prevProps.link.url === nextProps.link.url &&
     prevProps.link.title === nextProps.link.title &&
     prevProps.link.description === nextProps.link.description &&

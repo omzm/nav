@@ -7,7 +7,7 @@ import VirtualCategories from './components/VirtualCategories';
 import ThemeToggle from './components/ThemeToggle';
 import BackToTop from './components/BackToTop';
 import Sidebar from './components/Sidebar';
-import { NavCategory } from './types';
+import { NavCategory, HotLink } from './types';
 import { loadFromCache, saveToCache, clearCache } from './utils/cache';
 import { loadBingWallpaper as loadWallpaper, loadDailyQuote as loadQuote } from './utils/externalApi';
 import { preloadFavicons } from './utils/favicon';
@@ -23,6 +23,7 @@ export default function Home() {
   const [dailyQuote, setDailyQuote] = useState('');
   const [showPrivate, setShowPrivate] = useState(false);
   const [scrolledPastHeader, setScrolledPastHeader] = useState(false);
+  const [hotLinks, setHotLinks] = useState<HotLink[]>([]);
   const headerRef = useRef<HTMLElement>(null);
 
   // 防抖实时更新回调
@@ -35,6 +36,7 @@ export default function Home() {
 
   useEffect(() => {
     loadData();
+    loadHotLinks();
     // 异步加载外部资源，不阻塞主内容
     loadWallpaper().then(setBingWallpaper);
     loadQuote().then(setDailyQuote);
@@ -56,10 +58,18 @@ export default function Home() {
       })
       .subscribe();
 
+    const clicksChannel = supabase
+      .channel('link-clicks-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'link_clicks' }, () => {
+        loadHotLinks();
+      })
+      .subscribe();
+
     // 清理订阅
     return () => {
       supabase.removeChannel(categoriesChannel);
       supabase.removeChannel(linksChannel);
+      supabase.removeChannel(clicksChannel);
     };
   }, []);
 
@@ -151,6 +161,7 @@ export default function Home() {
       links: linksData
         .filter((link: DBLink) => link.category_id === cat.id)
         .map((link: DBLink) => ({
+          id: link.id,
           title: link.title,
           url: link.url,
           description: link.description,
@@ -164,6 +175,60 @@ export default function Home() {
     preloadFavicons(allUrls);
 
     return formatted;
+  };
+
+  const loadHotLinks = async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayISO = today.toISOString();
+
+      const { data, error } = await supabase
+        .from('link_clicks')
+        .select('link_id, links(title, url, icon)')
+        .gte('clicked_at', todayISO);
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        setHotLinks([]);
+        return;
+      }
+
+      // 按 link_id 聚合计数
+      const countMap = new Map<string, { count: number; title: string; url: string; icon?: string }>();
+      for (const row of data) {
+        const linkId = row.link_id as string;
+        const linkInfo = row.links as unknown as { title: string; url: string; icon?: string } | null;
+        if (!linkInfo) continue;
+
+        const existing = countMap.get(linkId);
+        if (existing) {
+          existing.count++;
+        } else {
+          countMap.set(linkId, {
+            count: 1,
+            title: linkInfo.title,
+            url: linkInfo.url,
+            icon: linkInfo.icon || undefined,
+          });
+        }
+      }
+
+      // 排序取前 5
+      const sorted = Array.from(countMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5)
+        .map(item => ({
+          title: item.title,
+          url: item.url,
+          icon: item.icon,
+          clickCount: item.count,
+        }));
+
+      setHotLinks(sorted);
+    } catch (error) {
+      console.error('加载今日热门失败:', error);
+    }
   };
 
   // 侧边栏分类列表：只过滤私密内容，不受分类筛选和搜索影响
@@ -274,6 +339,7 @@ export default function Home() {
         onSelectCategory={setSelectedCategory}
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+        hotLinks={hotLinks}
       />
 
       {/* 主内容区 */}

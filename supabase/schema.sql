@@ -72,3 +72,32 @@ CREATE POLICY "Allow admin to delete links"
   ON links FOR DELETE
   TO authenticated
   USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
+
+-- 创建点击记录表
+CREATE TABLE link_clicks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  link_id UUID REFERENCES links(id) ON DELETE CASCADE,
+  clicked_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE INDEX idx_link_clicks_link_id ON link_clicks(link_id);
+CREATE INDEX idx_link_clicks_clicked_at ON link_clicks(clicked_at);
+
+ALTER TABLE link_clicks ENABLE ROW LEVEL SECURITY;
+
+-- 所有人可写入点击记录
+CREATE POLICY "Allow anyone to insert link_clicks"
+  ON link_clicks FOR INSERT
+  WITH CHECK (true);
+
+-- 所有人可读取（用于聚合热门排名）
+CREATE POLICY "Allow anyone to read link_clicks"
+  ON link_clicks FOR SELECT
+  USING (true);
+
+-- 每天凌晨 0:05 (UTC) 自动清理前一天的点击记录
+SELECT cron.schedule(
+  'clean-old-link-clicks',
+  '5 0 * * *',
+  $$DELETE FROM link_clicks WHERE clicked_at < CURRENT_DATE$$
+);
