@@ -92,9 +92,7 @@ export default function Sidebar({
         {/* 侧边栏头部 */}
         <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700/50 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50">
           <div className="flex items-center space-x-2 sm:space-x-2.5">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gray-800 dark:bg-gray-700 flex items-center justify-center shadow-lg">
-              <span className="text-xs sm:text-sm font-bold text-white">N</span>
-            </div>
+            <img src="/icon.svg" alt="Logo" className="w-7 h-7 sm:w-8 sm:h-8" />
             <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">
               分类
             </h2>

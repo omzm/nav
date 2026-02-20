@@ -6,6 +6,7 @@ import SearchBar from './components/SearchBar';
 import CategorySection from './components/CategorySection';
 import ThemeToggle from './components/ThemeToggle';
 import BackToTop from './components/BackToTop';
+import RefreshButton from './components/RefreshButton';
 import Sidebar from './components/Sidebar';
 import { NavCategory, HotLink } from './types';
 import { loadDailyQuote as loadQuote } from './utils/externalApi';
@@ -301,8 +302,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex">
-      {/* 主题切换按钮 - 固定在右下角 */}
+      {/* 主题切换按钮 */}
       <ThemeToggle />
+
+      {/* 刷新按钮 - 固定在主题切换按钮下方 */}
+      <RefreshButton />
 
       {/* 返回顶部按钮 - 固定在主题切换按钮上方 */}
       <BackToTop />
@@ -325,8 +329,8 @@ export default function Home() {
         }`}>
           <div className="flex items-center justify-between px-4 py-2">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gray-800 dark:bg-gray-700 flex items-center justify-center">
-                <span className="text-xs font-bold text-white">N</span>
+              <div className="w-7 h-7 rounded-lg overflow-hidden">
+                <img src="/icon.svg" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <span className="text-sm font-bold text-gray-900 dark:text-gray-100">收藏夹</span>
             </div>
