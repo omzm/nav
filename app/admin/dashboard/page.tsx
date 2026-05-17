@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import { toast } from '@/app/components/Toast';
 import { loadAdminCache, saveAdminCache } from '@/app/utils/adminCache';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
+import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
+import CategoryIcon from '@/app/components/CategoryIcon';
+import IconFont from '@/app/components/IconFont';
 
 export default function AdminDashboard() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -123,6 +126,14 @@ export default function AdminDashboard() {
     toast.success('导出成功！');
   };
 
+  const invalidateHomeCache = async () => {
+    try {
+      await revalidateNavSnapshot();
+    } catch (error) {
+      console.error('刷新首页缓存失败:', error);
+    }
+  };
+
   const loadData = async (forceRefresh = false) => {
     try {
       if (forceRefresh) {
@@ -183,6 +194,7 @@ export default function AdminDashboard() {
             .eq('id', id);
 
           if (error) throw error;
+          await invalidateHomeCache();
           toast.success('分类删除成功！');
           loadData();
         } catch (error) {
@@ -207,6 +219,7 @@ export default function AdminDashboard() {
             .eq('id', id);
 
           if (error) throw error;
+          await invalidateHomeCache();
           toast.success('链接删除成功！');
           loadData();
         } catch (error) {
@@ -276,6 +289,7 @@ export default function AdminDashboard() {
     // 批量保存到数据库
     try {
       await Promise.all(updated.map(c => supabase.from('categories').update({ order: c.order }).eq('id', c.id)));
+      await invalidateHomeCache();
       toast.success('排序已保存');
     } catch {
       toast.error('排序保存失败');
@@ -301,6 +315,7 @@ export default function AdminDashboard() {
 
     try {
       await Promise.all(updated.map(l => supabase.from('links').update({ order: l.order }).eq('id', l.id)));
+      await invalidateHomeCache();
       toast.success('排序已保存');
     } catch {
       toast.error('排序保存失败');
@@ -343,7 +358,7 @@ export default function AdminDashboard() {
             }`}
           >
             <span className="flex items-center gap-1.5">
-              <span>📊</span>
+              <IconFont name="icon-chart" />
               <span className="hidden sm:inline">统计</span>
             </span>
           </button>
@@ -356,9 +371,9 @@ export default function AdminDashboard() {
             }`}
           >
             <span className="flex items-center gap-1.5">
-              <span>📁</span>
+              <IconFont name="icon-folder" />
               <span className="hidden sm:inline">分类</span>
-              <span className="text-xs opacity-75">({categories.length}{stats.privateCategories > 0 && <span className="ml-0.5">🔒{stats.privateCategories}</span>})</span>
+              <span className="text-xs opacity-75">({categories.length}{stats.privateCategories > 0 && <span className="ml-0.5 inline-flex items-center gap-0.5"><IconFont name="icon-lock" />{stats.privateCategories}</span>})</span>
             </span>
           </button>
           <button
@@ -370,9 +385,9 @@ export default function AdminDashboard() {
             }`}
           >
             <span className="flex items-center gap-1.5">
-              <span>🔗</span>
+              <IconFont name="icon-link" />
               <span className="hidden sm:inline">链接</span>
-              <span className="text-xs opacity-75">({links.length}{stats.privateLinks > 0 && <span className="ml-0.5">🔒{stats.privateLinks}</span>})</span>
+              <span className="text-xs opacity-75">({links.length}{stats.privateLinks > 0 && <span className="ml-0.5 inline-flex items-center gap-0.5"><IconFont name="icon-lock" />{stats.privateLinks}</span>})</span>
             </span>
           </button>
         </div>
@@ -384,16 +399,16 @@ export default function AdminDashboard() {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">📂 总分类数</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 inline-flex items-center gap-1.5"><IconFont name="icon-folder-open" /> 总分类数</p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
                       {stats.totalCategories}
                       {stats.privateCategories > 0 && (
-                        <span className="text-sm font-normal text-amber-600 dark:text-amber-400 ml-2">（🔒{stats.privateCategories}）</span>
+                        <span className="text-sm font-normal text-amber-600 dark:text-amber-400 ml-2 inline-flex items-center gap-0.5">（<IconFont name="icon-lock" />{stats.privateCategories}）</span>
                       )}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                    <span className="text-2xl">📁</span>
+                    <IconFont name="icon-folder" className="text-2xl" />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center space-x-4 text-xs">
@@ -409,16 +424,16 @@ export default function AdminDashboard() {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">🔗 总链接数</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 inline-flex items-center gap-1.5"><IconFont name="icon-link" /> 总链接数</p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">
                       {stats.totalLinks}
                       {stats.privateLinks > 0 && (
-                        <span className="text-sm font-normal text-amber-600 dark:text-amber-400 ml-2">（🔒{stats.privateLinks}）</span>
+                        <span className="text-sm font-normal text-amber-600 dark:text-amber-400 ml-2 inline-flex items-center gap-0.5">（<IconFont name="icon-lock" />{stats.privateLinks}）</span>
                       )}
                     </p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                    <span className="text-2xl">🔗</span>
+                    <IconFont name="icon-link" className="text-2xl" />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center space-x-4 text-xs">
@@ -441,28 +456,28 @@ export default function AdminDashboard() {
                   onClick={() => router.push('/admin/dashboard/category/new')}
                   className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all text-center active:scale-95 active:opacity-90"
                 >
-                  <div className="text-2xl mb-2">➕</div>
+                  <IconFont name="icon-plus" className="text-2xl mb-2 block" />
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">添加分类</div>
                 </button>
                 <button
                   onClick={() => router.push('/admin/dashboard/link/new')}
                   className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all text-center active:scale-95 active:opacity-90"
                 >
-                  <div className="text-2xl mb-2">🔗</div>
+                  <IconFont name="icon-link" className="text-2xl mb-2 block" />
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">添加链接</div>
                 </button>
                 <button
                   onClick={() => window.open('/', '_blank')}
                   className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all text-center active:scale-95 active:opacity-90"
                 >
-                  <div className="text-2xl mb-2">👁️</div>
+                  <IconFont name="icon-eye" className="text-2xl mb-2 block" />
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">查看网站</div>
                 </button>
                 <button
                   onClick={exportData}
                   className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all text-center active:scale-95 active:opacity-90"
                 >
-                  <div className="text-2xl mb-2">📥</div>
+                  <IconFont name="icon-download" className="text-2xl mb-2 block" />
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">导出备份</div>
                 </button>
                 <button
@@ -470,7 +485,7 @@ export default function AdminDashboard() {
                   disabled={refreshing}
                   className={`p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all text-center active:scale-95 active:opacity-90 ${refreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <div className={`text-2xl mb-2 ${refreshing ? 'animate-spin' : ''}`}>🔄</div>
+                  <IconFont name="icon-refresh" className={`text-2xl mb-2 block ${refreshing ? 'animate-spin' : ''}`} />
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     {refreshing ? '刷新中...' : '刷新数据'}
                   </div>
@@ -499,14 +514,14 @@ export default function AdminDashboard() {
                 onClick={() => router.push('/admin/dashboard/category/new')}
                 className="w-full sm:w-auto px-4 py-2.5 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-all font-medium text-sm flex items-center justify-center gap-2 active:scale-95 active:opacity-90"
               >
-                <span>➕</span>
+                <IconFont name="icon-plus" />
                 <span>添加分类</span>
               </button>
             </div>
 
             {filteredCategories.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg p-12 border border-gray-200 dark:border-gray-700 text-center">
-                <div className="text-4xl mb-4">📁</div>
+                <IconFont name="icon-folder" className="text-4xl mb-4 block" />
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
                   {searchQuery ? '没有找到匹配的分类' : '暂无分类，点击添加第一个分类'}
                 </p>
@@ -515,7 +530,7 @@ export default function AdminDashboard() {
                     onClick={() => router.push('/admin/dashboard/category/new')}
                     className="px-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-all text-sm font-medium active:scale-95"
                   >
-                    ➕ 添加分类
+                    <span className="inline-flex items-center gap-1.5"><IconFont name="icon-plus" /> 添加分类</span>
                   </button>
                 )}
               </div>
@@ -532,7 +547,7 @@ export default function AdminDashboard() {
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <span className="text-2xl flex-shrink-0">{category.icon}</span>
+                        <span className="text-2xl flex-shrink-0"><CategoryIcon icon={category.icon} /></span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base truncate">
@@ -540,7 +555,7 @@ export default function AdminDashboard() {
                             </h3>
                             {category.is_private && (
                               <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded flex-shrink-0">
-                                🔒 私密
+                                <IconFont name="icon-lock" className="mr-1" /> 私密
                               </span>
                             )}
                           </div>
@@ -548,7 +563,7 @@ export default function AdminDashboard() {
                               排序: {category.order} · {(() => {
                               const catLinks = links.filter(l => l.category_id === category.id);
                               const privateCount = catLinks.filter(l => l.is_private || category.is_private).length;
-                              return (<>{catLinks.length} 个链接{privateCount > 0 && <span className="text-amber-600 dark:text-amber-400 ml-1">（🔒{privateCount}）</span>}</>);
+                              return (<>{catLinks.length} 个链接{privateCount > 0 && <span className="text-amber-600 dark:text-amber-400 ml-1 inline-flex items-center gap-0.5">（<IconFont name="icon-lock" />{privateCount}）</span>}</>);
                             })()}
                           </p>
                         </div>
@@ -559,19 +574,19 @@ export default function AdminDashboard() {
                           className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium active:scale-95 active:opacity-90"
                           title="查看该分类下的所有链接"
                         >
-                          👁️ 查看
+                          <span className="inline-flex items-center gap-1"><IconFont name="icon-eye" /> 查看</span>
                         </button>
                         <button
                           onClick={() => router.push(`/admin/dashboard/category/${category.id}`)}
                           className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium active:scale-95 active:opacity-90"
                         >
-                          ✏️ 编辑
+                          <span className="inline-flex items-center gap-1"><IconFont name="icon-edit" /> 编辑</span>
                         </button>
                         <button
                           onClick={() => deleteCategory(category.id)}
                           className="flex-1 sm:flex-initial px-3 py-1.5 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-all font-medium active:scale-95 active:opacity-90"
                         >
-                          🗑️ 删除
+                          <span className="inline-flex items-center gap-1"><IconFont name="icon-delete" /> 删除</span>
                         </button>
                       </div>
                     </div>
@@ -610,7 +625,7 @@ export default function AdminDashboard() {
                   onClick={() => router.push('/admin/dashboard/link/new')}
                   className="px-4 py-2.5 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-all whitespace-nowrap font-medium text-sm flex items-center gap-2 active:scale-95 active:opacity-90"
                 >
-                  <span>➕</span>
+                  <IconFont name="icon-plus" />
                   <span className="hidden sm:inline">添加链接</span>
                   <span className="sm:hidden">添加</span>
                 </button>
@@ -642,7 +657,7 @@ export default function AdminDashboard() {
 
             {filteredLinks.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg p-12 border border-gray-200 dark:border-gray-700 text-center">
-                <div className="text-4xl mb-4">🔗</div>
+                <IconFont name="icon-link" className="text-4xl mb-4 block" />
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
                   {searchQuery || selectedCategoryFilter ? '没有找到匹配的链接' : '暂无链接，点击添加第一个链接'}
                 </p>
@@ -651,7 +666,7 @@ export default function AdminDashboard() {
                     onClick={() => router.push('/admin/dashboard/link/new')}
                     className="px-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-all text-sm font-medium active:scale-95"
                   >
-                    ➕ 添加链接
+                    <span className="inline-flex items-center gap-1.5"><IconFont name="icon-plus" /> 添加链接</span>
                   </button>
                 )}
               </div>
@@ -676,12 +691,12 @@ export default function AdminDashboard() {
                             </h3>
                             {link.is_private && (
                               <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded flex-shrink-0">
-                                🔒 私密
+                                <IconFont name="icon-lock" className="mr-1" /> 私密
                               </span>
                             )}
                             {category && (
                               <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded flex-shrink-0">
-                                {category.icon} {category.name}
+                                <CategoryIcon icon={category.icon} /> {category.name}
                               </span>
                             )}
                           </div>
@@ -702,13 +717,13 @@ export default function AdminDashboard() {
                             onClick={() => router.push(`/admin/dashboard/link/${link.id}`)}
                             className="px-3 py-1.5 text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium active:scale-95 active:opacity-90"
                           >
-                            ✏️ 编辑
+                            <span className="inline-flex items-center gap-1"><IconFont name="icon-edit" /> 编辑</span>
                           </button>
                           <button
                             onClick={() => deleteLink(link.id)}
                             className="px-3 py-1.5 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-all font-medium active:scale-95 active:opacity-90"
                           >
-                            🗑️ 删除
+                  <span className="inline-flex items-center gap-1"><IconFont name="icon-delete" /> 删除</span>
                           </button>
                         </div>
                       </div>

@@ -114,6 +114,15 @@ nav-website/
 ### 后台管理
 访问 `/admin` 登录，支持分类和链接的增删改查、排序、私密标记、数据统计。
 
+### 分类和后台图标
+分类图标字段继续支持 emoji，也支持 `icon-xxx` 形式的图标名。项目已经内置了一组线性 SVG 图标，不需要额外配置阿里 iconfont CSS。
+
+后台编辑分类时，图标字段填写 `icon-code`、`icon-design`、`icon-book`、`icon-lightning`、`icon-cloud`、`icon-robot` 这类名称即可。
+
+本项目默认用到这些图标名：`icon-code`、`icon-design`、`icon-book`、`icon-lightning`、`icon-cloud`、`icon-robot`、`icon-chart`、`icon-folder`、`icon-folder-open`、`icon-link`、`icon-plus`、`icon-eye`、`icon-download`、`icon-refresh`、`icon-lock`、`icon-edit`、`icon-delete`。
+
+如果你已有数据库里分类图标还是 emoji，可以按需执行 `supabase/update-category-icons-iconfont.sql`，或直接在后台分类编辑页逐个改成对应 `icon-xxx`。
+
 ### 诊断工具
 访问 `/admin/diagnostic` 查看认证状态、环境变量、数据库连通性、RLS 权限等完整诊断信息。
 
@@ -128,6 +137,24 @@ nav-website/
 ## 📄 许可证
 
 MIT License
+
+## 首页缓存快照与数据库升级
+
+当前首页使用服务端缓存快照模式：公共首页读取 `getNavSnapshot()`，访客浏览器不再订阅 Supabase realtime。后台管理仍然保留 realtime；分类或链接新增、编辑、删除、排序保存成功后，后台会主动触发 `revalidateTag('nav-snapshot')` 和 `revalidatePath('/')`，所以下一个新访客请求首页会立即看到最新内容。
+
+如果你的 Supabase 数据库是在这次改造前创建的，需要手动执行一次增量 SQL：
+
+1. 打开 Supabase 控制台，进入项目。
+2. 进入 **SQL Editor**。
+3. 打开本仓库的 `supabase/update-nav-snapshot-hot-links.sql`。
+4. 复制全部内容到 SQL Editor，点击 **Run**。
+
+这个增量 SQL 会补充：
+
+- `idx_link_clicks_clicked_at_link_id` 组合索引。
+- `get_today_hot_links(limit_count integer default 5)` RPC，用于数据库侧聚合今日热门。
+
+新建数据库可以直接执行完整的 `supabase/schema.sql`；已有数据库不要重复执行整份 `schema.sql`，优先执行上面的增量 SQL。
 
 ---
 

@@ -21,3 +21,13 @@ export interface NavCategory {
   links: NavLink[];
   isPrivate?: boolean;
 }
+
+export interface NavSnapshot {
+  categories: NavCategory[];
+  hotLinks: HotLink[];
+  stats: {
+    categoryCount: number;
+    linkCount: number;
+  };
+  generatedAt: string;
+}

@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from '@/app/components/Toast';
+import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
+import CategoryIcon from '@/app/components/CategoryIcon';
+import IconFont from '@/app/components/IconFont';
 
 export default function CategoryForm() {
   const [name, setName] = useState('');
@@ -75,6 +78,7 @@ export default function CategoryForm() {
         toast.success('分类添加成功！');
       }
 
+      await revalidateNavSnapshot();
       router.push('/admin/dashboard');
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '';
@@ -127,7 +131,7 @@ export default function CategoryForm() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              图标 Emoji *
+              图标 class *
             </label>
             <input
               type="text"
@@ -135,11 +139,19 @@ export default function CategoryForm() {
               onChange={(e) => setIcon(e.target.value)}
               required
               className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
-              placeholder="例如：🛠️"
+              placeholder="例如：icon-code"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              可以从 <a href="https://emojipedia.org" target="_blank" className="underline">Emojipedia</a> 复制 Emoji
+              填写阿里 iconfont 的 Font class，例如 icon-code；也兼容原来的 Emoji。
             </p>
+            {icon && (
+              <div className="mt-3 inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <span className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                  <CategoryIcon icon={icon} />
+                </span>
+                <span>预览</span>
+              </div>
+            )}
           </div>
 
           <div>
@@ -167,7 +179,7 @@ export default function CategoryForm() {
               className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-gray-800 focus:ring-gray-400"
             />
             <label htmlFor="isPrivate" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              🔒 设为私密分类（只有登录后可见）
+              <IconFont name="icon-lock" className="mr-1" /> 设为私密分类（只有登录后可见）
             </label>
           </div>
 

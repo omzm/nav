@@ -4,7 +4,7 @@ export const categories: NavCategory[] = [
   {
     id: 'dev-tools',
     name: '开发工具',
-    icon: '🛠️',
+    icon: 'icon-code',
     links: [
       {
         title: 'GitHub',
@@ -31,7 +31,7 @@ export const categories: NavCategory[] = [
   {
     id: 'design',
     name: '设计资源',
-    icon: '🎨',
+    icon: 'icon-design',
     links: [
       {
         title: 'Figma',
@@ -58,7 +58,7 @@ export const categories: NavCategory[] = [
   {
     id: 'learning',
     name: '学习平台',
-    icon: '📚',
+    icon: 'icon-book',
     links: [
       {
         title: 'MDN',
@@ -85,7 +85,7 @@ export const categories: NavCategory[] = [
   {
     id: 'productivity',
     name: '效率工具',
-    icon: '⚡',
+    icon: 'icon-lightning',
     links: [
       {
         title: 'Notion',
@@ -112,7 +112,7 @@ export const categories: NavCategory[] = [
   {
     id: 'cloud',
     name: '云服务',
-    icon: '☁️',
+    icon: 'icon-cloud',
     links: [
       {
         title: 'Vercel',
@@ -139,7 +139,7 @@ export const categories: NavCategory[] = [
   {
     id: 'ai-tools',
     name: 'AI工具',
-    icon: '🤖',
+    icon: 'icon-robot',
     links: [
       {
         title: 'Claude',

@@ -6,6 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { getFaviconUrl, getFallbackFaviconUrl } from '@/app/utils/favicon';
 import { toast } from '@/app/components/Toast';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
+import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
+import IconFont from '@/app/components/IconFont';
 
 export default function LinkForm() {
   const [categoryId, setCategoryId] = useState('');
@@ -225,6 +227,7 @@ export default function LinkForm() {
         toast.success('链接添加成功！');
       }
 
+      await revalidateNavSnapshot();
       if (continueAdding && !isEdit) {
         resetForm();
       } else {
@@ -439,7 +442,7 @@ export default function LinkForm() {
                 disabled={!url || iconLoading}
                 className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-all disabled:opacity-50 active:scale-95 active:opacity-90"
               >
-                🔄 重新获取
+                <span className="inline-flex items-center gap-1"><IconFont name="icon-refresh" /> 重新获取</span>
               </button>
               <a
                 href="https://emojipedia.org"
@@ -476,7 +479,7 @@ export default function LinkForm() {
               className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-gray-800 focus:ring-gray-400"
             />
             <label htmlFor="isPrivate" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              🔒 设为私密链接（只有登录后可见）
+              <IconFont name="icon-lock" className="mr-1" /> 设为私密链接（只有登录后可见）
             </label>
           </div>
 
