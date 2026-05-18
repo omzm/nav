@@ -201,7 +201,7 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <main className="flex-1 px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
           <div className="max-w-[1600px] mx-auto">
             {showPrivate && (
               <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-700 rounded-xl flex items-center justify-between">

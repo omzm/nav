@@ -117,9 +117,9 @@ nav-website/
 ### 分类和后台图标
 分类图标字段继续支持 emoji，也支持 `icon-xxx` 形式的图标名。项目已经内置了一组线性 SVG 图标，不需要额外配置阿里 iconfont CSS。
 
-后台编辑分类时，图标字段填写 `icon-code`、`icon-design`、`icon-book`、`icon-lightning`、`icon-cloud`、`icon-robot` 这类名称即可。
+后台编辑分类时，图标字段填写 `icon-tool`、`icon-server`、`icon-globe`、`icon-pen`、`icon-cloud`、`icon-robot` 这类名称即可。
 
-本项目默认用到这些图标名：`icon-code`、`icon-design`、`icon-book`、`icon-lightning`、`icon-cloud`、`icon-robot`、`icon-chart`、`icon-folder`、`icon-folder-open`、`icon-link`、`icon-plus`、`icon-eye`、`icon-download`、`icon-refresh`、`icon-lock`、`icon-edit`、`icon-delete`。
+本项目默认用到这些图标名：`icon-home`、`icon-code`、`icon-tool`、`icon-design`、`icon-book`、`icon-lightning`、`icon-cloud`、`icon-robot`、`icon-server`、`icon-globe`、`icon-pen`、`icon-search`、`icon-play`、`icon-chart`、`icon-folder`、`icon-folder-open`、`icon-link`、`icon-plus`、`icon-eye`、`icon-download`、`icon-refresh`、`icon-lock`、`icon-edit`、`icon-delete`。
 
 如果你已有数据库里分类图标还是 emoji，可以按需执行 `supabase/update-category-icons-iconfont.sql`，或直接在后台分类编辑页逐个改成对应 `icon-xxx`。
 

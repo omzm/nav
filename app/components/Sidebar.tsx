@@ -4,6 +4,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { HotLink, NavCategory } from '../types';
 import { getFaviconUrl } from '../utils/favicon';
 import CategoryIcon from './CategoryIcon';
+import IconFont from './IconFont';
 
 interface SidebarProps {
   categories: NavCategory[];
@@ -33,7 +34,7 @@ const RunTimer = memo(function RunTimer() {
 
   return (
     <div className="flex items-center justify-center gap-1">
-      <span>⏱️</span>
+      <IconFont name="icon-clock" />
       <span>已运行 {days} 天</span>
     </div>
   );
@@ -51,20 +52,20 @@ const CategoryList = memo(function CategoryList({
   onCategoryClick,
 }: CategoryListProps) {
   return (
-    <nav className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-1">
+    <nav className="flex-1 overflow-y-auto overscroll-contain p-2 sm:p-3 space-y-1">
       <button
         onClick={() => onCategoryClick(null)}
-        className={`w-full text-left px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all duration-300 group ${
+        className={`w-full text-left px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors duration-200 group ${
           selectedCategory === null
             ? 'bg-gray-100 dark:bg-gray-800/50'
             : 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
         }`}
       >
         <span className="flex items-center space-x-2 sm:space-x-2.5">
-          <span className={`text-sm sm:text-base transition-transform duration-300 ${selectedCategory === null ? 'scale-110' : 'group-hover:scale-110'}`}>
-            🏠
+          <span className={`text-sm sm:text-base transition-transform duration-200 ${selectedCategory === null ? 'scale-110' : 'group-hover:scale-110'}`}>
+            <IconFont name="icon-home" />
           </span>
-          <span className={`text-xs sm:text-sm font-medium transition-colors duration-300 ${
+          <span className={`text-xs sm:text-sm font-medium transition-colors duration-200 ${
             selectedCategory === null
               ? 'text-blue-500 dark:text-blue-400'
               : 'text-gray-700 dark:text-gray-300'
@@ -76,17 +77,17 @@ const CategoryList = memo(function CategoryList({
         <button
           key={category.id}
           onClick={() => onCategoryClick(category.id)}
-          className={`w-full text-left px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all duration-300 group ${
+          className={`w-full text-left px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-colors duration-200 group ${
             selectedCategory === category.id
               ? 'bg-gray-100 dark:bg-gray-800/50'
               : 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
           }`}
         >
           <span className="flex items-center space-x-2 sm:space-x-2.5">
-            <span className={`text-sm sm:text-base transition-transform duration-300 ${selectedCategory === category.id ? 'scale-110' : 'group-hover:scale-110'}`}>
+            <span className={`text-sm sm:text-base transition-transform duration-200 ${selectedCategory === category.id ? 'scale-110' : 'group-hover:scale-110'}`}>
               <CategoryIcon icon={category.icon} />
             </span>
-            <span className={`text-xs sm:text-sm font-medium transition-colors duration-300 ${
+            <span className={`text-xs sm:text-sm font-medium transition-colors duration-200 ${
               selectedCategory === category.id
                 ? 'text-blue-500 dark:text-blue-400'
                 : 'text-gray-700 dark:text-gray-300'
