@@ -148,11 +148,13 @@ MIT License
 2. 进入 **SQL Editor**。
 3. 打开本仓库的 `supabase/update-nav-snapshot-hot-links.sql`。
 4. 复制全部内容到 SQL Editor，点击 **Run**。
+5. 再打开 `supabase/update-nav-snapshot-private-rpc.sql`，复制全部内容到 SQL Editor，点击 **Run**。
 
 这个增量 SQL 会补充：
 
 - `idx_link_clicks_clicked_at_link_id` 组合索引。
 - `get_today_hot_links(limit_count integer default 5)` RPC，用于数据库侧聚合今日热门。
+- `get_nav_snapshot_data(limit_count integer default 5)` RPC，用于首页服务端快照，并让“开门”模式有隐藏分类和链接可展示。
 
 新建数据库可以直接执行完整的 `supabase/schema.sql`；已有数据库不要重复执行整份 `schema.sql`，优先执行上面的增量 SQL。
 

@@ -35,6 +35,15 @@ export default function LinkForm() {
   const router = useRouter();
   const params = useParams();
 
+  const returnToPreviousPage = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push('/admin/dashboard');
+  };
+
   useEffect(() => {
     loadCategories();
     if (params.id && params.id !== 'new') {
@@ -231,7 +240,7 @@ export default function LinkForm() {
       if (continueAdding && !isEdit) {
         resetForm();
       } else {
-        router.push('/admin/dashboard');
+        returnToPreviousPage();
       }
     } catch (error) {
       console.error('保存失败:', error);

@@ -19,6 +19,15 @@ export default function CategoryForm() {
   const router = useRouter();
   const params = useParams();
 
+  const returnToPreviousPage = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push('/admin/dashboard');
+  };
+
   useEffect(() => {
     if (params.id && params.id !== 'new') {
       setIsEdit(true);
@@ -79,7 +88,7 @@ export default function CategoryForm() {
       }
 
       await revalidateNavSnapshot();
-      router.push('/admin/dashboard');
+      returnToPreviousPage();
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '';
       if (!msg) {
