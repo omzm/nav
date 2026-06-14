@@ -408,7 +408,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           onCancel={() => setShowLogoutConfirm(false)}
         >
           <Space spacing="medium">
-            <Avatar color="red" size="small">
+            <Avatar color="grey" size="small">
               <IconExit />
             </Avatar>
             <Text>确定要退出后台管理吗？</Text>

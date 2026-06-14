@@ -10,6 +10,7 @@ import {
   Space,
   Spin,
   Switch,
+  TextArea,
   Toast,
   Typography,
 } from '@douyinfe/semi-ui';
@@ -19,6 +20,10 @@ import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
 import CategoryIcon from '@/app/components/CategoryIcon';
 
 const { Text, Title } = Typography;
+
+function isSvgCode(value: string) {
+  return /^<svg[\s\S]*<\/svg>$/i.test(value.trim());
+}
 
 export default function CategoryForm() {
   const [name, setName] = useState('');
@@ -71,8 +76,8 @@ export default function CategoryForm() {
       return;
     }
 
-    if (!icon.trim()) {
-      Toast.warning('请填写分类图标');
+    if (!isSvgCode(icon)) {
+      Toast.warning('请粘贴阿里巴巴 iconfont 的 SVG 代码');
       return;
     }
 
@@ -121,7 +126,7 @@ export default function CategoryForm() {
           <div>
             <h1 className="admin-page-title">{isEdit ? '编辑分类' : '添加分类'}</h1>
             <p className="admin-page-subtitle">
-              分类用于组织首页导航区域，排序数字越小越靠前。
+              分类用于组织首页导航区域，图标请直接粘贴阿里巴巴 iconfont 的 SVG 代码。
             </p>
           </div>
           <Button icon={<IconArrowLeft />} onClick={() => router.back()}>
@@ -147,18 +152,20 @@ export default function CategoryForm() {
               </label>
 
               <label>
-                <Text strong>图标 class</Text>
-                <Input
+                <Text strong>分类图标 SVG 代码</Text>
+                <TextArea
                   value={icon}
                   onChange={setIcon}
-                  placeholder="例如：icon-code，也可以填写 Emoji"
-                  size="large"
+                  placeholder={
+                    '从阿里巴巴 iconfont 复制 SVG 代码，例如：\n<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="..." /></svg>'
+                  }
+                  rows={8}
                   showClear
                   required
                   style={{ marginTop: 8 }}
                 />
                 <Text type="tertiary" size="small" style={{ display: 'block', marginTop: 6 }}>
-                  支持 iconfont 的 Font class，也兼容 Emoji。
+                  只使用 SVG 代码，不再使用 iconfont 类名或图标名称。
                 </Text>
               </label>
 
@@ -172,7 +179,7 @@ export default function CategoryForm() {
                       图标预览
                     </Title>
                     <Text type="tertiary" size="small">
-                      {icon ? icon : '输入图标后会在这里显示'}
+                      {isSvgCode(icon) ? 'SVG 预览已生成' : '粘贴 SVG 代码后会在这里显示'}
                     </Text>
                   </Space>
                 </Space>
@@ -193,7 +200,7 @@ export default function CategoryForm() {
               <Card bordered style={{ background: 'var(--semi-color-fill-0)' }}>
                 <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
                   <Space spacing="medium">
-                    <IconLock style={{ color: 'var(--semi-color-warning)' }} />
+                    <IconLock />
                     <Space vertical spacing={2} align="start">
                       <Text strong>设为私密分类</Text>
                       <Text type="tertiary" size="small">
@@ -207,13 +214,7 @@ export default function CategoryForm() {
 
               <Space style={{ width: '100%', justifyContent: 'flex-end' }} wrap>
                 <Button onClick={() => router.back()}>取消</Button>
-                <Button
-                  htmlType="submit"
-                  theme="solid"
-                  type="primary"
-                  icon={<IconSave />}
-                  loading={saving}
-                >
+                <Button htmlType="submit" theme="solid" type="primary" icon={<IconSave />} loading={saving}>
                   保存
                 </Button>
               </Space>

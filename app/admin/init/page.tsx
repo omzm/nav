@@ -214,7 +214,7 @@ export default function DatabaseInit() {
           <Card bordered={false} shadows="hover">
             <Space vertical spacing="medium" align="start" style={{ width: '100%' }}>
               <Tag
-                color={status === 'success' ? 'green' : status === 'error' ? 'red' : 'grey'}
+                color="grey"
                 prefixIcon={
                   status === 'success' ? (
                     <IconTickCircle />

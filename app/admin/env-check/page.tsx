@@ -157,7 +157,7 @@ function ConfigRow({ label, configured }: { label: string; configured: boolean }
     <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
       <Text strong>{label}</Text>
       <Tag
-        color={configured ? 'green' : 'red'}
+        color="grey"
         prefixIcon={configured ? <IconTickCircle /> : <IconAlertTriangle />}
       >
         {configured ? '已配置' : '未配置'}

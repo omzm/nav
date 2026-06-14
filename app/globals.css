@@ -136,19 +136,44 @@ html {
 }
 
 .admin-shell {
-  --semi-color-primary: #1f2937;
-  --semi-color-primary-hover: #111827;
-  --semi-color-primary-active: #030712;
+  --semi-color-primary: #6b7280;
+  --semi-color-primary-hover: #4b5563;
+  --semi-color-primary-active: #374151;
   --semi-color-primary-disabled: #9ca3af;
-  --semi-color-primary-light-default: #eef0f3;
+  --semi-color-primary-light-default: #f3f4f6;
   --semi-color-primary-light-hover: #e5e7eb;
   --semi-color-primary-light-active: #d1d5db;
-  --semi-color-primary-light-disabled: #f3f4f6;
+  --semi-color-primary-light-disabled: #f9fafb;
   min-height: 100vh;
   display: flex;
-  background:
-    linear-gradient(180deg, rgba(250, 251, 252, 0.96), rgba(244, 246, 248, 0.96)),
-    radial-gradient(circle at top left, rgba(17, 24, 39, 0.07), transparent 34%);
+  font-weight: 400;
+  background: #f9fafb;
+}
+
+.admin-shell .semi-typography,
+.admin-shell .semi-typography strong,
+.admin-shell .semi-button,
+.admin-shell .semi-card,
+.admin-shell .semi-table,
+.admin-login-shell .semi-typography,
+.admin-login-shell .semi-typography strong,
+.admin-login-shell .semi-button {
+  font-weight: 400;
+}
+
+.admin-shell h1.semi-typography,
+.admin-shell h2.semi-typography,
+.admin-shell h3.semi-typography,
+.admin-shell h4.semi-typography,
+.admin-shell h5.semi-typography,
+.admin-shell h6.semi-typography,
+.admin-login-shell h1.semi-typography,
+.admin-login-shell h2.semi-typography,
+.admin-login-shell h3.semi-typography,
+.admin-login-shell h4.semi-typography,
+.admin-login-shell h5.semi-typography,
+.admin-login-shell h6.semi-typography {
+  font-weight: 400;
 }
 
 .admin-rail {
@@ -163,8 +188,8 @@ html {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  border-right: 1px solid var(--semi-color-border);
-  background: rgba(255, 255, 255, 0.96);
+  border-right: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
 }
 
@@ -175,11 +200,31 @@ html {
   border-radius: 10px;
 }
 
+.admin-rail .admin-rail-icon-button.semi-button-primary.semi-button-solid {
+  border-color: transparent;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.admin-rail .admin-rail-icon-button.semi-button-primary.semi-button-solid:hover,
+.admin-rail .admin-rail-icon-button.semi-button-primary.semi-button-solid:focus,
+.admin-rail .admin-rail-icon-button.semi-button-primary.semi-button-solid:active {
+  border-color: transparent;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.admin-rail .admin-rail-icon-button.semi-button-tertiary.semi-button-borderless:hover,
+.admin-rail .admin-rail-icon-button.semi-button-tertiary.semi-button-borderless:focus {
+  background: #f9fafb;
+  color: #4b5563;
+}
+
 .admin-rail-divider {
   width: 28px;
   height: 1px;
   margin: 2px 0;
-  background: var(--semi-color-border);
+  background: #e5e7eb;
 }
 
 .admin-workspace {
@@ -199,8 +244,8 @@ html {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 1px solid var(--semi-color-border);
-  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
 }
 
@@ -217,8 +262,8 @@ html {
   position: sticky;
   top: 0;
   z-index: 20;
-  border-bottom: 1px solid var(--semi-color-border);
-  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(12px);
 }
 
@@ -296,7 +341,7 @@ html {
   color: var(--semi-color-text-0);
   font-size: 24px;
   line-height: 32px;
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: 0;
 }
 
@@ -311,6 +356,43 @@ html {
   padding: 20px;
 }
 
+.admin-shell .semi-card,
+.admin-login-card {
+  border: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.admin-shell .semi-card:hover {
+  border-color: #d1d5db;
+}
+
+.admin-shell .semi-button-primary.semi-button-solid,
+.admin-login-shell .semi-button-primary.semi-button-solid {
+  border-color: #d1d5db;
+  background: #ffffff;
+  color: #374151;
+}
+
+.admin-shell .semi-button-primary.semi-button-solid:hover,
+.admin-shell .semi-button-primary.semi-button-solid:focus,
+.admin-shell .semi-button-primary.semi-button-solid:active,
+.admin-login-shell .semi-button-primary.semi-button-solid:hover,
+.admin-login-shell .semi-button-primary.semi-button-solid:focus,
+.admin-login-shell .semi-button-primary.semi-button-solid:active {
+  border-color: #9ca3af;
+  background: #f9fafb;
+  color: #374151;
+}
+
+.admin-shell .semi-button-primary.semi-button-borderless,
+.admin-shell .semi-button-primary.semi-button-light,
+.admin-login-shell .semi-button-primary.semi-button-borderless,
+.admin-login-shell .semi-button-primary.semi-button-light {
+  color: #374151;
+}
+
 .admin-table-card .semi-card-body {
   padding: 0;
 }
@@ -321,7 +403,7 @@ html {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid var(--semi-color-border);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .admin-table-card .semi-table-tbody > .semi-table-row > .semi-table-row-cell {
@@ -351,21 +433,51 @@ html {
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background: var(--semi-color-fill-0);
+  background: #f3f4f6;
   color: var(--semi-color-text-1);
   overflow: hidden;
 }
 
+.category-svg-icon {
+  width: 1em;
+  height: 1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+  line-height: 1;
+  vertical-align: -0.125em;
+}
+
+.category-svg-icon svg {
+  width: 1em !important;
+  height: 1em !important;
+  display: block;
+  flex: none;
+}
+
+.admin-icon-preview .category-svg-icon {
+  width: 24px;
+  height: 24px;
+  font-size: 24px;
+}
+
+.admin-icon-preview .category-svg-icon svg {
+  width: 24px !important;
+  height: 24px !important;
+}
+
 .admin-nav-sheet-body {
-  --semi-color-primary: #1f2937;
-  --semi-color-primary-hover: #111827;
-  --semi-color-primary-active: #030712;
-  --semi-color-primary-light-default: #eef0f3;
+  --semi-color-primary: #6b7280;
+  --semi-color-primary-hover: #4b5563;
+  --semi-color-primary-active: #374151;
+  --semi-color-primary-light-default: #f3f4f6;
   --semi-color-primary-light-hover: #e5e7eb;
   --semi-color-primary-light-active: #d1d5db;
   padding: 16px;
   display: grid;
   gap: 20px;
+  background: #ffffff;
 }
 
 .admin-nav-user {
@@ -374,9 +486,9 @@ html {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
   align-items: center;
-  border: 1px solid var(--semi-color-border);
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
-  background: var(--semi-color-fill-0);
+  background: #f9fafb;
 }
 
 .admin-nav-user > div {
@@ -412,12 +524,16 @@ html {
 }
 
 .admin-nav-card:hover {
-  background: var(--semi-color-fill-0);
+  background: #f9fafb;
 }
 
 .admin-nav-card.active {
-  border-color: var(--semi-color-primary);
-  background: var(--semi-color-primary-light-default);
+  border-color: transparent;
+  background: #f3f4f6;
+}
+
+.admin-nav-card.active:hover {
+  background: #f3f4f6;
 }
 
 .admin-nav-card-icon {
@@ -427,8 +543,8 @@ html {
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background: var(--semi-color-fill-1);
-  color: var(--semi-color-primary);
+  background: #f3f4f6;
+  color: #4b5563;
 }
 
 .admin-nav-card-text {
@@ -436,7 +552,7 @@ html {
   display: grid;
   gap: 2px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .admin-nav-card-text small {
@@ -450,21 +566,19 @@ html {
 }
 
 .admin-login-shell {
-  --semi-color-primary: #1f2937;
-  --semi-color-primary-hover: #111827;
-  --semi-color-primary-active: #030712;
+  --semi-color-primary: #6b7280;
+  --semi-color-primary-hover: #4b5563;
+  --semi-color-primary-active: #374151;
   --semi-color-primary-disabled: #9ca3af;
-  --semi-color-primary-light-default: #eef0f3;
+  --semi-color-primary-light-default: #f3f4f6;
   --semi-color-primary-light-hover: #e5e7eb;
   --semi-color-primary-light-active: #d1d5db;
-  --semi-color-primary-light-disabled: #f3f4f6;
+  --semi-color-primary-light-disabled: #f9fafb;
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 24px;
-  background:
-    linear-gradient(135deg, rgba(247, 249, 252, 0.96), rgba(235, 239, 245, 0.96)),
-    radial-gradient(circle at 15% 15%, rgba(17, 24, 39, 0.08), transparent 30%);
+  background: #f9fafb;
 }
 
 .admin-login-card {
@@ -478,7 +592,7 @@ html {
 .admin-login-logo {
   width: 68px;
   height: 68px;
-  color: var(--semi-color-primary);
+  color: #4b5563;
 }
 
 .admin-login-form {

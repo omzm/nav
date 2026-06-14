@@ -150,7 +150,7 @@ export default function TestConnection() {
             ) : (
               <Space vertical spacing="medium" align="start" style={{ width: '100%' }}>
                 <Tag
-                  color={status === 'success' ? 'green' : 'red'}
+                  color="grey"
                   prefixIcon={status === 'success' ? <IconTickCircle /> : <IconAlertTriangle />}
                 >
                   {status === 'success' ? '测试通过' : '测试失败'}

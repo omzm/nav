@@ -161,7 +161,7 @@ export default function AdminDashboard() {
                       </div>
                       <Text strong>{category.name}</Text>
                     </Space>
-                    {category.is_private && <Tag color="orange">私密</Tag>}
+                    {category.is_private && <Tag color="grey">私密</Tag>}
                   </Space>
                 ))}
               </Space>

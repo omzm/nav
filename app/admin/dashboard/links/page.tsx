@@ -243,7 +243,7 @@ export default function LinksPage() {
               <Text strong ellipsis={{ showTooltip: true }}>
                 {record.title}
               </Text>
-              {record.is_private && <Tag color="orange">私密</Tag>}
+              {record.is_private && <Tag color="grey">私密</Tag>}
             </Space>
             <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }}>
               {record.description}
@@ -262,9 +262,9 @@ export default function LinksPage() {
         const category = categoryMap.get(record.category_id);
 
         return category ? (
-          <Tag color={category.is_private ? 'orange' : 'grey'}>{category.name}</Tag>
+          <Tag color="grey">{category.name}</Tag>
         ) : (
-          <Tag color="red">分类不存在</Tag>
+          <Tag color="grey">分类不存在</Tag>
         );
       },
     },
@@ -367,7 +367,7 @@ export default function LinksPage() {
                 {filteredLinks.length} / {links.length} 个链接
               </Tag>
               {canSort ? (
-                <Tag color="green">当前排序范围：{selectedCategory?.name}</Tag>
+                <Tag color="grey">当前排序范围：{selectedCategory?.name}</Tag>
               ) : (
                 <Tag color="grey">选择分类后可拖拽排序</Tag>
               )}

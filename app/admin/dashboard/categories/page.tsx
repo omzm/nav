@@ -53,7 +53,7 @@ export default function CategoriesPage() {
     return categories
       .filter((category) => {
         if (!query) return true;
-        return `${category.name} ${category.icon}`.toLowerCase().includes(query);
+        return category.name.toLowerCase().includes(query);
       })
       .sort((a, b) => a.order - b.order);
   }, [categories, keyword]);
@@ -162,10 +162,10 @@ export default function CategoriesPage() {
               <Text strong ellipsis={{ showTooltip: true }}>
                 {record.name}
               </Text>
-              {record.is_private && <Tag color="orange">私密</Tag>}
+              {record.is_private && <Tag color="grey">私密</Tag>}
             </Space>
-            <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }}>
-              {record.icon}
+            <Text type="tertiary" size="small">
+              {record.icon?.trim().startsWith('<svg') ? 'SVG 图标已配置' : '请编辑为 SVG 代码'}
             </Text>
           </Space>
         </Space>
@@ -180,7 +180,7 @@ export default function CategoriesPage() {
         return (
           <Space spacing={8} wrap>
             <Tag>{count.total} 个链接</Tag>
-            {count.privateCount > 0 && <Tag color="orange">私密 {count.privateCount}</Tag>}
+            {count.privateCount > 0 && <Tag color="grey">私密 {count.privateCount}</Tag>}
           </Space>
         );
       },
@@ -256,7 +256,7 @@ export default function CategoriesPage() {
               value={keyword}
               onChange={setKeyword}
               prefix={<IconSearch />}
-              placeholder="搜索分类名称或图标"
+              placeholder="搜索分类名称"
               showClear
               style={{ width: 320, maxWidth: '100%' }}
             />
