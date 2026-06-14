@@ -1,94 +1,265 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase, ADMIN_EMAIL } from '@/app/lib/supabase';
-import { useRouter, usePathname } from 'next/navigation';
-import { UserContext } from './context';
-import ConfirmDialog from '@/app/components/ConfirmDialog';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
+import {
+  Avatar,
+  Breadcrumb,
+  Button,
+  Layout,
+  Modal,
+  SideSheet,
+  Space,
+  Spin,
+  Typography,
+} from '@douyinfe/semi-ui';
+import {
+  IconApps,
+  IconExit,
+  IconExternalOpen,
+  IconFolder,
+  IconHistogram,
+  IconInfoCircle,
+  IconLink,
+  IconMenu,
+  IconPlusCircle,
+  IconServer,
+  IconUser,
+} from '@douyinfe/semi-icons';
+import { supabase, ADMIN_EMAIL } from '@/app/lib/supabase';
+import { getLocalAdminUser, signOutLocalAdmin } from '@/app/lib/local-admin';
+import { UserContext } from './context';
 
-function Breadcrumbs() {
+const { Content } = Layout;
+const { Text, Title } = Typography;
+
+type NavAction = {
+  label: string;
+  description: string;
+  path?: string;
+  icon: React.ReactNode;
+  external?: boolean;
+  danger?: boolean;
+};
+
+const navSections: Array<{ title: string; items: NavAction[] }> = [
+  {
+    title: '数据管理',
+    items: [
+      {
+        label: '后台概览',
+        description: '查看分类、链接数量和常用入口',
+        path: '/admin/dashboard',
+        icon: <IconHistogram />,
+      },
+      {
+        label: '分类管理',
+        description: '维护首页导航分组和分类排序',
+        path: '/admin/dashboard/categories',
+        icon: <IconFolder />,
+      },
+      {
+        label: '链接管理',
+        description: '搜索、筛选、编辑和排序网站链接',
+        path: '/admin/dashboard/links',
+        icon: <IconLink />,
+      },
+    ],
+  },
+  {
+    title: '快捷操作',
+    items: [
+      {
+        label: '添加链接',
+        description: '新增一个网站链接',
+        path: '/admin/dashboard/link/new',
+        icon: <IconPlusCircle />,
+      },
+      {
+        label: '添加分类',
+        description: '新增一个首页分类',
+        path: '/admin/dashboard/category/new',
+        icon: <IconFolder />,
+      },
+    ],
+  },
+  {
+    title: '系统工具',
+    items: [
+      {
+        label: '认证诊断',
+        description: '检查登录、权限和环境配置',
+        path: '/admin/diagnostic',
+        icon: <IconInfoCircle />,
+      },
+      {
+        label: '初始化数据',
+        description: '初始化或补齐基础数据',
+        path: '/admin/init',
+        icon: <IconServer />,
+      },
+      {
+        label: '查看网站',
+        description: '在新窗口打开前台首页',
+        path: '/',
+        icon: <IconExternalOpen />,
+        external: true,
+      },
+    ],
+  },
+];
+
+function useDashboardBreadcrumbs() {
   const pathname = usePathname();
 
-  const crumbs: { label: string; href?: string }[] = [
-    { label: '后台管理', href: '/admin/dashboard' },
-  ];
+  return useMemo(() => {
+    const crumbs = [{ label: '后台管理', path: '/admin/dashboard' }];
 
+    if (pathname === '/admin/dashboard/categories') {
+      crumbs.push({ label: '分类管理', path: pathname });
+    } else if (pathname === '/admin/dashboard/links') {
+      crumbs.push({ label: '链接管理', path: pathname });
+    } else if (pathname.startsWith('/admin/dashboard/category/')) {
+      const id = pathname.split('/').pop();
+      crumbs.push({ label: '分类管理', path: '/admin/dashboard/categories' });
+      crumbs.push({ label: id === 'new' ? '添加分类' : '编辑分类', path: pathname });
+    } else if (pathname.startsWith('/admin/dashboard/link/')) {
+      const id = pathname.split('/').pop();
+      crumbs.push({ label: '链接管理', path: '/admin/dashboard/links' });
+      crumbs.push({ label: id === 'new' ? '添加链接' : '编辑链接', path: pathname });
+    } else if (pathname === '/admin/diagnostic') {
+      crumbs.push({ label: '认证诊断', path: pathname });
+    } else if (pathname === '/admin/init') {
+      crumbs.push({ label: '初始化数据', path: pathname });
+    }
+
+    return crumbs;
+  }, [pathname]);
+}
+
+function getPageTitle(pathname: string) {
+  if (pathname === '/admin/dashboard/categories') return '分类管理';
+  if (pathname === '/admin/dashboard/links') return '链接管理';
+  if (pathname === '/admin/diagnostic') return '认证诊断';
+  if (pathname === '/admin/init') return '初始化数据';
   if (pathname.startsWith('/admin/dashboard/category/')) {
-    const id = pathname.split('/').pop();
-    crumbs.push({
-      label: id === 'new' ? '添加分类' : '编辑分类',
-    });
-  } else if (pathname.startsWith('/admin/dashboard/link/')) {
-    const id = pathname.split('/').pop();
-    crumbs.push({
-      label: id === 'new' ? '添加链接' : '编辑链接',
-    });
+    return pathname.endsWith('/new') ? '添加分类' : '编辑分类';
   }
+  if (pathname.startsWith('/admin/dashboard/link/')) {
+    return pathname.endsWith('/new') ? '添加链接' : '编辑链接';
+  }
+  return '后台概览';
+}
+
+function DashboardBreadcrumbs() {
+  const router = useRouter();
+  const crumbs = useDashboardBreadcrumbs();
 
   if (crumbs.length <= 1) return null;
 
   return (
-    <nav className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-      {crumbs.map((crumb, i) => (
-        <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <span className="text-gray-400 dark:text-gray-500">/</span>}
-          {crumb.href && i < crumbs.length - 1 ? (
-            <a
-              href={crumb.href}
-              className="hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
-            >
-              {crumb.label}
-            </a>
-          ) : (
-            <span className="text-gray-900 dark:text-gray-200 font-medium">{crumb.label}</span>
-          )}
-        </span>
-      ))}
-    </nav>
+    <Breadcrumb
+      compact
+      routes={crumbs}
+      onClick={(route) => {
+        const target = route.path;
+        if (target && target !== crumbs[crumbs.length - 1]?.path) {
+          router.push(target);
+        }
+      }}
+      renderItem={(route) => route.label}
+    />
   );
+}
+
+function isActiveNav(pathname: string, item: NavAction) {
+  if (!item.path || item.external) return false;
+
+  if (item.path === '/admin/dashboard') {
+    return pathname === '/admin/dashboard';
+  }
+
+  if (item.path === '/admin/dashboard/categories') {
+    return pathname === item.path || pathname.startsWith('/admin/dashboard/category/');
+  }
+
+  if (item.path === '/admin/dashboard/links') {
+    return pathname === item.path || pathname.startsWith('/admin/dashboard/link/');
+  }
+
+  return pathname === item.path || pathname.startsWith(`${item.path}/`);
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+  const pageTitle = getPageTitle(pathname);
 
-  useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
+  const checkUser = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const localUser = getLocalAdminUser();
+      if (localUser) {
+        setUser(localUser);
+        return;
+      }
+
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+
+      if (!currentUser) {
         router.push('/admin');
         return;
       }
-      if (ADMIN_EMAIL && user.email !== ADMIN_EMAIL) {
+
+      if (ADMIN_EMAIL && currentUser.email !== ADMIN_EMAIL) {
         await supabase.auth.signOut();
         router.push('/admin');
         return;
       }
-      setUser(user);
+
+      setUser(currentUser);
     } finally {
       setChecking(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void checkUser();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [checkUser]);
 
   const handleLogout = async () => {
+    signOutLocalAdmin();
     await supabase.auth.signOut();
     router.push('/admin');
   };
 
+  const runNavAction = (item: NavAction) => {
+    if (!item.path) return;
+
+    setNavOpen(false);
+
+    if (item.external) {
+      window.open(item.path, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    router.push(item.path);
+  };
+
   if (checking) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center gap-4">
-        <p className="text-sm text-gray-500 dark:text-gray-400">验证登录中...</p>
-        <div className="w-48 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-          <div className="h-full bg-gray-800 dark:bg-gray-300 rounded-full animate-progress" />
-        </div>
+      <div className="admin-login-shell">
+        <Spin size="large" tip="正在验证登录状态..." />
       </div>
     );
   }
@@ -97,53 +268,153 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <UserContext.Provider value={user}>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 shadow-sm">
-          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                  <span>🎛️</span>
-                  <span className="hidden sm:inline">后台管理</span>
-                  <span className="sm:hidden">管理</span>
-                </h1>
-                <Breadcrumbs />
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <a
-                  href="/"
-                  target="_blank"
-                  className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  <span>👁️</span>
-                  <span className="hidden md:inline">查看网站</span>
-                </a>
-                <span className="hidden lg:inline text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-[150px] truncate">
+      <Layout className="admin-shell">
+        <aside className="admin-rail" aria-label="后台侧边入口">
+          <Button
+            aria-label="打开后台导航"
+            className="admin-rail-menu-button"
+            icon={<IconMenu size="extra-large" />}
+            theme="solid"
+            type="primary"
+            onClick={() => setNavOpen(true)}
+          />
+          <div className="admin-rail-divider" />
+          <Button
+            aria-label="后台概览"
+            className="admin-rail-icon-button"
+            icon={<IconHistogram />}
+            theme={pathname === '/admin/dashboard' ? 'solid' : 'borderless'}
+            type={pathname === '/admin/dashboard' ? 'primary' : 'tertiary'}
+            onClick={() => router.push('/admin/dashboard')}
+          />
+          <Button
+            aria-label="分类管理"
+            className="admin-rail-icon-button"
+            icon={<IconFolder />}
+            theme={pathname.includes('/category') || pathname.endsWith('/categories') ? 'solid' : 'borderless'}
+            type={pathname.includes('/category') || pathname.endsWith('/categories') ? 'primary' : 'tertiary'}
+            onClick={() => router.push('/admin/dashboard/categories')}
+          />
+          <Button
+            aria-label="链接管理"
+            className="admin-rail-icon-button"
+            icon={<IconLink />}
+            theme={pathname.includes('/link') || pathname.endsWith('/links') ? 'solid' : 'borderless'}
+            type={pathname.includes('/link') || pathname.endsWith('/links') ? 'primary' : 'tertiary'}
+            onClick={() => router.push('/admin/dashboard/links')}
+          />
+        </aside>
+
+        <div className="admin-workspace">
+          <header className="admin-topbar">
+            <div className="admin-topbar-title">
+              <Space spacing="medium" align="center">
+                <Avatar color="grey" size="small">
+                  <IconApps />
+                </Avatar>
+                <div>
+                  <Title heading={5} style={{ margin: 0 }}>
+                    {pageTitle}
+                  </Title>
+                  <DashboardBreadcrumbs />
+                </div>
+              </Space>
+            </div>
+
+          </header>
+
+          <Content className="admin-main">{children}</Content>
+        </div>
+
+        <SideSheet
+          title="后台导航"
+          visible={navOpen}
+          placement="left"
+          width={340}
+          onCancel={() => setNavOpen(false)}
+          bodyStyle={{ padding: 0 }}
+          className="admin-nav-sheet"
+        >
+          <div className="admin-nav-sheet-body">
+            <div className="admin-nav-user">
+              <Avatar color="grey">
+                <IconUser />
+              </Avatar>
+              <div>
+                <Text strong>当前账号</Text>
+                <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }}>
                   {user.email}
-                </span>
-                <button
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-all text-xs sm:text-sm font-medium active:scale-95 active:opacity-90"
-                >
-                  <span className="hidden sm:inline">退出登录</span>
-                  <span className="sm:hidden">退出</span>
-                </button>
+                </Text>
               </div>
             </div>
+
+            {navSections.map((section) => (
+              <section className="admin-nav-section" key={section.title}>
+                <Text type="tertiary" size="small" className="admin-nav-section-title">
+                  {section.title}
+                </Text>
+                <Space vertical spacing={8} style={{ width: '100%' }}>
+                  {section.items.map((item) => {
+                    const active = isActiveNav(pathname, item);
+                    return (
+                      <button
+                        key={`${section.title}-${item.label}`}
+                        className={`admin-nav-card${active ? ' active' : ''}`}
+                        type="button"
+                        onClick={() => runNavAction(item)}
+                      >
+                        <span className="admin-nav-card-icon">{item.icon}</span>
+                        <span className="admin-nav-card-text">
+                          <span>{item.label}</span>
+                          <small>{item.description}</small>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </Space>
+              </section>
+            ))}
+
+            <section className="admin-nav-section">
+              <Text type="tertiary" size="small" className="admin-nav-section-title">
+                账号操作
+              </Text>
+              <Button
+                block
+                type="danger"
+                theme="light"
+                icon={<IconExit />}
+                onClick={() => {
+                  setNavOpen(false);
+                  setShowLogoutConfirm(true);
+                }}
+              >
+                退出登录
+              </Button>
+            </section>
           </div>
-        </header>
-        <ConfirmDialog
-          open={showLogoutConfirm}
+        </SideSheet>
+
+        <Modal
           title="退出登录"
-          message="确定要退出登录吗？"
-          confirmText="退出"
+          visible={showLogoutConfirm}
+          okText="退出"
           cancelText="取消"
-          variant="danger"
-          onConfirm={() => { setShowLogoutConfirm(false); handleLogout(); }}
+          okButtonProps={{ type: 'danger', theme: 'solid' }}
+          onOk={() => {
+            setShowLogoutConfirm(false);
+            void handleLogout();
+          }}
           onCancel={() => setShowLogoutConfirm(false)}
-        />
-        {children}
-      </div>
+        >
+          <Space spacing="medium">
+            <Avatar color="red" size="small">
+              <IconExit />
+            </Avatar>
+            <Text>确定要退出后台管理吗？</Text>
+          </Space>
+        </Modal>
+      </Layout>
     </UserContext.Provider>
   );
 }

@@ -1,215 +1,226 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import {
+  Button,
+  Card,
+  Input,
+  InputNumber,
+  Space,
+  Spin,
+  Switch,
+  Toast,
+  Typography,
+} from '@douyinfe/semi-ui';
+import { IconArrowLeft, IconFolder, IconLock, IconSave } from '@douyinfe/semi-icons';
 import { supabase } from '@/app/lib/supabase';
-import { useRouter, useParams } from 'next/navigation';
-import { toast } from '@/app/components/Toast';
 import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
 import CategoryIcon from '@/app/components/CategoryIcon';
-import IconFont from '@/app/components/IconFont';
+
+const { Text, Title } = Typography;
 
 export default function CategoryForm() {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');
   const [order, setOrder] = useState(0);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
-  const [isEdit, setIsEdit] = useState(false);
   const router = useRouter();
   const params = useParams();
 
-  const returnToPreviousPage = () => {
-    if (window.history.length > 1) {
-      router.back();
-      return;
-    }
-
-    router.push('/admin/dashboard');
-  };
-
-  useEffect(() => {
-    if (params.id && params.id !== 'new') {
-      setIsEdit(true);
-      setDataLoading(true);
-      loadCategory(params.id as string);
-    }
+  const categoryId = useMemo(() => {
+    const value = params.id;
+    return Array.isArray(value) ? value[0] : value;
   }, [params.id]);
+  const isEdit = Boolean(categoryId && categoryId !== 'new');
 
-  const loadCategory = async (id: string) => {
+  const loadCategory = useCallback(async (id: string) => {
+    setDataLoading(true);
+
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('id', id)
-        .single();
-
+      const { data, error } = await supabase.from('categories').select('*').eq('id', id).single();
       if (error) throw error;
+
       if (data) {
         setName(data.name);
         setIcon(data.icon);
         setOrder(data.order);
-        setIsPrivate(data.is_private || false);
+        setIsPrivate(Boolean(data.is_private));
       }
     } catch (error) {
-      console.error('加载失败:', error);
-      toast.error('加载分类失败');
+      console.error('加载分类失败:', error);
+      Toast.error('加载分类失败');
     } finally {
       setDataLoading(false);
     }
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  useEffect(() => {
+    if (isEdit && categoryId) {
+      void loadCategory(categoryId);
+    }
+  }, [categoryId, isEdit, loadCategory]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!name.trim()) {
+      Toast.warning('请填写分类名称');
+      return;
+    }
+
+    if (!icon.trim()) {
+      Toast.warning('请填写分类图标');
+      return;
+    }
+
+    setSaving(true);
 
     try {
-      if (isEdit) {
-        const { error } = await supabase
-          .from('categories')
-          .update({ name, icon, order, is_private: isPrivate })
-          .eq('id', params.id);
+      const payload = {
+        name: name.trim(),
+        icon: icon.trim(),
+        order,
+        is_private: isPrivate,
+      };
 
-        if (error) {
-          throw error;
-        }
-        toast.success('分类更新成功！');
+      if (isEdit && categoryId) {
+        const { error } = await supabase.from('categories').update(payload).eq('id', categoryId);
+        if (error) throw error;
+        Toast.success('分类已更新');
       } else {
-        const { data, error } = await supabase
-          .from('categories')
-          .insert([{ name, icon, order, is_private: isPrivate }])
-          .select();
-
-        if (error) {
-          toast.error(`保存失败: ${error.message}`);
-          throw error;
-        }
-        toast.success('分类添加成功！');
+        const { error } = await supabase.from('categories').insert([payload]);
+        if (error) throw error;
+        Toast.success('分类已添加');
       }
 
       await revalidateNavSnapshot();
-      returnToPreviousPage();
+      router.push('/admin/dashboard/categories');
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : '';
-      if (!msg) {
-        toast.error('保存失败: 未知错误');
-      }
+      const message = error instanceof Error ? error.message : '保存失败，请重试';
+      Toast.error(message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   if (dataLoading) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-          <div className="space-y-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i}>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 mb-2 animate-pulse"></div>
-                <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
-              </div>
-            ))}
-            <div className="flex space-x-4">
-              <div className="flex-1 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
-              <div className="flex-1 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
-            </div>
-          </div>
-        </div>
+      <div className="admin-form-page">
+        <Spin size="large" tip="正在加载分类..." style={{ width: '100%', padding: '96px 0' }} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="admin-form-page">
+      <Space vertical spacing={24} style={{ width: '100%' }}>
+        <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              分类名称 *
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
-              placeholder="例如：开发工具"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              图标 class *
-            </label>
-            <input
-              type="text"
-              value={icon}
-              onChange={(e) => setIcon(e.target.value)}
-              required
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
-              placeholder="例如：icon-code"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              填写阿里 iconfont 的 Font class，例如 icon-code；也兼容原来的 Emoji。
-            </p>
-            {icon && (
-              <div className="mt-3 inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                <span className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  <CategoryIcon icon={icon} />
-                </span>
-                <span>预览</span>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              排序顺序
-            </label>
-            <input
-              type="number"
-              value={order}
-              onChange={(e) => setOrder(parseInt(e.target.value, 10) || 0)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
-              placeholder="0"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              数字越小越靠前
+            <h1 className="admin-page-title">{isEdit ? '编辑分类' : '添加分类'}</h1>
+            <p className="admin-page-subtitle">
+              分类用于组织首页导航区域，排序数字越小越靠前。
             </p>
           </div>
+          <Button icon={<IconArrowLeft />} onClick={() => router.back()}>
+            返回
+          </Button>
+        </Space>
 
-          <div className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              id="isPrivate"
-              checked={isPrivate}
-              onChange={(e) => setIsPrivate(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-gray-800 focus:ring-gray-400"
-            />
-            <label htmlFor="isPrivate" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              <IconFont name="icon-lock" className="mr-1" /> 设为私密分类（只有登录后可见）
-            </label>
-          </div>
+        <Card bordered={false} shadows="hover">
+          <form onSubmit={handleSubmit}>
+            <Space vertical spacing="medium" style={{ width: '100%' }}>
+              <label>
+                <Text strong>分类名称</Text>
+                <Input
+                  value={name}
+                  onChange={setName}
+                  prefix={<IconFolder />}
+                  placeholder="例如：开发工具"
+                  size="large"
+                  showClear
+                  required
+                  style={{ marginTop: 8 }}
+                />
+              </label>
 
-          <div className="flex space-x-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-gray-800 dark:bg-gray-700 text-white py-3 rounded-lg font-medium hover:bg-gray-700 dark:hover:bg-gray-600 transition-all disabled:opacity-50 active:scale-95 active:opacity-90"
-            >
-              {loading ? '保存中...' : '保存'}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95 active:opacity-90"
-            >
-              取消
-            </button>
-          </div>
-        </form>
-      </div>
+              <label>
+                <Text strong>图标 class</Text>
+                <Input
+                  value={icon}
+                  onChange={setIcon}
+                  placeholder="例如：icon-code，也可以填写 Emoji"
+                  size="large"
+                  showClear
+                  required
+                  style={{ marginTop: 8 }}
+                />
+                <Text type="tertiary" size="small" style={{ display: 'block', marginTop: 6 }}>
+                  支持 iconfont 的 Font class，也兼容 Emoji。
+                </Text>
+              </label>
+
+              <Card bordered style={{ background: 'var(--semi-color-fill-0)' }}>
+                <Space align="center" spacing="medium">
+                  <div className="admin-icon-preview">
+                    <CategoryIcon icon={icon} />
+                  </div>
+                  <Space vertical spacing={2} align="start">
+                    <Title heading={6} style={{ margin: 0 }}>
+                      图标预览
+                    </Title>
+                    <Text type="tertiary" size="small">
+                      {icon ? icon : '输入图标后会在这里显示'}
+                    </Text>
+                  </Space>
+                </Space>
+              </Card>
+
+              <label>
+                <Text strong>排序顺序</Text>
+                <InputNumber
+                  value={order}
+                  onChange={(value) => setOrder(Number(value) || 0)}
+                  min={0}
+                  step={1}
+                  size="large"
+                  style={{ width: '100%', marginTop: 8 }}
+                />
+              </label>
+
+              <Card bordered style={{ background: 'var(--semi-color-fill-0)' }}>
+                <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <Space spacing="medium">
+                    <IconLock style={{ color: 'var(--semi-color-warning)' }} />
+                    <Space vertical spacing={2} align="start">
+                      <Text strong>设为私密分类</Text>
+                      <Text type="tertiary" size="small">
+                        私密分类只会在首页隐私模式中显示。
+                      </Text>
+                    </Space>
+                  </Space>
+                  <Switch checked={isPrivate} onChange={setIsPrivate} />
+                </Space>
+              </Card>
+
+              <Space style={{ width: '100%', justifyContent: 'flex-end' }} wrap>
+                <Button onClick={() => router.back()}>取消</Button>
+                <Button
+                  htmlType="submit"
+                  theme="solid"
+                  type="primary"
+                  icon={<IconSave />}
+                  loading={saving}
+                >
+                  保存
+                </Button>
+              </Space>
+            </Space>
+          </form>
+        </Card>
+      </Space>
     </div>
   );
 }

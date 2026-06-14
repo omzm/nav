@@ -1,44 +1,52 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import type { User } from '@supabase/supabase-js';
+import { Button, Card, Space, Spin, Tag, Toast, Typography } from '@douyinfe/semi-ui';
+import { IconAlertTriangle, IconArrowLeft, IconRefresh, IconTickCircle } from '@douyinfe/semi-icons';
 import { supabase } from '@/app/lib/supabase';
+import { getLocalAdminUser } from '@/app/lib/local-admin';
+
+const { Paragraph, Text } = Typography;
+
+type TestStatus = 'checking' | 'success' | 'error';
 
 export default function TestConnection() {
-  const [status, setStatus] = useState<'checking' | 'success' | 'error'>('checking');
+  const [status, setStatus] = useState<TestStatus>('checking');
   const [message, setMessage] = useState('');
-  const [currentUser, setCurrentUser] = useState<{ email?: string; id: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const router = useRouter();
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  const testConnection = useCallback(async () => {
+    setStatus('checking');
+    setMessage('');
 
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      window.location.href = '/admin';
-      return;
-    }
-    testConnection();
-  };
-
-  const testConnection = async () => {
     try {
-      // 测试 1: 检查环境变量
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-      if (!url || !key) {
+      if (!supabaseUrl || !supabaseKey) {
         setStatus('error');
-        setMessage('❌ 环境变量未配置\n\n请检查 .env.local 文件是否存在并包含:\nNEXT_PUBLIC_SUPABASE_URL\nNEXT_PUBLIC_SUPABASE_ANON_KEY');
+        setMessage('环境变量未配置，请检查 .env.local 中的 NEXT_PUBLIC_SUPABASE_URL 和 NEXT_PUBLIC_SUPABASE_ANON_KEY。');
         return;
       }
 
-      // 测试 2: 检查用户登录状态
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const localUser = getLocalAdminUser();
+      if (localUser) {
+        setCurrentUser(localUser);
+      }
+
+      const {
+        data: { user },
+        error: userError,
+      } = localUser
+        ? { data: { user: localUser }, error: null }
+        : await supabase.auth.getUser();
 
       if (userError) {
         setStatus('error');
-        setMessage(`❌ 获取用户信息失败: ${userError.message}`);
+        setMessage(`获取用户信息失败：${userError.message}`);
         return;
       }
 
@@ -46,28 +54,23 @@ export default function TestConnection() {
 
       if (!user) {
         setStatus('error');
-        setMessage('❌ 未登录\n\n请先访问 /admin 登录');
+        setMessage('当前未登录，请先访问 /admin 登录。');
         return;
       }
 
-      // 测试 3: 检查数据库连接
-      const { data, error } = await supabase
-        .from('categories')
-        .select('count')
-        .limit(1);
+      const { error: queryError } = await supabase.from('categories').select('id').limit(1);
 
-      if (error) {
+      if (queryError) {
         setStatus('error');
-        setMessage(`❌ 数据库连接失败: ${error.message}\n\n可能原因:\n1. 数据库表未创建\n2. RLS 策略配置错误\n3. API 密钥错误`);
+        setMessage(`数据库连接失败：${queryError.message}`);
         return;
       }
 
-      // 测试 4: 尝试插入测试数据
       const testData = {
-        name: '测试分类',
-        icon: '🧪',
+        name: '__connection_test__',
+        icon: 'icon-tool',
         order: 999,
-        is_private: false,
+        is_private: true,
       };
 
       const { data: insertData, error: insertError } = await supabase
@@ -77,87 +80,106 @@ export default function TestConnection() {
 
       if (insertError) {
         setStatus('error');
-        setMessage(`❌ 插入测试失败: ${insertError.message}\n\n详细信息:\n${JSON.stringify(insertError, null, 2)}`);
+        setMessage(`写入测试失败：${insertError.message}`);
         return;
       }
 
-      // 删除测试数据
-      if (insertData && insertData[0]) {
-        await supabase
-          .from('categories')
-          .delete()
-          .eq('id', insertData[0].id);
+      if (insertData?.[0]?.id) {
+        await supabase.from('categories').delete().eq('id', insertData[0].id);
       }
 
       setStatus('success');
-      setMessage('✅ 所有测试通过！\n\n- 环境变量配置正确\n- 用户已登录\n- 数据库连接正常\n- 可以正常插入数据');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '未知错误';
+      setMessage('所有测试通过：环境变量、登录状态、数据库连接和写入权限均正常。');
+      Toast.success('连接测试通过');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : '未知错误';
       setStatus('error');
-      setMessage(`❌ 测试失败: ${msg}`);
+      setMessage(`测试失败：${msg}`);
     }
-  };
+  }, []);
+
+  const checkAuth = useCallback(async () => {
+    const localUser = getLocalAdminUser();
+    if (localUser) {
+      await testConnection();
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.push('/admin');
+      return;
+    }
+
+    await testConnection();
+  }, [router, testConnection]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void checkAuth();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [checkAuth]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-          🔍 Supabase 连接测试
-        </h1>
-
-        <div className="space-y-4">
-          {status === 'checking' && (
-            <div className="text-gray-600 dark:text-gray-400">
-              正在测试连接...
+    <main className="admin-shell">
+      <div className="admin-form-page">
+        <Space vertical spacing={24} style={{ width: '100%' }}>
+          <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+            <div>
+              <h1 className="admin-page-title">Supabase 连接测试</h1>
+              <p className="admin-page-subtitle">验证登录、读写权限和数据库连通性。</p>
             </div>
-          )}
+            <Space wrap>
+              <Button icon={<IconArrowLeft />} onClick={() => router.push('/admin/dashboard')}>
+                返回后台
+              </Button>
+              <Button icon={<IconRefresh />} loading={status === 'checking'} onClick={() => void testConnection()}>
+                重新测试
+              </Button>
+            </Space>
+          </Space>
 
-          {status === 'success' && (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-              <pre className="text-sm text-green-800 dark:text-green-200 whitespace-pre-wrap">
-                {message}
-              </pre>
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <pre className="text-sm text-red-800 dark:text-red-200 whitespace-pre-wrap">
-                {message}
-              </pre>
-            </div>
-          )}
+          <Card bordered={false} shadows="hover">
+            {status === 'checking' ? (
+              <Spin size="large" tip="正在测试连接..." style={{ width: '100%', padding: '56px 0' }} />
+            ) : (
+              <Space vertical spacing="medium" align="start" style={{ width: '100%' }}>
+                <Tag
+                  color={status === 'success' ? 'green' : 'red'}
+                  prefixIcon={status === 'success' ? <IconTickCircle /> : <IconAlertTriangle />}
+                >
+                  {status === 'success' ? '测试通过' : '测试失败'}
+                </Tag>
+                <Paragraph style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{message}</Paragraph>
+              </Space>
+            )}
+          </Card>
 
           {currentUser && (
-            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                当前用户信息:
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                邮箱: {currentUser.email}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                ID: {currentUser.id}
-              </p>
-            </div>
+            <Card title="当前用户" bordered={false} shadows="hover">
+              <Space vertical align="start">
+                <Text>邮箱：{currentUser.email}</Text>
+                <Text type="tertiary">ID：{currentUser.id}</Text>
+              </Space>
+            </Card>
           )}
 
-          <div className="flex space-x-4 mt-6">
-            <button
-              onClick={testConnection}
-              className="flex-1 bg-gray-800 dark:bg-gray-700 text-white py-3 rounded-lg font-medium hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
-            >
-              重新测试
-            </button>
-            <a
-              href="/admin/dashboard"
-              className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-center"
-            >
-              返回后台
-            </a>
-          </div>
-        </div>
+          <Card title="下一步" bordered={false} shadows="hover">
+            <Space wrap>
+              <Button theme="solid" type="primary" onClick={() => router.push('/admin/dashboard')}>
+                进入后台
+              </Button>
+              <Button onClick={() => router.push('/admin/env-check')}>环境检查</Button>
+              <Button onClick={() => router.push('/admin/init')}>数据库初始化</Button>
+            </Space>
+          </Card>
+        </Space>
       </div>
-    </div>
+    </main>
   );
 }

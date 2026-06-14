@@ -117,9 +117,9 @@ nav-website/
 ### 分类和后台图标
 分类图标字段继续支持 emoji，也支持 `icon-xxx` 形式的图标名。项目已经内置了一组线性 SVG 图标，不需要额外配置阿里 iconfont CSS。
 
-后台编辑分类时，图标字段填写 `icon-tool`、`icon-server`、`icon-globe`、`icon-pen`、`icon-cloud`、`icon-robot` 这类名称即可。
+后台编辑分类时，图标字段填写 `icon-code`、`icon-design`、`icon-book`、`icon-lightning`、`icon-cloud`、`icon-robot` 这类名称即可。
 
-本项目默认用到这些图标名：`icon-home`、`icon-code`、`icon-tool`、`icon-design`、`icon-book`、`icon-lightning`、`icon-cloud`、`icon-robot`、`icon-server`、`icon-globe`、`icon-pen`、`icon-search`、`icon-play`、`icon-chart`、`icon-folder`、`icon-folder-open`、`icon-link`、`icon-plus`、`icon-eye`、`icon-download`、`icon-refresh`、`icon-lock`、`icon-edit`、`icon-delete`。
+本项目默认用到这些图标名：`icon-code`、`icon-design`、`icon-book`、`icon-lightning`、`icon-cloud`、`icon-robot`、`icon-chart`、`icon-folder`、`icon-folder-open`、`icon-link`、`icon-plus`、`icon-eye`、`icon-download`、`icon-refresh`、`icon-lock`、`icon-edit`、`icon-delete`。
 
 如果你已有数据库里分类图标还是 emoji，可以按需执行 `supabase/update-category-icons-iconfont.sql`，或直接在后台分类编辑页逐个改成对应 `icon-xxx`。
 
@@ -148,13 +148,11 @@ MIT License
 2. 进入 **SQL Editor**。
 3. 打开本仓库的 `supabase/update-nav-snapshot-hot-links.sql`。
 4. 复制全部内容到 SQL Editor，点击 **Run**。
-5. 再打开 `supabase/update-nav-snapshot-private-rpc.sql`，复制全部内容到 SQL Editor，点击 **Run**。
 
 这个增量 SQL 会补充：
 
 - `idx_link_clicks_clicked_at_link_id` 组合索引。
 - `get_today_hot_links(limit_count integer default 5)` RPC，用于数据库侧聚合今日热门。
-- `get_nav_snapshot_data(limit_count integer default 5)` RPC，用于首页服务端快照，并让“开门”模式有隐藏分类和链接可展示。
 
 新建数据库可以直接执行完整的 `supabase/schema.sql`；已有数据库不要重复执行整份 `schema.sql`，优先执行上面的增量 SQL。
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import SearchBar from './SearchBar';
 import CategorySection from './CategorySection';
@@ -8,6 +8,7 @@ import ThemeToggle from './ThemeToggle';
 import BackToTop from './BackToTop';
 import RefreshButton from './RefreshButton';
 import Sidebar from './Sidebar';
+import { revalidateNavSnapshot } from '../actions/revalidateNavSnapshot';
 import type { NavCategory, NavSnapshot } from '../types';
 
 interface HomeClientProps {
@@ -21,6 +22,8 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showPrivate, setShowPrivate] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshPending, startRefreshTransition] = useTransition();
   const [scrolledPastHeader, setScrolledPastHeader] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
 
@@ -50,9 +53,24 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleRefresh = useCallback(() => {
-    router.refresh();
-  }, [router]);
+  const isRefreshButtonBusy = isRefreshing || isRefreshPending;
+
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshButtonBusy) return;
+
+    setIsRefreshing(true);
+
+    try {
+      await revalidateNavSnapshot();
+    } catch (error) {
+      console.error('Failed to refresh nav snapshot:', error);
+    } finally {
+      startRefreshTransition(() => {
+        router.refresh();
+      });
+      setIsRefreshing(false);
+    }
+  }, [isRefreshButtonBusy, router, startRefreshTransition]);
 
   const handleSearchChange = useCallback((value: string) => {
     if (value.trim() === '开门') {
@@ -129,7 +147,7 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex">
       <ThemeToggle />
-      <RefreshButton onRefresh={handleRefresh} />
+      <RefreshButton onRefresh={handleRefresh} isRefreshing={isRefreshButtonBusy} />
       <BackToTop />
 
       <Sidebar
@@ -201,7 +219,7 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
           </div>
         </header>
 
-        <main className="flex-1 px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <main className="flex-1 overflow-y-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
           <div className="max-w-[1600px] mx-auto">
             {showPrivate && (
               <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-700 rounded-xl flex items-center justify-between">

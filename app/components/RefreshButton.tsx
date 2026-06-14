@@ -1,19 +1,26 @@
 'use client';
 
 interface RefreshButtonProps {
-  onRefresh?: () => void;
+  onRefresh?: () => void | Promise<void>;
+  isRefreshing?: boolean;
 }
 
-export default function RefreshButton({ onRefresh }: RefreshButtonProps) {
+export default function RefreshButton({ onRefresh, isRefreshing = false }: RefreshButtonProps) {
   return (
     <button
       onClick={onRefresh}
-      className="fixed bottom-[8.5rem] sm:bottom-[9rem] right-4 sm:right-6 z-50 w-12 h-12 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center group"
-      aria-label="刷新页面"
+      disabled={isRefreshing}
+      aria-busy={isRefreshing}
+      aria-label="Refresh page"
+      className={`fixed bottom-[8.5rem] sm:bottom-[9rem] right-4 sm:right-6 z-50 w-12 h-12 rounded-full bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center group ${
+        isRefreshing ? 'cursor-not-allowed opacity-70' : ''
+      }`}
       type="button"
     >
       <svg
-        className="w-6 h-6 text-gray-600 dark:text-gray-300 transition-transform duration-300 group-hover:rotate-180"
+        className={`w-6 h-6 text-gray-600 dark:text-gray-300 transition-transform duration-300 ${
+          isRefreshing ? 'animate-spin' : 'group-hover:rotate-180'
+        }`}
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

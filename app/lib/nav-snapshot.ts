@@ -27,89 +27,10 @@ type HotLinkRow = {
   click_count: number;
 };
 
-type SnapshotRpcLink = {
-  id?: string;
-  title?: string;
-  url?: string;
-  description?: string;
-  icon?: string | null;
-  isPrivate?: boolean;
-};
-
-type SnapshotRpcCategory = {
-  id?: string;
-  name?: string;
-  icon?: string;
-  isPrivate?: boolean;
-  links?: SnapshotRpcLink[];
-};
-
-type SnapshotRpcPayload = {
-  categories?: SnapshotRpcCategory[];
-  hotLinks?: Array<{
-    title?: string;
-    url?: string;
-    icon?: string | null;
-    clickCount?: number;
-  }>;
-  stats?: {
-    categoryCount?: number;
-    linkCount?: number;
-  };
-  generatedAt?: string;
-};
-
-function formatRpcSnapshot(payload: SnapshotRpcPayload): NavSnapshot {
-  const categories: NavCategory[] = (payload.categories || []).map((category) => ({
-    id: category.id || '',
-    name: category.name || '',
-    icon: category.icon || 'icon-folder',
-    isPrivate: category.isPrivate || false,
-    links: (category.links || []).map((link) => ({
-      id: link.id,
-      title: link.title || '',
-      url: link.url || '',
-      description: link.description || '',
-      icon: link.icon || undefined,
-      isPrivate: link.isPrivate || false,
-    })),
-  }));
-
-  const linkCount = categories.reduce((sum, category) => sum + category.links.length, 0);
-
-  return {
-    categories,
-    hotLinks: (payload.hotLinks || []).map((link) => ({
-      title: link.title || '',
-      url: link.url || '',
-      icon: link.icon || undefined,
-      clickCount: Number(link.clickCount) || 0,
-    })),
-    stats: {
-      categoryCount: payload.stats?.categoryCount ?? categories.length,
-      linkCount: payload.stats?.linkCount ?? linkCount,
-    },
-    generatedAt: payload.generatedAt || new Date().toISOString(),
-  };
-}
-
 async function loadNavSnapshot(): Promise<NavSnapshot> {
   const supabase = createServerSupabaseClient();
 
   try {
-    const { data: snapshotData, error: snapshotError } = await supabase.rpc(
-      'get_nav_snapshot_data',
-      { limit_count: 5 }
-    );
-
-    if (!snapshotError && snapshotData) {
-      return formatRpcSnapshot(snapshotData as SnapshotRpcPayload);
-    }
-
-    if (snapshotError) {
-      console.warn('Falling back to table snapshot query:', snapshotError.message);
-    }
-
     const [categoriesResult, linksResult, hotLinksResult] = await Promise.all([
       supabase
         .from('categories')
