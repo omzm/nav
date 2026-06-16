@@ -12,6 +12,7 @@
     "@douyinfe/semi-icons": "^2.100.0",
     "@douyinfe/semi-ui": "^2.100.0",
     "@supabase/supabase-js": "^2.95.3",
+    "@vercel/analytics": "^2.0.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

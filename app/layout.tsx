@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ToastContainer } from "./components/Toast";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "收藏夹 - 一些常用的工具",
@@ -32,6 +33,7 @@ export default function RootLayout({
           {children}
         </ErrorBoundary>
         <ToastContainer />
+        <Analytics />
       </body>
     </html>
   );
