@@ -16,6 +16,11 @@ interface SidebarProps {
 }
 
 const START_DATE = new Date('2026-02-16T00:00:00');
+const ALL_CATEGORIES_ICON = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M3 10.75L12 3l9 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M5.5 9.75V20h13V9.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9.5 20v-6h5v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
 
 function getRunDays() {
   const diff = Date.now() - START_DATE.getTime();
@@ -63,7 +68,7 @@ const CategoryList = memo(function CategoryList({
       >
         <span className="flex items-center space-x-2 sm:space-x-2.5">
           <span className={`text-sm sm:text-base transition-transform duration-300 ${selectedCategory === null ? 'scale-110' : 'group-hover:scale-110'}`}>
-            🏠
+            <CategoryIcon icon={ALL_CATEGORIES_ICON} />
           </span>
           <span className={`text-xs sm:text-sm font-medium transition-colors duration-300 ${
             selectedCategory === null
