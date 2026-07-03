@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, memo } from 'react';
+import { useEffect, useMemo, useRef, useState, memo } from 'react';
 import { NavLink } from '../types';
 import { getFaviconUrl, getFallbackFaviconUrl } from '../utils/favicon';
 
@@ -8,11 +8,50 @@ interface NavCardProps {
   link: NavLink;
 }
 
+function useIconVisibility() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    if (shouldLoad) return;
+
+    const node = ref.current;
+    if (!node) return;
+
+    if (!('IntersectionObserver' in window)) {
+      const timer = setTimeout(() => setShouldLoad(true), 0);
+      return () => clearTimeout(timer);
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      {
+        rootMargin: '240px 0px',
+        threshold: 0.01,
+      }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [shouldLoad]);
+
+  return { ref, shouldLoad };
+}
+
 function NavCard({ link }: NavCardProps) {
   const [imgError, setImgError] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
+  const { ref: iconRef, shouldLoad: shouldLoadIcon } = useIconVisibility();
 
-  const faviconUrl = useFallback ? getFallbackFaviconUrl(link.url) : getFaviconUrl(link.url);
+  const faviconUrl = useMemo(() => {
+    if (!shouldLoadIcon) return '';
+    return useFallback ? getFallbackFaviconUrl(link.url) : getFaviconUrl(link.url);
+  }, [link.url, shouldLoadIcon, useFallback]);
 
   const handleImageError = () => {
     if (!useFallback) {
@@ -59,14 +98,18 @@ function NavCard({ link }: NavCardProps) {
 
       <div className="relative flex h-full flex-col items-center justify-center gap-1 text-center sm:h-auto sm:flex-row sm:items-start sm:justify-start sm:gap-0 sm:space-x-3 sm:text-left">
         {/* 网站图标 */}
-        <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 flex items-center justify-center rounded-md sm:rounded-lg bg-gray-50 dark:bg-gray-700/50 group-hover:scale-110 transition-transform duration-300 overflow-hidden">
-          {!imgError && faviconUrl ? (
+        <div
+          ref={iconRef}
+          className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 flex items-center justify-center rounded-md sm:rounded-lg bg-gray-50 dark:bg-gray-700/50 group-hover:scale-110 transition-transform duration-300 overflow-hidden"
+        >
+          {shouldLoadIcon && !imgError && faviconUrl ? (
             <img
               src={faviconUrl}
               alt={`${link.title} icon`}
               className="w-4 h-4 sm:w-6 sm:h-6 object-contain"
               onError={handleImageError}
               loading="lazy"
+              decoding="async"
             />
           ) : link.icon ? (
             <span className="text-base sm:text-xl">{link.icon}</span>
