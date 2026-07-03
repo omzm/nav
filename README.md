@@ -15,7 +15,7 @@
 - 🔍 **智能搜索** - 实时搜索标题和描述
 - 🌓 **深色模式** - 自动适配系统主题
 - 📱 **响应式设计** - 完美适配手机、平板、电脑
-- 🔐 **隐私模式** - 隐藏敏感链接，输入"开门"解锁
+- 🔐 **隐私模式** - 公开访问默认隐藏敏感内容，输入"开门"后在本机临时显示
 - 🎛️ **后台管理** - 可视化管理分类和链接
 - 🖼️ **每日壁纸** - 必应每日壁纸背景
 - 💬 **每日一言** - 随机名言展示
@@ -28,9 +28,11 @@
 - 🔑 **密钥保护** - 环境变量不入库，诊断页面不暴露密钥值
 
 ### 性能优化
-- ⚡ **并行查询** - Promise.all 并行加载数据
+- ⚡ **服务端快照** - 首页通过缓存快照读取导航数据，后台变更后主动刷新
+- 🗄️ **数据库聚合** - 今日热门和首页快照由 Supabase RPC 聚合返回
+- ⚡ **并行查询** - 后台数据和诊断页按场景并行加载
 - 🎯 **React.memo** - 完整属性比较，减少不必要的重渲染
-- 📉 **防抖优化** - 实时订阅回调 1s 防抖
+- 📉 **防抖优化** - 后台实时订阅回调 1s 防抖
 - 🖼️ **壁纸直加载** - 浏览器直接请求壁纸 URL，无 JS 中间层
 - 🔄 **懒加载图标** - Favicon 按需加载，不阻塞首屏
 
@@ -74,8 +76,11 @@ nav-website/
 │   ├── admin/
 │   │   ├── page.tsx             # 管理员登录
 │   │   ├── dashboard/           # 后台管理面板
-│   │   │   ├── category/[id]/   # 分类编辑
-│   │   │   └── link/[id]/       # 链接编辑
+│   │   │   ├── categories/      # 分类列表、删除、排序
+│   │   │   ├── category/[id]/   # 分类新增/编辑
+│   │   │   ├── links/           # 链接列表、删除、排序
+│   │   │   ├── link/[id]/       # 链接新增/编辑
+│   │   │   └── _components/     # 后台数据 Hook
 │   │   └── diagnostic/          # 认证诊断工具
 │   ├── components/
 │   │   ├── ErrorBoundary.tsx    # 错误边界
@@ -86,12 +91,18 @@ nav-website/
 │   │   ├── BackToTop.tsx        # 返回顶部
 │   │   ├── ThemeToggle.tsx      # 主题切换
 │   │   └── Toast.tsx            # Toast 通知
-│   ├── lib/supabase.ts          # Supabase 客户端 + 类型定义
+│   ├── actions/
+│   │   └── revalidateNavSnapshot.ts # 后台保存后刷新首页快照
+│   ├── lib/
+│   │   ├── daily-quote.ts       # 服务端每日一言（1 小时缓存）
+│   │   ├── local-admin.ts       # 本地测试管理员会话
+│   │   ├── nav-snapshot.ts      # 首页导航快照（RPC 优先，表查询兜底）
+│   │   ├── supabase-server.ts   # 服务端 Supabase 客户端
+│   │   └── supabase.ts          # 浏览器 Supabase 客户端 + 类型定义
 │   ├── utils/
 │   │   ├── adminCache.ts        # 后台缓存（2 分钟）
-│   │   ├── externalApi.ts       # 每日一言 API（24 小时缓存）
 │   │   ├── favicon.ts           # Favicon 获取（内存 + localStorage 缓存）
-│   │   └── throttle.ts          # 节流/防抖
+│   │   └── throttle.ts          # 节流
 │   ├── data.ts                  # 本地备用数据
 │   ├── types.ts                 # 类型定义（NavLink、HotLink、NavCategory）
 │   └── globals.css              # 全局样式
@@ -106,7 +117,7 @@ nav-website/
 ## 🎯 功能说明
 
 ### 隐私模式
-在搜索框输入 `开门` 解锁隐藏内容，点击"退出隐私模式"返回。
+在搜索框输入 `开门` 解锁隐藏内容，点击"退出隐私模式"返回。首页快照会通过 `get_nav_snapshot_data()` 取回完整分类/链接数据，浏览器端只负责临时显示或隐藏；这不会放开表级 SELECT 策略，也不会给访客写入权限。
 
 ### 今日热门
 侧边栏自动展示当日被点击最多的 5 个链接，显示网站图标和点击次数。数据存储在 `link_clicks` 表中，每天自动清理历史记录。
@@ -132,7 +143,7 @@ nav-website/
 - **React 19** - UI 库
 - **TypeScript 5** - 类型安全
 - **Tailwind CSS 4** - 样式框架
-- **Supabase** - 数据库 + 认证 + 实时订阅
+- **Supabase** - 数据库 + 认证 + RPC + 后台实时订阅
 
 ## 📄 许可证
 
@@ -140,19 +151,21 @@ MIT License
 
 ## 首页缓存快照与数据库升级
 
-当前首页使用服务端缓存快照模式：公共首页读取 `getNavSnapshot()`，访客浏览器不再订阅 Supabase realtime。后台管理仍然保留 realtime；分类或链接新增、编辑、删除、排序保存成功后，后台会主动触发 `revalidateTag('nav-snapshot')` 和 `revalidatePath('/')`，所以下一个新访客请求首页会立即看到最新内容。
+当前首页使用服务端缓存快照模式：公共首页读取 `getNavSnapshot()`，访客浏览器不再订阅 Supabase realtime。分类或链接新增、编辑、删除、排序保存成功后，后台会主动触发 `revalidateTag('nav-snapshot')` 和 `revalidatePath('/')`，所以下一个新访客请求首页会立即看到最新内容。
 
-如果你的 Supabase 数据库是在这次改造前创建的，需要手动执行一次增量 SQL：
+如果你的 Supabase 数据库是在这次改造前创建的，需要手动执行增量 SQL：
 
 1. 打开 Supabase 控制台，进入项目。
 2. 进入 **SQL Editor**。
-3. 打开本仓库的 `supabase/update-nav-snapshot-hot-links.sql`。
-4. 复制全部内容到 SQL Editor，点击 **Run**。
+3. 依次打开并执行本仓库的增量 SQL：
+   - `supabase/update-nav-snapshot-hot-links.sql`
+   - `supabase/update-nav-snapshot-private-rpc.sql`
 
 这个增量 SQL 会补充：
 
 - `idx_link_clicks_clicked_at_link_id` 组合索引。
 - `get_today_hot_links(limit_count integer default 5)` RPC，用于数据库侧聚合今日热门。
+- `get_nav_snapshot_data(limit_count integer default 5)` RPC，用于首页服务端快照，并让“开门”模式有私密分类/链接数据可显示。
 
 新建数据库可以直接执行完整的 `supabase/schema.sql`；已有数据库不要重复执行整份 `schema.sql`，优先执行上面的增量 SQL。
 

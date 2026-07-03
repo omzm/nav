@@ -31,7 +31,9 @@
 执行成功后会创建：
 - `categories` 表（分类）
 - `links` 表（链接）
-- 5 个索引
+- `link_clicks` 表（今日热门点击记录）
+- 常用查询索引
+- `get_today_hot_links()` 和 `get_nav_snapshot_data()` RPC
 - RLS 安全策略（只有你的邮箱可以增删改数据）
 
 ---
@@ -113,10 +115,11 @@ npm run dev
 │   │   ├── dashboard/           # 后台管理页
 │   │   └── diagnostic/          # 认证诊断页（调试用）
 │   ├── components/              # 所有组件
-│   ├── lib/supabase.ts          # Supabase 客户端
-│   ├── utils/                   # 工具函数
-│   └── config/                  # 配置
-├── supabase/schema.sql          # 数据库建表 SQL
+│   ├── lib/                     # Supabase 客户端、首页快照、每日一言
+│   ├── actions/                 # 首页快照刷新 action
+│   └── utils/                   # 缓存、favicon、节流工具
+├── supabase/schema.sql          # 数据库建表、RLS、RPC SQL
+├── supabase/update-*.sql        # 旧数据库升级 SQL
 ├── middleware.ts                # Next.js 中间件
 ├── .env.local.example           # 环境变量模板
 └── vercel.json                  # Vercel 部署配置
@@ -150,3 +153,10 @@ npm run dev
 - 管理员邮箱是否匹配
 - 数据库连通性
 - RLS 写入权限
+
+### 已有数据库升级
+
+如果你的数据库是旧版本初始化的，不要重复执行整份 `supabase/schema.sql`。进入 Supabase SQL Editor，按需执行：
+
+- `supabase/update-nav-snapshot-hot-links.sql`：补充今日热门聚合 RPC 和点击索引。
+- `supabase/update-nav-snapshot-private-rpc.sql`：补充首页快照 RPC，让搜索框输入 `开门` 后能显示隐藏分类和隐藏链接。

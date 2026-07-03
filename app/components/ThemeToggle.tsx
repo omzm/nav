@@ -1,51 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
+
+const THEME_CHANGE_EVENT = 'nav-theme-change';
+
+function applyTheme(isDark: boolean) {
+  document.documentElement.classList.toggle('dark', isDark);
+  document.documentElement.classList.toggle('light', !isDark);
+}
+
+function getThemeSnapshot() {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem('theme') === 'dark';
+}
+
+function subscribeThemeChange(callback: () => void) {
+  window.addEventListener('storage', callback);
+  window.addEventListener(THEME_CHANGE_EVENT, callback);
+
+  return () => {
+    window.removeEventListener('storage', callback);
+    window.removeEventListener(THEME_CHANGE_EVENT, callback);
+  };
+}
 
 export default function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const isDark = useSyncExternalStore(subscribeThemeChange, getThemeSnapshot, () => false);
 
   useEffect(() => {
-    setMounted(true);
-
-    // 检查本地存储
-    const savedTheme = localStorage.getItem('theme');
-    const shouldBeDark = savedTheme === 'dark';
-
-    setIsDark(shouldBeDark);
-
-    // 应用主题
-    if (shouldBeDark) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
+    applyTheme(isDark);
+  }, [isDark]);
 
   const toggleTheme = () => {
     const newIsDark = !isDark;
-    setIsDark(newIsDark);
-
-    // 保存到本地存储
     localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
-
-    // 更新 DOM
-    if (newIsDark) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    }
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   };
-
-  // 防止闪烁
-  if (!mounted) {
-    return null;
-  }
 
   return (
     <button

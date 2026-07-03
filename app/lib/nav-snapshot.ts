@@ -27,9 +27,36 @@ type HotLinkRow = {
   click_count: number;
 };
 
-async function loadNavSnapshot(): Promise<NavSnapshot> {
-  const supabase = createServerSupabaseClient();
+type SnapshotRpcData = Partial<{
+  categories: NavCategory[];
+  hotLinks: HotLink[];
+  stats: {
+    categoryCount: number;
+    linkCount: number;
+  };
+  generatedAt: string;
+}>;
 
+function normalizeRpcSnapshot(data: SnapshotRpcData): NavSnapshot {
+  const categories = Array.isArray(data.categories) ? data.categories : [];
+  const hotLinks = Array.isArray(data.hotLinks) ? data.hotLinks : [];
+
+  return {
+    categories,
+    hotLinks,
+    stats: {
+      categoryCount: Number(data.stats?.categoryCount) || categories.length,
+      linkCount:
+        Number(data.stats?.linkCount) ||
+        categories.reduce((sum, category) => sum + category.links.length, 0),
+    },
+    generatedAt: data.generatedAt ? new Date(data.generatedAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+async function loadNavSnapshotFromTables(
+  supabase: ReturnType<typeof createServerSupabaseClient>
+): Promise<NavSnapshot> {
   try {
     const [categoriesResult, linksResult, hotLinksResult] = await Promise.all([
       supabase
@@ -105,6 +132,21 @@ async function loadNavSnapshot(): Promise<NavSnapshot> {
       },
       generatedAt: new Date().toISOString(),
     };
+  }
+}
+
+async function loadNavSnapshot(): Promise<NavSnapshot> {
+  const supabase = createServerSupabaseClient();
+
+  try {
+    const { data, error } = await supabase.rpc('get_nav_snapshot_data', { limit_count: 5 });
+
+    if (error) throw error;
+
+    return normalizeRpcSnapshot((data || {}) as SnapshotRpcData);
+  } catch (error) {
+    console.error('Failed to load nav snapshot via RPC:', error);
+    return loadNavSnapshotFromTables(supabase);
   }
 }
 
