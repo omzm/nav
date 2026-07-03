@@ -1,174 +1,169 @@
-# 收藏夹导航网站
+# 收藏夹导航
 
-一个现代化的个人收藏夹导航网站，支持分类管理、搜索、隐私模式等功能。
+一个用于个人收藏、工具导航和团队常用链接管理的 Next.js 网站。前台面向快速访问，后台面向分类、链接、排序和隐私内容维护。
 
 ![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![React](https://img.shields.io/badge/React-19-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
 
-## ✨ 特性
+## 功能概览
 
-### 核心功能
-- 📁 **分类管理** - 支持自定义分类和排序
-- 🔍 **智能搜索** - 实时搜索标题和描述
-- 🌓 **深色模式** - 自动适配系统主题
-- 📱 **响应式设计** - 完美适配手机、平板、电脑
-- 🔐 **隐私模式** - 公开访问默认隐藏敏感内容，输入"开门"后在本机临时显示
-- 🎛️ **后台管理** - 可视化管理分类和链接
-- 🖼️ **每日壁纸** - 必应每日壁纸背景
-- 💬 **每日一言** - 随机名言展示
-- 🔥 **今日热门** - 侧边栏展示当日点击排名前 5 的链接
+- 分类导航：按分类展示链接，支持后台自定义分类、图标和排序。
+- 即时搜索：在首页搜索标题和描述，快速过滤链接。
+- 隐私模式：默认隐藏私密分类和私密链接，在搜索框输入 `开门` 后临时显示。
+- 今日热门：记录链接点击，侧边栏展示当天访问最多的前 5 个链接。
+- 后台管理：支持分类和链接的新增、编辑、删除、排序、私密标记和统计概览。
+- 深色模式：本地保存主题偏好。
+- 每日壁纸和一言：首页展示必应壁纸背景和服务端缓存的一言内容。
+- 诊断工具：检查环境变量、登录状态、数据库连接和 RLS 写入权限。
 
-### 安全特性
-- 🔒 **RLS 策略** - 数据库行级安全，只有管理员邮箱可以写入
-- 🛡️ **安全头** - X-Frame-Options、CSP、Referrer-Policy 等
-- 👤 **管理员校验** - 前端 + 数据库双重身份校验
-- 🔑 **密钥保护** - 环境变量不入库，诊断页面不暴露密钥值
+## 性能设计
 
-### 性能优化
-- ⚡ **服务端快照** - 首页通过缓存快照读取导航数据，后台变更后主动刷新
-- 🗄️ **数据库聚合** - 今日热门和首页快照由 Supabase RPC 聚合返回
-- ⚡ **并行查询** - 后台数据和诊断页按场景并行加载
-- 🎯 **React.memo** - 完整属性比较，减少不必要的重渲染
-- 📉 **防抖优化** - 后台实时订阅回调 1s 防抖
-- 🖼️ **壁纸直加载** - 浏览器直接请求壁纸 URL，无 JS 中间层
-- 🔄 **懒加载图标** - Favicon 按需加载，不阻塞首屏
+- 首页使用服务端快照读取导航数据，减少访客端 Supabase 请求。
+- 快照数据通过 `get_nav_snapshot_data()` RPC 聚合，后台保存后主动刷新缓存。
+- 今日热门通过 `get_today_hot_links()` 在数据库侧聚合。
+- 首页链接 favicon 滚动到视口附近才开始加载，避免首屏一次性请求所有图标。
+- 分类区和链接卡片使用 `React.memo` 降低重复渲染。
+- 后台实时订阅分类和链接变化，并对刷新做防抖处理。
 
-## 🚀 快速开始
+## 快速开始
 
-### 环境要求
+环境要求：
+
 - Node.js 18.17 或更高版本
-- npm 包管理器
-- [Supabase](https://supabase.com) 账号
-
-### 三步启动
+- npm
+- Supabase 项目
 
 ```bash
-# 1. 克隆 & 安装
-git clone https://github.com/your-username/nav-website.git
-cd nav-website
 npm install
-
-# 2. 配置环境变量
 cp .env.local.example .env.local
-# 编辑 .env.local，填入你的 Supabase 配置和管理员邮箱
-
-# 3. 启动
 npm run dev
 ```
 
-- 前台：http://localhost:3000
-- 后台：http://localhost:3000/admin
-- 诊断：http://localhost:3000/admin/diagnostic
+打开：
 
-> **首次部署？** 👉 查看 **[详细搭建步骤（SETUP.md）](./SETUP.md)**，包含 Supabase 项目创建、数据库初始化、管理员账号创建、Vercel 部署的完整流程。
+- 首页：`http://localhost:3000`
+- 后台：`http://localhost:3000/admin`
+- 诊断：`http://localhost:3000/admin/diagnostic`
 
-## 📂 项目结构
+`.env.local` 至少需要：
 
+```bash
+NEXT_PUBLIC_SUPABASE_URL=你的 Supabase Project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=你的 Supabase anon public key
+NEXT_PUBLIC_ADMIN_EMAIL=你的管理员邮箱
 ```
-nav-website/
+
+完整部署流程见 [SETUP.md](./SETUP.md)。
+
+## 目录结构
+
+```text
+.
 ├── app/
-│   ├── page.tsx                 # 首页
-│   ├── layout.tsx               # 根布局（ErrorBoundary + OG 元数据）
-│   ├── icon.svg                 # 网站图标
-│   ├── admin/
-│   │   ├── page.tsx             # 管理员登录
-│   │   ├── dashboard/           # 后台管理面板
-│   │   │   ├── categories/      # 分类列表、删除、排序
-│   │   │   ├── category/[id]/   # 分类新增/编辑
-│   │   │   ├── links/           # 链接列表、删除、排序
-│   │   │   ├── link/[id]/       # 链接新增/编辑
-│   │   │   └── _components/     # 后台数据 Hook
-│   │   └── diagnostic/          # 认证诊断工具
-│   ├── components/
-│   │   ├── ErrorBoundary.tsx    # 错误边界
-│   │   ├── Sidebar.tsx          # 侧边栏（分类导航 + 今日热门）
-│   │   ├── CategorySection.tsx  # 分类区域（完整 memo 比较）
-│   │   ├── NavCard.tsx          # 链接卡片（点击上报 + 完整 memo 比较）
-│   │   ├── SearchBar.tsx        # 搜索框
-│   │   ├── BackToTop.tsx        # 返回顶部
-│   │   ├── ThemeToggle.tsx      # 主题切换
-│   │   └── Toast.tsx            # Toast 通知
-│   ├── actions/
-│   │   └── revalidateNavSnapshot.ts # 后台保存后刷新首页快照
-│   ├── lib/
-│   │   ├── daily-quote.ts       # 服务端每日一言（1 小时缓存）
-│   │   ├── local-admin.ts       # 本地测试管理员会话
-│   │   ├── nav-snapshot.ts      # 首页导航快照（RPC 优先，表查询兜底）
-│   │   ├── supabase-server.ts   # 服务端 Supabase 客户端
-│   │   └── supabase.ts          # 浏览器 Supabase 客户端 + 类型定义
-│   ├── utils/
-│   │   ├── adminCache.ts        # 后台缓存（2 分钟）
-│   │   ├── favicon.ts           # Favicon 获取（内存 + localStorage 缓存）
-│   │   └── throttle.ts          # 节流
-│   ├── data.ts                  # 本地备用数据
-│   ├── types.ts                 # 类型定义（NavLink、HotLink、NavCategory）
-│   └── globals.css              # 全局样式
-├── supabase/schema.sql          # 数据库建表 + RLS 策略 + 点击记录表
-├── middleware.ts                # Next.js 中间件
-├── .env.local.example           # 环境变量模板
-├── vercel.json                  # Vercel 部署配置
-├── SETUP.md                     # 详细搭建步骤
-└── README.md                    # 本文件
+│   ├── actions/                  # 服务端 action，例如刷新首页快照
+│   ├── admin/                    # 登录、诊断、初始化和后台管理页面
+│   ├── api/                      # 点击上报 API
+│   ├── components/               # 首页和通用组件
+│   ├── lib/                      # Supabase、每日一言、首页快照、本地管理员
+│   ├── utils/                    # 后台缓存、favicon、节流工具
+│   ├── data.ts                   # Supabase 不可用时的本地备用数据
+│   ├── globals.css               # 全局样式
+│   ├── icon.svg                  # 站点图标
+│   ├── layout.tsx                # 根布局
+│   ├── loading.tsx               # 首页 loading 骨架
+│   └── page.tsx                  # 首页入口
+├── supabase/
+│   ├── schema.sql                # 建表、RLS、索引和 RPC
+│   ├── update-category-icons-iconfont.sql
+│   ├── update-nav-snapshot-hot-links.sql
+│   └── update-nav-snapshot-private-rpc.sql
+├── middleware.ts                 # 后台访问中间件
+├── next.config.ts
+├── package.json
+├── SETUP.md
+└── README.md
 ```
 
-## 🎯 功能说明
+## 核心逻辑
+
+### 首页快照
+
+首页通过 `app/lib/nav-snapshot.ts` 读取导航快照。优先调用 Supabase RPC `get_nav_snapshot_data()`，如果 RPC 不存在或网络失败，则回退到表查询；如果表查询也失败，则使用 `app/data.ts` 的本地备用数据。
+
+快照由 Next 缓存 45 秒，并使用 `nav-snapshot` tag。后台新增、编辑、删除或排序后，会调用 `revalidateNavSnapshot()` 主动刷新。
 
 ### 隐私模式
-在搜索框输入 `开门` 解锁隐藏内容，点击"退出隐私模式"返回。首页快照会通过 `get_nav_snapshot_data()` 取回完整分类/链接数据，浏览器端只负责临时显示或隐藏；这不会放开表级 SELECT 策略，也不会给访客写入权限。
+
+私密内容仍由数据库字段 `is_private` 标记：
+
+- 分类可以设为私密。
+- 单个链接可以设为私密。
+- 首页默认隐藏私密分类和私密链接。
+- 在搜索框输入 `开门` 后，当前浏览器页面临时显示私密内容。
+
+`get_nav_snapshot_data()` 使用 `SECURITY DEFINER` 返回首页需要的快照形状，让前端有数据可显示；它不开放表级写入权限，也不改变 RLS 的管理限制。
 
 ### 今日热门
-侧边栏自动展示当日被点击最多的 5 个链接，显示网站图标和点击次数。数据存储在 `link_clicks` 表中，每天自动清理历史记录。
 
-### 后台管理
-访问 `/admin` 登录，支持分类和链接的增删改查、排序、私密标记、数据统计。
+链接点击通过 `app/api/link-click/route.ts` 写入 `link_clicks` 表。首页侧边栏调用快照里的 `hotLinks`，展示当天点击最多的前 5 条公开链接。
 
-### 分类和后台图标
-分类图标字段继续支持 emoji，也支持 `icon-xxx` 形式的图标名。项目已经内置了一组线性 SVG 图标，不需要额外配置阿里 iconfont CSS。
+### 图标
 
-后台编辑分类时，图标字段填写 `icon-code`、`icon-design`、`icon-book`、`icon-lightning`、`icon-cloud`、`icon-robot` 这类名称即可。
+分类图标支持两种写法：
 
-本项目默认用到这些图标名：`icon-code`、`icon-design`、`icon-book`、`icon-lightning`、`icon-cloud`、`icon-robot`、`icon-chart`、`icon-folder`、`icon-folder-open`、`icon-link`、`icon-plus`、`icon-eye`、`icon-download`、`icon-refresh`、`icon-lock`、`icon-edit`、`icon-delete`。
+- emoji，例如 `📁`
+- 内置图标名，例如 `icon-code`、`icon-design`、`icon-book`
 
-如果你已有数据库里分类图标还是 emoji，可以按需执行 `supabase/update-category-icons-iconfont.sql`，或直接在后台分类编辑页逐个改成对应 `icon-xxx`。
+链接图标默认走 favicon。首页卡片会等卡片接近视口后再加载 favicon，减少首屏网络请求。
 
-### 诊断工具
-访问 `/admin/diagnostic` 查看认证状态、环境变量、数据库连通性、RLS 权限等完整诊断信息。
+## 后台入口
 
-## 🛠️ 技术栈
+- `/admin`：登录
+- `/admin/dashboard`：后台首页和统计
+- `/admin/dashboard/categories`：分类列表
+- `/admin/dashboard/category/new`：新增分类
+- `/admin/dashboard/category/[id]`：编辑分类
+- `/admin/dashboard/links`：链接列表
+- `/admin/dashboard/link/new`：新增链接
+- `/admin/dashboard/link/[id]`：编辑链接
+- `/admin/diagnostic`：诊断工具
+- `/admin/init`：数据库初始化辅助
+- `/admin/env-check`：环境变量检查
 
-- **Next.js 16** - React 框架
-- **React 19** - UI 库
-- **TypeScript 5** - 类型安全
-- **Tailwind CSS 4** - 样式框架
-- **Supabase** - 数据库 + 认证 + RPC + 后台实时订阅
+## 常用命令
 
-## 📄 许可证
+```bash
+npm run dev      # 本地开发
+npm run build    # 生产构建
+npm run start    # 启动生产服务
+npm run lint     # ESLint 检查
+```
 
-MIT License
+## 数据库升级
 
-## 首页缓存快照与数据库升级
+新建数据库可以直接执行 `supabase/schema.sql`。
 
-当前首页使用服务端缓存快照模式：公共首页读取 `getNavSnapshot()`，访客浏览器不再订阅 Supabase realtime。分类或链接新增、编辑、删除、排序保存成功后，后台会主动触发 `revalidateTag('nav-snapshot')` 和 `revalidatePath('/')`，所以下一个新访客请求首页会立即看到最新内容。
+已有旧数据库请按需执行增量 SQL：
 
-如果你的 Supabase 数据库是在这次改造前创建的，需要手动执行增量 SQL：
+- `supabase/update-nav-snapshot-hot-links.sql`：补充点击索引和今日热门 RPC。
+- `supabase/update-nav-snapshot-private-rpc.sql`：补充首页完整快照 RPC，让 `开门` 模式能显示隐藏内容。
+- `supabase/update-category-icons-iconfont.sql`：可选，把示例分类图标迁移到内置图标名。
 
-1. 打开 Supabase 控制台，进入项目。
-2. 进入 **SQL Editor**。
-3. 依次打开并执行本仓库的增量 SQL：
-   - `supabase/update-nav-snapshot-hot-links.sql`
-   - `supabase/update-nav-snapshot-private-rpc.sql`
+## 安全说明
 
-这个增量 SQL 会补充：
+- 表写入权限由 Supabase RLS 和管理员邮箱控制。
+- `NEXT_PUBLIC_ADMIN_EMAIL` 只用于前端判断和显示，真正权限仍在数据库层。
+- `.env.local` 不应提交到 GitHub。
+- 诊断页面不会展示完整密钥值。
 
-- `idx_link_clicks_clicked_at_link_id` 组合索引。
-- `get_today_hot_links(limit_count integer default 5)` RPC，用于数据库侧聚合今日热门。
-- `get_nav_snapshot_data(limit_count integer default 5)` RPC，用于首页服务端快照，并让“开门”模式有私密分类/链接数据可显示。
+## 技术栈
 
-新建数据库可以直接执行完整的 `supabase/schema.sql`；已有数据库不要重复执行整份 `schema.sql`，优先执行上面的增量 SQL。
+- Next.js 16
+- React 19
+- TypeScript 5
+- Tailwind CSS 4
+- Supabase
+- Semi UI
 
----
-
-⭐ 如果这个项目对你有帮助，欢迎 Star！

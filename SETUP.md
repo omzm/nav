@@ -1,162 +1,207 @@
 # 部署指南
 
-从零开始部署本项目到 Vercel + Supabase 的完整步骤。
+这份文档说明如何把本项目部署到 Supabase + Vercel，并给出本地开发、数据库升级和常见问题处理方式。
 
----
+## 1. 准备 Supabase
 
-## 一、创建 Supabase 项目
+1. 打开 [Supabase](https://supabase.com) 并登录。
+2. 创建一个新项目。
+3. 进入 **Project Settings -> API**。
+4. 记录以下两个值：
 
-1. 打开 [supabase.com](https://supabase.com)，注册/登录
-2. 点击 **New Project**，填写项目名称，选择区域（推荐选离你近的），设置数据库密码
-3. 等待项目创建完成（约 1-2 分钟）
+| 环境变量 | Supabase 位置 | 说明 |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL | 项目地址 |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon public key | 浏览器端公开 key |
 
-### 获取密钥
-
-项目创建完成后，进入 **Project Settings → API**，记录以下两个值：
-
-| 名称 | 位置 | 说明 |
-|------|------|------|
-| `Project URL` | 页面顶部 | 格式：`https://xxxxx.supabase.co` |
-| `anon public` | Project API keys 区域 | 以 `eyJ` 开头的长字符串 |
-
----
-
-## 二、初始化数据库
-
-1. 在 Supabase 控制台，进入 **SQL Editor**
-2. 打开本项目的 `supabase/schema.sql` 文件
-3. **重要**：将文件中所有 `your-admin@example.com` 替换为你自己的管理员邮箱
-4. 将修改后的 SQL 粘贴到编辑器中，点击 **Run** 执行
-
-执行成功后会创建：
-- `categories` 表（分类）
-- `links` 表（链接）
-- `link_clicks` 表（今日热门点击记录）
-- 常用查询索引
-- `get_today_hot_links()` 和 `get_nav_snapshot_data()` RPC
-- RLS 安全策略（只有你的邮箱可以增删改数据）
-
----
-
-## 三、创建管理员账号
-
-1. 在 Supabase 控制台，进入 **Authentication → Users**
-2. 点击 **Add user → Create new user**
-3. 填写：
-   - **Email**：和上一步 SQL 中填写的邮箱 **完全一致**
-   - **Password**：设置一个密码
-   - 勾选 **Auto Confirm User**
-4. 点击 **Create user**
-
----
-
-## 四、部署到 Vercel
-
-### 方式一：从 GitHub 部署（推荐）
-
-1. 将本项目推送到你的 GitHub 仓库
-2. 打开 [vercel.com](https://vercel.com)，登录后点击 **Add New → Project**
-3. 选择你的 GitHub 仓库，点击 **Import**
-4. 在 **Environment Variables** 中添加以下三个变量：
-
-| 变量名 | 值 |
-|--------|-----|
-| `NEXT_PUBLIC_SUPABASE_URL` | 第一步获取的 Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 第一步获取的 anon public key |
-| `NEXT_PUBLIC_ADMIN_EMAIL` | 你的管理员邮箱 |
-
-5. 点击 **Deploy**，等待部署完成
-
-### 方式二：使用 Vercel CLI
+还需要确定一个管理员邮箱，后面会用于 RLS 写入权限和后台登录：
 
 ```bash
-# 安装 Vercel CLI
-npm i -g vercel
-
-# 在项目目录下执行
-vercel
-
-# 按提示操作，然后在 Vercel 控制台添加环境变量后重新部署
-vercel --prod
+NEXT_PUBLIC_ADMIN_EMAIL=your-admin@example.com
 ```
 
----
+## 2. 初始化数据库
 
-## 五、本地开发
+新项目直接执行完整 schema：
+
+1. 打开 Supabase 控制台。
+2. 进入 **SQL Editor**。
+3. 打开本仓库的 `supabase/schema.sql`。
+4. 把所有 `your-admin@example.com` 替换成你的管理员邮箱。
+5. 复制完整 SQL 到 SQL Editor 并执行。
+
+执行后会创建：
+
+- `categories` 分类表
+- `links` 链接表
+- `link_clicks` 点击记录表
+- 常用索引
+- RLS 策略
+- `get_today_hot_links()` RPC
+- `get_nav_snapshot_data()` RPC
+
+## 3. 创建管理员账号
+
+1. 在 Supabase 控制台进入 **Authentication -> Users**。
+2. 点击 **Add user -> Create new user**。
+3. 填写邮箱和密码。
+4. 邮箱必须和 `schema.sql` 里的管理员邮箱完全一致。
+5. 勾选 **Auto Confirm User**。
+6. 创建用户。
+
+三处邮箱必须一致：
+
+| 位置 | 用途 |
+| --- | --- |
+| `schema.sql` 里的管理员邮箱 | 数据库 RLS 写入权限 |
+| Supabase Authentication 用户邮箱 | 登录认证 |
+| `.env.local` / Vercel 环境变量里的 `NEXT_PUBLIC_ADMIN_EMAIL` | 前端后台校验 |
+
+## 4. 本地开发
 
 ```bash
-# 1. 克隆项目
-git clone https://github.com/你的用户名/你的仓库名.git
-cd 你的仓库名
-
-# 2. 安装依赖
 npm install
-
-# 3. 配置环境变量
 cp .env.local.example .env.local
-# 编辑 .env.local，填入你的 Supabase URL、Key 和管理员邮箱
-
-# 4. 启动开发服务器
 npm run dev
 ```
 
-打开 `http://localhost:3000` 查看网站，`http://localhost:3000/admin` 进入后台。
+编辑 `.env.local`：
 
----
-
-## 六、关键文件说明
-
-```
-├── app/
-│   ├── page.tsx                 # 首页
-│   ├── layout.tsx               # 根布局
-│   ├── admin/
-│   │   ├── page.tsx             # 管理员登录页
-│   │   ├── dashboard/           # 后台管理页
-│   │   └── diagnostic/          # 认证诊断页（调试用）
-│   ├── components/              # 所有组件
-│   ├── lib/                     # Supabase 客户端、首页快照、每日一言
-│   ├── actions/                 # 首页快照刷新 action
-│   └── utils/                   # 缓存、favicon、节流工具
-├── supabase/schema.sql          # 数据库建表、RLS、RPC SQL
-├── supabase/update-*.sql        # 旧数据库升级 SQL
-├── middleware.ts                # Next.js 中间件
-├── .env.local.example           # 环境变量模板
-└── vercel.json                  # Vercel 部署配置
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=你的 anon public key
+NEXT_PUBLIC_ADMIN_EMAIL=你的管理员邮箱
 ```
 
----
+访问地址：
 
-## 七、注意事项
+- 首页：`http://localhost:3000`
+- 后台：`http://localhost:3000/admin`
+- 诊断：`http://localhost:3000/admin/diagnostic`
 
-### 安全相关
+## 5. 部署到 Vercel
 
-- **`schema.sql` 中的邮箱**：必须替换为你自己的邮箱后再执行，这是数据库层面的权限控制
-- **`.env.local`**：包含密钥，已在 `.gitignore` 中排除，不会被提交到 GitHub
-- **`NEXT_PUBLIC_ADMIN_EMAIL`**：虽然是前端可见的变量，但仅用于客户端 UI 校验，真正的安全由 Supabase RLS 策略保证
+推荐用 GitHub 仓库部署：
 
-### 三处邮箱必须一致
+1. 把项目推送到 GitHub。
+2. 打开 [Vercel](https://vercel.com)。
+3. 点击 **Add New -> Project**。
+4. 选择你的 GitHub 仓库并导入。
+5. 添加环境变量：
 
-| 位置 | 说明 |
-|------|------|
-| `schema.sql` 中的 RLS 策略 | 数据库层面限制谁能写入 |
-| Supabase Authentication 中的用户 | 登录认证用 |
-| `.env.local` 中的 `NEXT_PUBLIC_ADMIN_EMAIL` | 前端校验用 |
+| 变量名 | 值 |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon public key |
+| `NEXT_PUBLIC_ADMIN_EMAIL` | 管理员邮箱 |
 
-这三处的邮箱必须完全相同，否则会出现能登录但无法操作数据，或能操作数据但前端校验不通过的情况。
+6. 点击 **Deploy**。
 
-### 诊断工具
+部署完成后，打开 Vercel 分配的域名测试首页和 `/admin`。
 
-如果遇到登录或权限问题，访问 `/admin/diagnostic` 可以查看完整的认证诊断信息，包括：
-- 环境变量是否配置
-- Session 是否有效
-- 管理员邮箱是否匹配
-- 数据库连通性
-- RLS 写入权限
+## 6. 已有数据库升级
 
-### 已有数据库升级
+如果你的数据库来自旧版本，不要重复执行完整 `schema.sql`。按需要执行增量 SQL：
 
-如果你的数据库是旧版本初始化的，不要重复执行整份 `supabase/schema.sql`。进入 Supabase SQL Editor，按需执行：
+### 今日热门
 
-- `supabase/update-nav-snapshot-hot-links.sql`：补充今日热门聚合 RPC 和点击索引。
-- `supabase/update-nav-snapshot-private-rpc.sql`：补充首页快照 RPC，让搜索框输入 `开门` 后能显示隐藏分类和隐藏链接。
+执行：
+
+```text
+supabase/update-nav-snapshot-hot-links.sql
+```
+
+它会补充：
+
+- `idx_link_clicks_clicked_at_link_id` 索引
+- `get_today_hot_links(limit_count integer default 5)` RPC
+
+### 首页快照和隐私模式
+
+执行：
+
+```text
+supabase/update-nav-snapshot-private-rpc.sql
+```
+
+它会补充：
+
+- `get_nav_snapshot_data(limit_count integer default 5)` RPC
+
+这个 RPC 让首页服务端快照能拿到完整分类和链接，浏览器端输入 `开门` 后才显示私密内容。
+
+### 分类图标迁移
+
+可选执行：
+
+```text
+supabase/update-category-icons-iconfont.sql
+```
+
+如果旧数据里的分类图标还是 emoji，你也可以直接在后台分类编辑页手动修改。
+
+## 7. 功能检查清单
+
+部署后建议检查：
+
+- 首页是否能正常展示分类和链接。
+- 搜索框是否能过滤链接。
+- 输入 `开门` 是否显示私密分类和链接。
+- 点击链接后，今日热门是否会在当天统计中更新。
+- `/admin` 是否能登录。
+- 后台新增、编辑、删除、排序后，首页是否刷新。
+- `/admin/diagnostic` 是否显示数据库连接和权限正常。
+
+## 8. 常见问题
+
+### 能登录后台，但保存失败
+
+通常是三处管理员邮箱不一致：
+
+- Supabase Auth 用户邮箱
+- `schema.sql` 中 RLS 策略的邮箱
+- `NEXT_PUBLIC_ADMIN_EMAIL`
+
+保持大小写和字符完全一致后重新测试。
+
+### 首页输入 `开门` 仍然没有私密内容
+
+检查数据库是否执行了：
+
+```text
+supabase/update-nav-snapshot-private-rpc.sql
+```
+
+然后在后台保存一次任意分类或链接，触发首页快照刷新。
+
+### 今日热门为空
+
+今日热门只统计当天点击。先在首页点击几个链接，再刷新页面查看。
+
+### 构建时提示 Supabase 环境变量未配置
+
+本地没有 `.env.local` 或 Vercel 没有配置环境变量。补齐：
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_ADMIN_EMAIL
+```
+
+### GitHub Desktop 显示上传包文件夹
+
+不要把临时上传包放进仓库根目录。真正的仓库目录是 `E:\nav`，里面应直接包含 `app`、`supabase`、`package.json` 等文件。
+
+## 9. 维护建议
+
+- 修改数据库结构时，同步更新 `supabase/schema.sql` 和对应的 `supabase/update-*.sql`。
+- 修改首页数据结构时，同步检查 `app/lib/nav-snapshot.ts` 和 Supabase RPC 返回字段。
+- 更新后台保存逻辑时，确认会调用 `revalidateNavSnapshot()`。
+- 发布前执行：
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
