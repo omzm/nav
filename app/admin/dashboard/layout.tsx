@@ -258,7 +258,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (checking) {
     return (
-      <div className="admin-login-shell">
+      <div className="admin-login-shell admin-loading-shell">
         <Spin size="large" tip="正在验证登录状态..." />
       </div>
     );

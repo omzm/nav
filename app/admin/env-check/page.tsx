@@ -57,7 +57,7 @@ export default function EnvCheck() {
 
   if (checking) {
     return (
-      <main className="admin-login-shell">
+      <main className="admin-login-shell admin-loading-shell">
         <Spin size="large" tip="正在验证登录状态..." />
       </main>
     );

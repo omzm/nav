@@ -94,6 +94,7 @@ export default function LinksPage() {
   const [keyword, setKeyword] = useState('');
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
   const [deletingId, setDeletingId] = useState('');
+  const [linkToDelete, setLinkToDelete] = useState<NavLink | null>(null);
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
   const router = useRouter();
@@ -147,6 +148,7 @@ export default function LinksPage() {
       if (error) throw error;
 
       Toast.success('链接已删除');
+      setLinkToDelete(null);
       await invalidateHomeCache();
       await loadData(true);
     } catch (error) {
@@ -158,16 +160,7 @@ export default function LinksPage() {
   };
 
   const confirmDelete = (link: NavLink) => {
-    Modal.confirm({
-      title: '删除链接',
-      content: `确定删除「${link.title}」吗？`,
-      okText: '删除',
-      cancelText: '取消',
-      okButtonProps: { type: 'danger', theme: 'solid' },
-      onOk: () => {
-        void handleDelete(link);
-      },
-    });
+    setLinkToDelete(link);
   };
 
   const handleDrop = async () => {
@@ -468,6 +461,22 @@ export default function LinksPage() {
           </div>
         </Card>
       </Space>
+
+      <Modal
+        title="删除链接"
+        visible={Boolean(linkToDelete)}
+        okText="删除"
+        cancelText="取消"
+        okButtonProps={{ type: 'danger', theme: 'solid', loading: Boolean(linkToDelete && deletingId === linkToDelete.id) }}
+        onOk={() => {
+          if (linkToDelete) void handleDelete(linkToDelete);
+        }}
+        onCancel={() => {
+          if (!deletingId) setLinkToDelete(null);
+        }}
+      >
+        <Text>确定删除「{linkToDelete?.title}」吗？</Text>
+      </Modal>
     </div>
   );
 }

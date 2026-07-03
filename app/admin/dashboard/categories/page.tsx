@@ -43,6 +43,7 @@ export default function CategoriesPage() {
   } = useAdminData();
   const [keyword, setKeyword] = useState('');
   const [deletingId, setDeletingId] = useState('');
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
   const router = useRouter();
@@ -66,6 +67,7 @@ export default function CategoriesPage() {
       if (error) throw error;
 
       Toast.success('分类已删除');
+      setCategoryToDelete(null);
       await invalidateHomeCache();
       await loadData(true);
     } catch (error) {
@@ -77,22 +79,10 @@ export default function CategoriesPage() {
   };
 
   const confirmDelete = (category: Category) => {
-    const linkCount = linkCountByCategory.get(category.id)?.total || 0;
-
-    Modal.confirm({
-      title: '删除分类',
-      content:
-        linkCount > 0
-          ? `该分类下还有 ${linkCount} 个链接，删除分类会同时删除这些链接。确定继续吗？`
-          : `确定删除「${category.name}」吗？`,
-      okText: '删除',
-      cancelText: '取消',
-      okButtonProps: { type: 'danger', theme: 'solid' },
-      onOk: () => {
-        void handleDelete(category);
-      },
-    });
+    setCategoryToDelete(category);
   };
+
+  const categoryToDeleteLinkCount = categoryToDelete ? linkCountByCategory.get(categoryToDelete.id)?.total || 0 : 0;
 
   const handleDrop = async () => {
     const sourceId = dragItem.current;
@@ -359,6 +349,30 @@ export default function CategoriesPage() {
           </div>
         </Card>
       </Space>
+
+      <Modal
+        title="删除分类"
+        visible={Boolean(categoryToDelete)}
+        okText="删除"
+        cancelText="取消"
+        okButtonProps={{
+          type: 'danger',
+          theme: 'solid',
+          loading: Boolean(categoryToDelete && deletingId === categoryToDelete.id),
+        }}
+        onOk={() => {
+          if (categoryToDelete) void handleDelete(categoryToDelete);
+        }}
+        onCancel={() => {
+          if (!deletingId) setCategoryToDelete(null);
+        }}
+      >
+        <Text>
+          {categoryToDeleteLinkCount > 0
+            ? `该分类下还有 ${categoryToDeleteLinkCount} 个链接，删除分类会同时删除这些链接。确定继续吗？`
+            : `确定删除「${categoryToDelete?.name}」吗？`}
+        </Text>
+      </Modal>
     </div>
   );
 }

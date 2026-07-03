@@ -183,6 +183,7 @@ AS $$
   );
 $$;
 
+GRANT EXECUTE ON FUNCTION get_today_hot_links(integer) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_nav_snapshot_data(integer) TO anon, authenticated;
 
 -- 每天凌晨 0:05 (UTC) 自动清理前一天的点击记录

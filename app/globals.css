@@ -740,6 +740,25 @@ html {
   background: #f5f6f8;
 }
 
+.admin-loading-shell .semi-spin {
+  min-width: min(280px, calc(100vw - 48px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-loading-shell .semi-spin-tip {
+  width: max-content;
+  max-width: calc(100vw - 48px);
+  margin-top: 12px;
+  line-height: 22px;
+  text-align: center;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
 .admin-login-card {
   width: min(100%, 520px);
 }

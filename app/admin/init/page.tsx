@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, CodeHighlight, Space, Tag, Toast, Typography } from '@douyinfe/semi-ui';
 import {
-  IconCopy,
   IconAlertTriangle,
+  IconCopy,
   IconExternalOpen,
   IconRefresh,
   IconServer,
@@ -13,10 +13,20 @@ import {
 } from '@douyinfe/semi-icons';
 import { supabase } from '@/app/lib/supabase';
 import { getLocalAdminUser } from '@/app/lib/local-admin';
+import { categories as fallbackCategories } from '@/app/data';
 
 const { Paragraph, Text } = Typography;
 
-type InitStatus = 'idle' | 'checking' | 'success' | 'error';
+type InitStatus = 'idle' | 'checking' | 'success' | 'warning' | 'error';
+
+type DatabaseSyncStatus = {
+  categoryCount: number;
+  linkCount: number;
+  fallbackCategoryCount: number;
+  fallbackLinkCount: number;
+  needsDataSync: boolean;
+  needsSchemaSync: boolean;
+};
 
 const sqlCode = `CREATE TABLE IF NOT EXISTS categories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -43,8 +53,10 @@ ALTER TABLE categories ADD COLUMN IF NOT EXISTS is_private BOOLEAN DEFAULT FALSE
 ALTER TABLE links ADD COLUMN IF NOT EXISTS is_private BOOLEAN DEFAULT FALSE;
 
 CREATE INDEX IF NOT EXISTS idx_categories_order ON categories("order");
+CREATE INDEX IF NOT EXISTS idx_categories_is_private ON categories(is_private);
 CREATE INDEX IF NOT EXISTS idx_links_category_id ON links(category_id);
 CREATE INDEX IF NOT EXISTS idx_links_order ON links("order");
+CREATE INDEX IF NOT EXISTS idx_links_is_private ON links(is_private);
 
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE links ENABLE ROW LEVEL SECURITY;
@@ -53,6 +65,12 @@ DROP POLICY IF EXISTS "Allow public read access on categories" ON categories;
 DROP POLICY IF EXISTS "Allow public read access on links" ON links;
 DROP POLICY IF EXISTS "Allow public read access on public categories" ON categories;
 DROP POLICY IF EXISTS "Allow public read access on public links" ON links;
+DROP POLICY IF EXISTS "Allow authenticated users to insert categories" ON categories;
+DROP POLICY IF EXISTS "Allow authenticated users to update categories" ON categories;
+DROP POLICY IF EXISTS "Allow authenticated users to delete categories" ON categories;
+DROP POLICY IF EXISTS "Allow authenticated users to insert links" ON links;
+DROP POLICY IF EXISTS "Allow authenticated users to update links" ON links;
+DROP POLICY IF EXISTS "Allow authenticated users to delete links" ON links;
 
 CREATE POLICY "Allow public read access on public categories"
   ON categories FOR SELECT
@@ -90,12 +108,134 @@ CREATE POLICY "Allow authenticated users to update links"
 CREATE POLICY "Allow authenticated users to delete links"
   ON links FOR DELETE
   TO authenticated
-  USING (true);`;
+  USING (true);
+
+CREATE TABLE IF NOT EXISTS link_clicks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  link_id UUID REFERENCES links(id) ON DELETE CASCADE,
+  clicked_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE INDEX IF NOT EXISTS idx_link_clicks_link_id ON link_clicks(link_id);
+CREATE INDEX IF NOT EXISTS idx_link_clicks_clicked_at ON link_clicks(clicked_at);
+CREATE INDEX IF NOT EXISTS idx_link_clicks_clicked_at_link_id ON link_clicks(clicked_at, link_id);
+
+ALTER TABLE link_clicks ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow anyone to insert link_clicks" ON link_clicks;
+DROP POLICY IF EXISTS "Allow anyone to read link_clicks" ON link_clicks;
+
+CREATE POLICY "Allow anyone to insert link_clicks"
+  ON link_clicks FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "Allow anyone to read link_clicks"
+  ON link_clicks FOR SELECT
+  USING (true);
+
+CREATE OR REPLACE FUNCTION get_today_hot_links(limit_count integer DEFAULT 5)
+RETURNS TABLE (
+  title TEXT,
+  url TEXT,
+  icon TEXT,
+  click_count BIGINT
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    l.title,
+    l.url,
+    l.icon,
+    COUNT(c.id)::BIGINT AS click_count
+  FROM link_clicks c
+  JOIN links l ON l.id = c.link_id
+  WHERE c.clicked_at >= date_trunc('day', now())
+    AND c.clicked_at < date_trunc('day', now()) + interval '1 day'
+    AND COALESCE(l.is_private, false) = false
+  GROUP BY l.id, l.title, l.url, l.icon
+  ORDER BY click_count DESC, l.title ASC
+  LIMIT GREATEST(limit_count, 0);
+$$;
+
+CREATE OR REPLACE FUNCTION get_nav_snapshot_data(limit_count integer DEFAULT 5)
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT jsonb_build_object(
+    'categories',
+    COALESCE((
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'id', c.id,
+          'name', c.name,
+          'icon', c.icon,
+          'isPrivate', COALESCE(c.is_private, false),
+          'links', COALESCE((
+            SELECT jsonb_agg(
+              jsonb_build_object(
+                'id', l.id,
+                'title', l.title,
+                'url', l.url,
+                'description', l.description,
+                'icon', l.icon,
+                'isPrivate', COALESCE(l.is_private, false)
+              )
+              ORDER BY l."order" ASC
+            )
+            FROM links l
+            WHERE l.category_id = c.id
+          ), '[]'::jsonb)
+        )
+        ORDER BY c."order" ASC
+      )
+      FROM categories c
+    ), '[]'::jsonb),
+    'hotLinks',
+    COALESCE((
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'title', h.title,
+          'url', h.url,
+          'icon', h.icon,
+          'clickCount', h.click_count
+        )
+        ORDER BY h.click_count DESC, h.title ASC
+      )
+      FROM get_today_hot_links(limit_count) h
+    ), '[]'::jsonb),
+    'stats',
+    jsonb_build_object(
+      'categoryCount', (SELECT COUNT(*) FROM categories),
+      'linkCount', (SELECT COUNT(*) FROM links)
+    ),
+    'generatedAt', now()
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION get_today_hot_links(integer) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION get_nav_snapshot_data(integer) TO anon, authenticated;`;
+
+function isMissingDatabaseObject(message: string) {
+  return (
+    message.includes('relation') ||
+    message.includes('function') ||
+    message.includes('does not exist') ||
+    message.includes('schema cache') ||
+    message.includes('is_private')
+  );
+}
 
 export default function DatabaseInit() {
   const [status, setStatus] = useState<InitStatus>('idle');
   const [message, setMessage] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
+  const [syncStatus, setSyncStatus] = useState<DatabaseSyncStatus | null>(null);
   const router = useRouter();
 
   const addLog = (log: string) => {
@@ -106,6 +246,7 @@ export default function DatabaseInit() {
     setStatus('checking');
     setMessage('');
     setLogs([]);
+    setSyncStatus(null);
 
     try {
       addLog('开始检查数据库结构');
@@ -127,60 +268,119 @@ export default function DatabaseInit() {
 
       addLog(`用户已登录：${user.email}`);
 
-      let needsInit = false;
+      let needsSchemaSync = false;
+      let coreTablesReady = true;
 
-      addLog('检查 categories 表');
-      const { error: categoriesError } = await supabase
-        .from('categories')
-        .select('id, name, icon, order, is_private')
-        .limit(1);
+      const tableChecks = [
+        {
+          name: 'categories',
+          query: () => supabase.from('categories').select('id, name, icon, order, is_private').limit(1),
+          core: true,
+        },
+        {
+          name: 'links',
+          query: () => supabase.from('links').select('id, title, url, is_private').limit(1),
+          core: true,
+        },
+        {
+          name: 'link_clicks',
+          query: () => supabase.from('link_clicks').select('id, link_id, clicked_at').limit(1),
+          core: false,
+        },
+      ];
 
-      if (categoriesError) {
-        if (
-          categoriesError.message.includes('relation') ||
-          categoriesError.message.includes('does not exist') ||
-          categoriesError.message.includes('is_private')
-        ) {
-          needsInit = true;
-          addLog(`categories 表需要初始化：${categoriesError.message}`);
+      for (const check of tableChecks) {
+        addLog(`检查 ${check.name} 表`);
+        const { error } = await check.query();
+
+        if (error) {
+          if (isMissingDatabaseObject(error.message)) {
+            needsSchemaSync = true;
+            if (check.core) coreTablesReady = false;
+            addLog(`${check.name} 表需要同步：${error.message}`);
+          } else {
+            throw error;
+          }
         } else {
-          throw categoriesError;
+          addLog(`${check.name} 表正常`);
         }
-      } else {
-        addLog('categories 表结构正常');
       }
 
-      addLog('检查 links 表');
-      const { error: linksError } = await supabase
-        .from('links')
-        .select('id, title, url, is_private')
-        .limit(1);
+      const rpcChecks = [
+        {
+          name: 'get_today_hot_links',
+          query: () => supabase.rpc('get_today_hot_links', { limit_count: 1 }),
+        },
+        {
+          name: 'get_nav_snapshot_data',
+          query: () => supabase.rpc('get_nav_snapshot_data', { limit_count: 1 }),
+        },
+      ];
 
-      if (linksError) {
-        if (
-          linksError.message.includes('relation') ||
-          linksError.message.includes('does not exist') ||
-          linksError.message.includes('is_private')
-        ) {
-          needsInit = true;
-          addLog(`links 表需要初始化：${linksError.message}`);
+      for (const check of rpcChecks) {
+        addLog(`检查 ${check.name} RPC`);
+        const { error } = await check.query();
+
+        if (error) {
+          if (isMissingDatabaseObject(error.message)) {
+            needsSchemaSync = true;
+            addLog(`${check.name} RPC 需要同步：${error.message}`);
+          } else {
+            throw error;
+          }
         } else {
-          throw linksError;
+          addLog(`${check.name} RPC 正常`);
         }
-      } else {
-        addLog('links 表结构正常');
       }
 
-      if (!needsInit) {
-        setStatus('success');
-        setMessage('数据库结构已正确配置');
-        addLog('检查完成，一切正常');
+      const fallbackCategoryCount = fallbackCategories.length;
+      const fallbackLinkCount = fallbackCategories.reduce((sum, category) => sum + category.links.length, 0);
+      let categoryCount = 0;
+      let linkCount = 0;
+
+      if (coreTablesReady) {
+        addLog('检查数据库分类和链接数据量');
+        const [categoryCountResult, linkCountResult] = await Promise.all([
+          supabase.from('categories').select('id', { count: 'exact', head: true }),
+          supabase.from('links').select('id', { count: 'exact', head: true }),
+        ]);
+
+        if (categoryCountResult.error) throw categoryCountResult.error;
+        if (linkCountResult.error) throw linkCountResult.error;
+
+        categoryCount = categoryCountResult.count || 0;
+        linkCount = linkCountResult.count || 0;
+        addLog(`数据库当前有 ${categoryCount} 个分类、${linkCount} 个链接`);
+      }
+
+      const needsDataSync = !needsSchemaSync && (categoryCount === 0 || linkCount === 0);
+
+      setSyncStatus({
+        categoryCount,
+        linkCount,
+        fallbackCategoryCount,
+        fallbackLinkCount,
+        needsDataSync,
+        needsSchemaSync,
+      });
+
+      if (needsSchemaSync) {
+        setStatus('error');
+        setMessage('数据库结构或 RPC 不完整，需要去 Supabase SQL Editor 同步 SQL。');
+        addLog('请复制下方 SQL 到 Supabase SQL Editor 执行。');
         return;
       }
 
-      setStatus('error');
-      setMessage('数据库需要手动初始化');
-      addLog('请复制下方 SQL 到 Supabase SQL Editor 中执行');
+      if (needsDataSync) {
+        setStatus('warning');
+        setMessage('数据库结构正常，但分类或链接数据为空，需要去数据库同步/导入数据。');
+        addLog(`本地备用数据有 ${fallbackCategoryCount} 个分类、${fallbackLinkCount} 个链接，可作为同步参考。`);
+        return;
+      }
+
+      setStatus('success');
+      setMessage('数据库结构、RPC 和基础数据均已正常配置。');
+      addLog('检查完成，一切正常。');
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '未知错误';
       setStatus('error');
@@ -194,14 +394,26 @@ export default function DatabaseInit() {
     Toast.success('SQL 已复制到剪贴板');
   };
 
+  const statusColor = status === 'success' ? 'green' : status === 'warning' ? 'orange' : status === 'error' ? 'red' : 'blue';
+  const statusText =
+    status === 'idle'
+      ? '等待检查'
+      : status === 'checking'
+        ? '检查中'
+        : status === 'success'
+          ? '已就绪'
+          : status === 'warning'
+            ? '需要同步数据'
+            : '需要处理';
+
   return (
     <main className="admin-shell">
       <div className="admin-content">
         <Space vertical spacing={24} style={{ width: '100%' }}>
           <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
             <div>
-              <h1 className="admin-page-title">数据库初始化</h1>
-              <p className="admin-page-subtitle">检查 Supabase 表结构，并提供可手动执行的初始化 SQL。</p>
+              <h1 className="admin-page-title">数据库检查</h1>
+              <p className="admin-page-subtitle">检查 Supabase 表结构、RPC 和基础数据，判断是否需要去数据库同步。</p>
             </div>
             <Space wrap>
               <Button icon={<IconRefresh />} loading={status === 'checking'} onClick={() => void checkAndInitDatabase()}>
@@ -214,28 +426,48 @@ export default function DatabaseInit() {
           <Card bordered={false} shadows="hover">
             <Space vertical spacing="medium" align="start" style={{ width: '100%' }}>
               <Tag
-                color={status === 'success' ? 'green' : status === 'error' ? 'red' : 'blue'}
+                color={statusColor}
                 prefixIcon={
                   status === 'success' ? (
                     <IconTickCircle />
-                  ) : status === 'error' ? (
+                  ) : status === 'error' || status === 'warning' ? (
                     <IconAlertTriangle />
                   ) : (
                     <IconServer />
                   )
                 }
               >
-                {status === 'idle'
-                  ? '等待检查'
-                  : status === 'checking'
-                    ? '检查中'
-                    : status === 'success'
-                      ? '已就绪'
-                      : '需要处理'}
+                {statusText}
               </Tag>
               {message && <Paragraph style={{ margin: 0 }}>{message}</Paragraph>}
             </Space>
           </Card>
+
+          {syncStatus && (
+            <Card title="数据库同步检查" bordered={false} shadows="hover">
+              <Space vertical align="start" spacing="medium" style={{ width: '100%' }}>
+                <Space wrap>
+                  <Tag color={syncStatus.needsSchemaSync ? 'red' : 'green'}>
+                    结构/RPC：{syncStatus.needsSchemaSync ? '需要同步 SQL' : '正常'}
+                  </Tag>
+                  <Tag color={syncStatus.needsDataSync ? 'orange' : 'green'}>
+                    数据：{syncStatus.needsDataSync ? '需要同步数据' : '正常'}
+                  </Tag>
+                </Space>
+                <Text>
+                  数据库当前：{syncStatus.categoryCount} 个分类、{syncStatus.linkCount} 个链接。
+                </Text>
+                <Text type="tertiary">
+                  本地备用数据：{syncStatus.fallbackCategoryCount} 个分类、{syncStatus.fallbackLinkCount} 个链接。
+                </Text>
+                {syncStatus.needsDataSync && (
+                  <Text type="warning">
+                    建议去 Supabase 表编辑器或 SQL Editor 导入分类和链接数据，导入后回到本页重新检查。
+                  </Text>
+                )}
+              </Space>
+            </Card>
+          )}
 
           {logs.length > 0 && (
             <Card title="执行日志" bordered={false} shadows="hover">
@@ -251,7 +483,7 @@ export default function DatabaseInit() {
 
           {status === 'error' && (
             <Card
-              title="初始化 SQL"
+              title="同步 SQL"
               bordered={false}
               shadows="hover"
               headerExtraContent={
@@ -280,7 +512,7 @@ export default function DatabaseInit() {
             </Card>
           )}
 
-          {status === 'success' && (
+          {(status === 'success' || status === 'warning') && (
             <Card bordered={false} shadows="hover">
               <Space wrap>
                 <Button theme="solid" type="primary" onClick={() => router.push('/admin/dashboard')}>
