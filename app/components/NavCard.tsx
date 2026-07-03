@@ -49,11 +49,11 @@ function NavCard({ link }: NavCardProps) {
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
-      className="group relative block min-h-16 sm:min-h-0 p-1.5 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700/60 bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-gray-500/5 hover:border-gray-300 dark:hover:border-gray-500/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden active:scale-95"
+      className="group relative block min-h-[74px] sm:min-h-0 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700/60 bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-gray-500/5 hover:border-gray-300 dark:hover:border-gray-500/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden active:scale-95"
     >
       <div className="absolute inset-0 bg-gray-50 dark:bg-gray-700/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-      <div className="relative flex h-full flex-col items-center justify-center gap-1 text-center sm:h-auto sm:flex-row sm:items-start sm:justify-start sm:gap-0 sm:space-x-3 sm:text-left">
+      <div className="relative flex h-full items-center justify-start gap-2.5 text-left sm:h-auto sm:items-start sm:gap-0 sm:space-x-3">
         <div className="flex-shrink-0 w-7 h-7 sm:w-10 sm:h-10 flex items-center justify-center rounded-md sm:rounded-lg bg-gray-50 dark:bg-gray-700/50 group-hover:scale-110 transition-transform duration-300 overflow-hidden">
           <LazyFavicon
             url={link.url}
@@ -64,8 +64,8 @@ function NavCard({ link }: NavCardProps) {
         </div>
 
         <div className="w-full flex-1 min-w-0 flex flex-col">
-          <div className="flex items-start justify-center gap-2 sm:justify-between">
-            <h3 className="max-w-full text-[11px] leading-tight sm:text-sm sm:leading-normal font-medium sm:font-normal text-gray-900 dark:text-gray-100 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors duration-300 line-clamp-2 sm:line-clamp-1 break-words">
+          <div className="flex items-start justify-start gap-2 sm:justify-between">
+            <h3 className="max-w-full truncate text-xs leading-4 sm:text-sm sm:leading-normal font-medium sm:font-normal text-gray-900 dark:text-gray-100 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors duration-300">
               {link.title}
             </h3>
             <svg
@@ -82,7 +82,7 @@ function NavCard({ link }: NavCardProps) {
               />
             </svg>
           </div>
-          <p className="hidden sm:block text-xs text-gray-600 dark:text-gray-400 mt-1.5 truncate">
+          <p className="mt-1 truncate text-[11px] leading-4 text-gray-600 dark:text-gray-400 sm:mt-1.5 sm:text-xs sm:leading-normal">
             {link.description}
           </p>
         </div>

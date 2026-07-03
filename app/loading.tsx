@@ -52,17 +52,17 @@ export default function Loading() {
                     <div className="h-3 w-14 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5 sm:gap-3">
                   {Array.from({ length: 8 }).map((_, cardIndex) => (
                     <div
                       key={cardIndex}
-                      className="min-h-16 sm:min-h-0 p-1.5 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700/60 bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm"
+                      className="min-h-[74px] sm:min-h-0 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700/60 bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm"
                     >
-                      <div className="flex h-full flex-col items-center justify-center gap-1 sm:h-auto sm:flex-row sm:items-start sm:justify-start sm:gap-0 sm:space-x-3">
+                      <div className="flex h-full items-center justify-start gap-2.5 sm:h-auto sm:items-start sm:gap-0 sm:space-x-3">
                         <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-md sm:rounded-lg bg-gray-100 dark:bg-gray-700 animate-pulse" />
                         <div className="w-full flex-1 min-w-0 pt-1">
-                          <div className="h-3 sm:h-4 w-2/3 mx-auto sm:mx-0 rounded bg-gray-200 dark:bg-gray-700 animate-pulse mb-3" />
-                          <div className="hidden sm:block h-3 w-full rounded bg-gray-100 dark:bg-gray-700/70 animate-pulse" />
+                          <div className="h-3 sm:h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700 animate-pulse mb-2" />
+                          <div className="h-3 w-full rounded bg-gray-100 dark:bg-gray-700/70 animate-pulse" />
                         </div>
                       </div>
                     </div>
