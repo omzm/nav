@@ -25,11 +25,11 @@ type DiagnosticResult = {
   detail: string;
 };
 
-const statusMeta: Record<CheckStatus, { color: 'grey'; label: string; icon: ReactNode }> = {
-  ok: { color: 'grey', label: '正常', icon: <IconTickCircle /> },
-  fail: { color: 'grey', label: '失败', icon: <IconAlertCircle /> },
-  warn: { color: 'grey', label: '警告', icon: <IconAlertTriangle /> },
-  info: { color: 'grey', label: '信息', icon: <IconInfoCircle /> },
+const statusMeta: Record<CheckStatus, { color?: 'green' | 'red' | 'orange'; label: string; icon: ReactNode }> = {
+  ok: { color: 'green', label: '正常', icon: <IconTickCircle /> },
+  fail: { color: 'red', label: '失败', icon: <IconAlertCircle /> },
+  warn: { color: 'orange', label: '警告', icon: <IconAlertTriangle /> },
+  info: { label: '信息', icon: <IconInfoCircle /> },
 };
 
 export default function AuthDiagnostic() {
@@ -286,7 +286,7 @@ export default function AuthDiagnostic() {
             ) : (
               <Space vertical spacing="medium" align="start" style={{ width: '100%' }}>
                 <Tag
-                  color="grey"
+                  color={failCount > 0 ? 'red' : 'green'}
                   prefixIcon={failCount > 0 ? <IconAlertCircle /> : <IconTickCircle />}
                 >
                   {failCount === 0 ? '关键检查通过' : `发现 ${failCount} 个问题`}

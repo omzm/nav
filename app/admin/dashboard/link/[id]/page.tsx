@@ -394,21 +394,24 @@ export default function LinkForm() {
       </Modal>
 
       <Space vertical spacing={24} style={{ width: '100%' }}>
-        <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+        <div className="admin-page-head">
           <div>
             <h1 className="admin-page-title">{isEdit ? '编辑链接' : '添加链接'}</h1>
             <p className="admin-page-subtitle">
               维护首页展示的网站信息，图标留空时会自动使用网站 favicon。
             </p>
           </div>
-          <Button icon={<IconArrowLeft />} onClick={() => router.back()}>
-            返回
-          </Button>
-        </Space>
+          <div className="admin-actions-row">
+            <Button icon={<IconArrowLeft />} onClick={() => router.back()}>
+              返回
+            </Button>
+          </div>
+        </div>
 
-        <Card bordered={false} shadows="hover">
-          <Space vertical spacing="medium" style={{ width: '100%' }}>
-            <label>
+        <Card bordered={false} shadows="hover" className="admin-form-card">
+          <div className="admin-form-grid">
+            <div className="admin-form-fields">
+            <label className="admin-form-field">
               <Text strong>所属分类</Text>
               <Select
                 value={categoryId}
@@ -429,7 +432,7 @@ export default function LinkForm() {
               </Select>
             </label>
 
-            <label>
+            <label className="admin-form-field">
               <Text strong>网站名称</Text>
               <Input
                 value={title}
@@ -442,7 +445,7 @@ export default function LinkForm() {
               />
             </label>
 
-            <label>
+            <label className="admin-form-field">
               <Text strong>网站 URL</Text>
               <Input
                 value={url}
@@ -455,7 +458,7 @@ export default function LinkForm() {
               />
             </label>
 
-            <label>
+            <label className="admin-form-field">
               <Text strong>网站描述</Text>
               <TextArea
                 value={description}
@@ -467,7 +470,36 @@ export default function LinkForm() {
               />
             </label>
 
-            <Card bordered style={{ background: 'var(--semi-color-fill-0)' }}>
+            <label className="admin-form-field">
+              <Text strong>自定义图标</Text>
+              <Input
+                value={icon}
+                onChange={setIcon}
+                placeholder="可填写 Emoji 或图标 URL，留空自动使用 favicon"
+                size="large"
+                showClear
+                style={{ marginTop: 8 }}
+              />
+            </label>
+
+            <label className="admin-form-field">
+              <Text strong>排序顺序</Text>
+              <InputNumber
+                value={order}
+                onChange={(value) => setOrder(Number(value) || 0)}
+                min={0}
+                step={1}
+                size="large"
+                style={{ width: '100%', marginTop: 8 }}
+              />
+              <Text type="tertiary" size="small" style={{ display: 'block', marginTop: 6 }}>
+                {isEdit ? '数字越小越靠前。' : '选择分类后会自动填入下一个排序值。'}
+              </Text>
+            </label>
+            </div>
+
+            <aside className="admin-form-aside">
+            <Card bordered className="admin-form-preview-card" style={{ background: 'var(--semi-color-fill-0)' }}>
               <Space align="center" spacing="medium">
                 <div className="admin-icon-preview" style={{ width: 64, height: 64 }}>
                   {renderIconPreview()}
@@ -505,34 +537,7 @@ export default function LinkForm() {
               </Space>
             </Card>
 
-            <label>
-              <Text strong>自定义图标</Text>
-              <Input
-                value={icon}
-                onChange={setIcon}
-                placeholder="可填写 Emoji 或图标 URL，留空自动使用 favicon"
-                size="large"
-                showClear
-                style={{ marginTop: 8 }}
-              />
-            </label>
-
-            <label>
-              <Text strong>排序顺序</Text>
-              <InputNumber
-                value={order}
-                onChange={(value) => setOrder(Number(value) || 0)}
-                min={0}
-                step={1}
-                size="large"
-                style={{ width: '100%', marginTop: 8 }}
-              />
-              <Text type="tertiary" size="small" style={{ display: 'block', marginTop: 6 }}>
-                {isEdit ? '数字越小越靠前。' : '选择分类后会自动填入下一个排序值。'}
-              </Text>
-            </label>
-
-            <Card bordered style={{ background: 'var(--semi-color-fill-0)' }}>
+            <Card bordered className="admin-form-option-card" style={{ background: 'var(--semi-color-fill-0)' }}>
               <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
                 <Space spacing="medium">
                   <IconLock style={{ color: 'var(--semi-color-warning)' }} />
@@ -546,8 +551,9 @@ export default function LinkForm() {
                 <Switch checked={isPrivate} onChange={setIsPrivate} />
               </Space>
             </Card>
+            </aside>
 
-            <Space style={{ width: '100%', justifyContent: 'flex-end' }} wrap>
+            <Space className="admin-form-actions" wrap>
               <Button onClick={() => router.back()}>取消</Button>
               {!isEdit && (
                 <Button
@@ -570,7 +576,7 @@ export default function LinkForm() {
                 保存
               </Button>
             </Space>
-          </Space>
+          </div>
         </Card>
       </Space>
     </div>

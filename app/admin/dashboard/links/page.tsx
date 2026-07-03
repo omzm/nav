@@ -243,7 +243,7 @@ export default function LinksPage() {
               <Text strong ellipsis={{ showTooltip: true }}>
                 {record.title}
               </Text>
-              {record.is_private && <Tag color="grey">私密</Tag>}
+              {record.is_private && <Tag color="orange">私密</Tag>}
             </Space>
             <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }}>
               {record.description}
@@ -262,9 +262,9 @@ export default function LinksPage() {
         const category = categoryMap.get(record.category_id);
 
         return category ? (
-          <Tag color="grey">{category.name}</Tag>
+          <Tag>{category.name}</Tag>
         ) : (
-          <Tag color="grey">分类不存在</Tag>
+          <Tag color="red">分类不存在</Tag>
         );
       },
     },
@@ -313,14 +313,14 @@ export default function LinksPage() {
   return (
     <div className="admin-content">
       <Space vertical spacing={24} style={{ width: '100%' }}>
-        <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+        <div className="admin-page-head">
           <div>
             <h1 className="admin-page-title">链接管理</h1>
             <p className="admin-page-subtitle">
               搜索、筛选并维护首页链接；选择具体分类后可以拖动调整该分类内的顺序。
             </p>
           </div>
-          <Space wrap>
+          <div className="admin-actions-row">
             <Button icon={<IconRefresh />} loading={refreshing} onClick={() => void loadData(true)}>
               刷新
             </Button>
@@ -332,8 +332,8 @@ export default function LinksPage() {
             >
               添加链接
             </Button>
-          </Space>
-        </Space>
+          </div>
+        </div>
 
         <Card bordered={false} shadows="hover" className="admin-table-card">
           <div className="admin-list-toolbar">
@@ -362,45 +362,110 @@ export default function LinksPage() {
             </Space>
 
             <Space spacing={8} wrap>
-              <Tag color="grey">
+              <Tag>
                 <IconLink style={{ marginRight: 4 }} />
                 {filteredLinks.length} / {links.length} 个链接
               </Tag>
               {canSort ? (
-                <Tag color="grey">当前排序范围：{selectedCategory?.name}</Tag>
+                <Tag>当前排序范围：{selectedCategory?.name}</Tag>
               ) : (
-                <Tag color="grey">选择分类后可拖拽排序</Tag>
+                <Tag>选择分类后可拖拽排序</Tag>
               )}
             </Space>
           </div>
 
-          <Table<NavLink>
-            rowKey="id"
-            columns={columns}
-            dataSource={filteredLinks}
-            pagination={filteredLinks.length > 12 ? { pageSize: 12 } : false}
-            empty={<Empty title="暂无链接" description="添加链接后，首页会按分类与排序展示。" />}
-            onRow={(record) => {
-              if (!record || !canSort) return {};
+          <div className="admin-table-scroll">
+            <Table<NavLink>
+              rowKey="id"
+              columns={columns}
+              dataSource={filteredLinks}
+              pagination={filteredLinks.length > 12 ? { pageSize: 12 } : false}
+              empty={<Empty title="暂无链接" description="添加链接后，首页会按分类与排序展示。" />}
+              onRow={(record) => {
+                if (!record || !canSort) return {};
 
-              return {
-                draggable: true,
-                className: 'admin-draggable-row',
-                onDragStart: () => {
-                  dragItem.current = record.id;
-                },
-                onDragEnter: () => {
-                  dragOverItem.current = record.id;
-                },
-                onDragOver: (event) => {
-                  event.preventDefault();
-                },
-                onDrop: () => {
-                  void handleDrop();
-                },
-              };
-            }}
-          />
+                return {
+                  draggable: true,
+                  className: 'admin-draggable-row',
+                  onDragStart: () => {
+                    dragItem.current = record.id;
+                  },
+                  onDragEnter: () => {
+                    dragOverItem.current = record.id;
+                  },
+                  onDragOver: (event) => {
+                    event.preventDefault();
+                  },
+                  onDrop: () => {
+                    void handleDrop();
+                  },
+                };
+              }}
+            />
+          </div>
+
+          <div className="admin-mobile-list">
+            {filteredLinks.length > 0 ? (
+              filteredLinks.map((link) => {
+                const category = categoryMap.get(link.category_id);
+
+                return (
+                  <article className="admin-mobile-card" key={link.id}>
+                    <div className="admin-mobile-card-head">
+                      <div className="admin-icon-preview">{renderLinkIcon(link)}</div>
+                      <div className="admin-mobile-card-title">
+                        <Text strong>{link.title}</Text>
+                        <Text type="tertiary" size="small">
+                          排序 #{link.order}
+                        </Text>
+                      </div>
+                      {link.is_private && <Tag color="orange">私密</Tag>}
+                    </div>
+
+                    <Text type="tertiary" size="small" className="admin-mobile-card-text">
+                      {link.description}
+                    </Text>
+                    <Text type="tertiary" size="small" className="admin-mobile-card-text">
+                      {link.url}
+                    </Text>
+
+                    <div className="admin-mobile-card-tags">
+                      {category ? <Tag>{category.name}</Tag> : <Tag color="red">分类不存在</Tag>}
+                    </div>
+
+                    <div className="admin-mobile-card-actions">
+                      <Button
+                        size="small"
+                        icon={<IconExternalOpen />}
+                        onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
+                      >
+                        打开
+                      </Button>
+                      <Button
+                        size="small"
+                        icon={<IconEdit />}
+                        onClick={() => router.push(`/admin/dashboard/link/${link.id}`)}
+                      >
+                        编辑
+                      </Button>
+                      <Button
+                        size="small"
+                        type="danger"
+                        theme="borderless"
+                        icon={<IconDelete />}
+                        loading={deletingId === link.id}
+                        onClick={() => confirmDelete(link)}
+                      >
+                        删除
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })
+            ) : (
+              <Empty title="暂无链接" description="添加链接后，首页会按分类与排序展示。" />
+            )}
+          </div>
         </Card>
       </Space>
     </div>

@@ -1,9 +1,10 @@
 'use client';
 
 import { memo, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { HotLink, NavCategory } from '../types';
-import { getFaviconUrl } from '../utils/favicon';
 import CategoryIcon from './CategoryIcon';
+import LazyFavicon from './LazyFavicon';
 
 interface SidebarProps {
   categories: NavCategory[];
@@ -119,11 +120,11 @@ const HotLinksPanel = memo(function HotLinksPanel({ hotLinks }: { hotLinks?: Hot
               <span className="text-xs font-bold text-gray-400 dark:text-gray-500 w-4 text-center">
                 {index + 1}
               </span>
-              <img
-                src={getFaviconUrl(link.url)}
+              <LazyFavicon
+                url={link.url}
                 alt=""
                 className="w-4 h-4 object-contain flex-shrink-0"
-                loading="lazy"
+                fallback={<span className="w-4 h-4 rounded-sm bg-gray-200 dark:bg-gray-700 flex-shrink-0" />}
               />
               <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 truncate flex-1 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
                 {link.title}
@@ -179,7 +180,7 @@ export default function Sidebar({
       >
         <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700/50 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50">
           <div className="flex items-center space-x-2 sm:space-x-2.5">
-            <img src="/icon.svg" alt="Logo" className="w-7 h-7 sm:w-8 sm:h-8" />
+            <Image src="/icon.svg" alt="Logo" width={32} height={32} className="w-7 h-7 sm:w-8 sm:h-8" />
             <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">
               分类
             </h2>

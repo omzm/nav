@@ -122,22 +122,25 @@ export default function CategoryForm() {
   return (
     <div className="admin-form-page">
       <Space vertical spacing={24} style={{ width: '100%' }}>
-        <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+        <div className="admin-page-head">
           <div>
             <h1 className="admin-page-title">{isEdit ? '编辑分类' : '添加分类'}</h1>
             <p className="admin-page-subtitle">
               分类用于组织首页导航区域，图标请直接粘贴阿里巴巴 iconfont 的 SVG 代码。
             </p>
           </div>
-          <Button icon={<IconArrowLeft />} onClick={() => router.back()}>
-            返回
-          </Button>
-        </Space>
+          <div className="admin-actions-row">
+            <Button icon={<IconArrowLeft />} onClick={() => router.back()}>
+              返回
+            </Button>
+          </div>
+        </div>
 
-        <Card bordered={false} shadows="hover">
+        <Card bordered={false} shadows="hover" className="admin-form-card">
           <form onSubmit={handleSubmit}>
-            <Space vertical spacing="medium" style={{ width: '100%' }}>
-              <label>
+            <div className="admin-form-grid">
+              <div className="admin-form-fields">
+              <label className="admin-form-field">
                 <Text strong>分类名称</Text>
                 <Input
                   value={name}
@@ -151,7 +154,7 @@ export default function CategoryForm() {
                 />
               </label>
 
-              <label>
+              <label className="admin-form-field">
                 <Text strong>分类图标 SVG 代码</Text>
                 <TextArea
                   value={icon}
@@ -169,7 +172,21 @@ export default function CategoryForm() {
                 </Text>
               </label>
 
-              <Card bordered style={{ background: 'var(--semi-color-fill-0)' }}>
+              <label className="admin-form-field">
+                <Text strong>排序顺序</Text>
+                <InputNumber
+                  value={order}
+                  onChange={(value) => setOrder(Number(value) || 0)}
+                  min={0}
+                  step={1}
+                  size="large"
+                  style={{ width: '100%', marginTop: 8 }}
+                />
+              </label>
+              </div>
+
+              <aside className="admin-form-aside">
+              <Card bordered className="admin-form-preview-card" style={{ background: 'var(--semi-color-fill-0)' }}>
                 <Space align="center" spacing="medium">
                   <div className="admin-icon-preview">
                     <CategoryIcon icon={icon} />
@@ -185,19 +202,7 @@ export default function CategoryForm() {
                 </Space>
               </Card>
 
-              <label>
-                <Text strong>排序顺序</Text>
-                <InputNumber
-                  value={order}
-                  onChange={(value) => setOrder(Number(value) || 0)}
-                  min={0}
-                  step={1}
-                  size="large"
-                  style={{ width: '100%', marginTop: 8 }}
-                />
-              </label>
-
-              <Card bordered style={{ background: 'var(--semi-color-fill-0)' }}>
+              <Card bordered className="admin-form-option-card" style={{ background: 'var(--semi-color-fill-0)' }}>
                 <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
                   <Space spacing="medium">
                     <IconLock />
@@ -211,14 +216,15 @@ export default function CategoryForm() {
                   <Switch checked={isPrivate} onChange={setIsPrivate} />
                 </Space>
               </Card>
+              </aside>
 
-              <Space style={{ width: '100%', justifyContent: 'flex-end' }} wrap>
+              <Space className="admin-form-actions" wrap>
                 <Button onClick={() => router.back()}>取消</Button>
                 <Button htmlType="submit" theme="solid" type="primary" icon={<IconSave />} loading={saving}>
                   保存
                 </Button>
               </Space>
-            </Space>
+            </div>
           </form>
         </Card>
       </Space>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import SearchBar from './SearchBar';
 import CategorySection from './CategorySection';
@@ -166,7 +167,7 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
           <div className="flex items-center justify-between px-4 py-2">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg overflow-hidden">
-                <img src="/icon.svg" alt="Logo" className="w-full h-full object-cover" />
+                <Image src="/icon.svg" alt="Logo" width={28} height={28} className="w-full h-full object-cover" />
               </div>
               <span className="text-sm font-bold text-gray-900 dark:text-gray-100">收藏夹</span>
             </div>

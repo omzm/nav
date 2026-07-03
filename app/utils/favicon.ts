@@ -1,6 +1,3 @@
-/**
- * 从 URL 中提取域名
- */
 export function extractDomain(url: string): string {
   try {
     const urlObj = new URL(url);
@@ -10,81 +7,63 @@ export function extractDomain(url: string): string {
   }
 }
 
-// Favicon 缓存
 const MAX_FAVICON_CACHE = 500;
 const faviconCache = new Map<string, string>();
 const FAVICON_CACHE_KEY_PREFIX = 'favicon_cache_';
 
-/**
- * 从 localStorage 加载 favicon 缓存
- */
 function loadFaviconFromStorage(domain: string): string | null {
   try {
-    const cached = localStorage.getItem(FAVICON_CACHE_KEY_PREFIX + domain);
-    return cached;
+    return localStorage.getItem(FAVICON_CACHE_KEY_PREFIX + domain);
   } catch {
     return null;
   }
 }
 
-/**
- * 保存 favicon 到 localStorage
- */
 function saveFaviconToStorage(domain: string, url: string) {
   try {
     localStorage.setItem(FAVICON_CACHE_KEY_PREFIX + domain, url);
   } catch {
-    // localStorage quota exceeded — evict oldest entries
     try {
       const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(FAVICON_CACHE_KEY_PREFIX)) {
+
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key?.startsWith(FAVICON_CACHE_KEY_PREFIX)) {
           keysToRemove.push(key);
         }
       }
-      // Remove first 50 entries to make room
+
       keysToRemove.slice(0, 50).forEach((key) => localStorage.removeItem(key));
       localStorage.setItem(FAVICON_CACHE_KEY_PREFIX + domain, url);
     } catch {
-      // Still failing, give up silently
+      // Ignore storage failures; favicon loading can continue without cache.
     }
   }
 }
 
-/**
- * 淘汰内存缓存中最旧的条目
- */
 function evictOldestFromCache() {
   if (faviconCache.size <= MAX_FAVICON_CACHE) return;
+
   const firstKey = faviconCache.keys().next().value;
   if (firstKey !== undefined) {
     faviconCache.delete(firstKey);
   }
 }
 
-/**
- * 获取网站 favicon URL（带缓存）
- * 使用 faviconextractor.com 服务
- */
 export function getFaviconUrl(url: string): string {
   const domain = extractDomain(url);
   if (!domain) return '';
 
-  // 1. 先检查内存缓存
-  if (faviconCache.has(domain)) {
-    return faviconCache.get(domain)!;
-  }
+  const memoryCached = faviconCache.get(domain);
+  if (memoryCached) return memoryCached;
 
-  // 2. 检查 localStorage 缓存
-  const cached = loadFaviconFromStorage(domain);
-  if (cached) {
-    faviconCache.set(domain, cached);
+  const storageCached = loadFaviconFromStorage(domain);
+  if (storageCached) {
+    faviconCache.set(domain, storageCached);
     evictOldestFromCache();
-    return cached;
+    return storageCached;
   }
 
-  // 3. 生成新的 URL
   const faviconUrl = `https://www.faviconextractor.com/favicon/${domain}?larger=true`;
   faviconCache.set(domain, faviconUrl);
   evictOldestFromCache();
@@ -93,31 +72,9 @@ export function getFaviconUrl(url: string): string {
   return faviconUrl;
 }
 
-/**
- * 获取备用 favicon URL
- * 使用 Google 的 favicon 服务作为备用
- */
 export function getFallbackFaviconUrl(url: string): string {
   const domain = extractDomain(url);
   if (!domain) return '';
+
   return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-}
-
-/**
- * 预加载 favicon（批量）
- */
-export function preloadFavicons(urls: string[]) {
-  const domains = urls.map(extractDomain).filter(Boolean);
-
-  // 使用 requestIdleCallback 在浏览器空闲时预加载
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(() => {
-      domains.forEach(domain => {
-        const faviconUrl = getFaviconUrl(`https://${domain}`);
-        // 创建 Image 对象预加载
-        const img = new Image();
-        img.src = faviconUrl;
-      });
-    });
-  }
 }

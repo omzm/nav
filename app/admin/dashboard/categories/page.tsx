@@ -162,7 +162,7 @@ export default function CategoriesPage() {
               <Text strong ellipsis={{ showTooltip: true }}>
                 {record.name}
               </Text>
-              {record.is_private && <Tag color="grey">私密</Tag>}
+              {record.is_private && <Tag color="orange">私密</Tag>}
             </Space>
             <Text type="tertiary" size="small">
               {record.icon?.trim().startsWith('<svg') ? 'SVG 图标已配置' : '请编辑为 SVG 代码'}
@@ -180,7 +180,7 @@ export default function CategoriesPage() {
         return (
           <Space spacing={8} wrap>
             <Tag>{count.total} 个链接</Tag>
-            {count.privateCount > 0 && <Tag color="grey">私密 {count.privateCount}</Tag>}
+            {count.privateCount > 0 && <Tag color="orange">私密 {count.privateCount}</Tag>}
           </Space>
         );
       },
@@ -230,12 +230,12 @@ export default function CategoriesPage() {
   return (
     <div className="admin-content">
       <Space vertical spacing={24} style={{ width: '100%' }}>
-        <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+        <div className="admin-page-head">
           <div>
             <h1 className="admin-page-title">分类管理</h1>
             <p className="admin-page-subtitle">维护首页导航分组，拖动行可以调整展示顺序。</p>
           </div>
-          <Space wrap>
+          <div className="admin-actions-row">
             <Button icon={<IconRefresh />} loading={refreshing} onClick={() => void loadData(true)}>
               刷新
             </Button>
@@ -247,8 +247,8 @@ export default function CategoriesPage() {
             >
               添加分类
             </Button>
-          </Space>
-        </Space>
+          </div>
+        </div>
 
         <Card bordered={false} shadows="hover" className="admin-table-card">
           <div className="admin-list-toolbar">
@@ -261,41 +261,102 @@ export default function CategoriesPage() {
               style={{ width: 320, maxWidth: '100%' }}
             />
             <Space spacing={8} wrap>
-              <Tag color="grey">
+              <Tag>
                 <IconFolder style={{ marginRight: 4 }} />
                 {filteredCategories.length} / {categories.length} 个分类
               </Tag>
-              {keyword && <Tag color="grey">搜索结果可直接拖拽排序</Tag>}
+              {keyword && <Tag>搜索结果可直接拖拽排序</Tag>}
             </Space>
           </div>
 
-          <Table<Category>
-            rowKey="id"
-            columns={columns}
-            dataSource={filteredCategories}
-            pagination={filteredCategories.length > 12 ? { pageSize: 12 } : false}
-            empty={<Empty title="暂无分类" description="添加分类后，首页导航会按排序展示。" />}
-            onRow={(record) => {
-              if (!record) return {};
+          <div className="admin-table-scroll">
+            <Table<Category>
+              rowKey="id"
+              columns={columns}
+              dataSource={filteredCategories}
+              pagination={filteredCategories.length > 12 ? { pageSize: 12 } : false}
+              empty={<Empty title="暂无分类" description="添加分类后，首页导航会按排序展示。" />}
+              onRow={(record) => {
+                if (!record) return {};
 
-              return {
-                draggable: true,
-                className: 'admin-draggable-row',
-                onDragStart: () => {
-                  dragItem.current = record.id;
-                },
-                onDragEnter: () => {
-                  dragOverItem.current = record.id;
-                },
-                onDragOver: (event) => {
-                  event.preventDefault();
-                },
-                onDrop: () => {
-                  void handleDrop();
-                },
-              };
-            }}
-          />
+                return {
+                  draggable: true,
+                  className: 'admin-draggable-row',
+                  onDragStart: () => {
+                    dragItem.current = record.id;
+                  },
+                  onDragEnter: () => {
+                    dragOverItem.current = record.id;
+                  },
+                  onDragOver: (event) => {
+                    event.preventDefault();
+                  },
+                  onDrop: () => {
+                    void handleDrop();
+                  },
+                };
+              }}
+            />
+          </div>
+
+          <div className="admin-mobile-list">
+            {filteredCategories.length > 0 ? (
+              filteredCategories.map((category) => {
+                const count = linkCountByCategory.get(category.id) || { total: 0, privateCount: 0 };
+
+                return (
+                  <article className="admin-mobile-card" key={category.id}>
+                    <div className="admin-mobile-card-head">
+                      <div className="admin-icon-preview">
+                        <CategoryIcon icon={category.icon} />
+                      </div>
+                      <div className="admin-mobile-card-title">
+                        <Text strong>{category.name}</Text>
+                        <Text type="tertiary" size="small">
+                          排序 #{category.order}
+                        </Text>
+                      </div>
+                      {category.is_private && <Tag color="orange">私密</Tag>}
+                    </div>
+
+                    <div className="admin-mobile-card-tags">
+                      <Tag>{count.total} 个链接</Tag>
+                      {count.privateCount > 0 && <Tag color="orange">私密 {count.privateCount}</Tag>}
+                    </div>
+
+                    <div className="admin-mobile-card-actions">
+                      <Button
+                        size="small"
+                        icon={<IconEyeOpened />}
+                        onClick={() => router.push(`/admin/dashboard/links?category=${category.id}`)}
+                      >
+                        查看链接
+                      </Button>
+                      <Button
+                        size="small"
+                        icon={<IconEdit />}
+                        onClick={() => router.push(`/admin/dashboard/category/${category.id}`)}
+                      >
+                        编辑
+                      </Button>
+                      <Button
+                        size="small"
+                        type="danger"
+                        theme="borderless"
+                        icon={<IconDelete />}
+                        loading={deletingId === category.id}
+                        onClick={() => confirmDelete(category)}
+                      >
+                        删除
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })
+            ) : (
+              <Empty title="暂无分类" description="添加分类后，首页导航会按排序展示。" />
+            )}
+          </div>
         </Card>
       </Space>
     </div>
