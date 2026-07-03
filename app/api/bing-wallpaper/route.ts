@@ -1,0 +1,42 @@
+import { NextResponse } from 'next/server';
+
+type BingWallpaperResponse = {
+  images?: Array<{
+    url?: string;
+  }>;
+};
+
+const BING_ARCHIVE_URL = 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN';
+
+export async function GET() {
+  try {
+    const response = await fetch(BING_ARCHIVE_URL, {
+      next: { revalidate: 86400 },
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Bing wallpaper request failed: ${response.status}`);
+    }
+
+    const data = (await response.json()) as BingWallpaperResponse;
+    const imagePath = data.images?.[0]?.url;
+
+    if (!imagePath) {
+      throw new Error('Bing wallpaper response did not include an image URL');
+    }
+
+    const imageUrl = imagePath.startsWith('http') ? imagePath : `https://www.bing.com${imagePath}`;
+    const redirect = NextResponse.redirect(imageUrl, 307);
+    redirect.headers.set('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800');
+    return redirect;
+  } catch (error) {
+    console.error('Failed to load Bing wallpaper:', error);
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Cache-Control': 'public, s-maxage=300',
+      },
+    });
+  }
+}

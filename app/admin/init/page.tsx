@@ -133,28 +133,44 @@ CREATE POLICY "Allow anyone to read link_clicks"
   ON link_clicks FOR SELECT
   USING (true);
 
-CREATE TABLE IF NOT EXISTS site_views (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  path TEXT NOT NULL DEFAULT '/',
-  user_agent TEXT,
-  viewed_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+CREATE TABLE IF NOT EXISTS site_stats (
+  key TEXT PRIMARY KEY,
+  value BIGINT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
-CREATE INDEX IF NOT EXISTS idx_site_views_viewed_at ON site_views(viewed_at);
-CREATE INDEX IF NOT EXISTS idx_site_views_path ON site_views(path);
+INSERT INTO site_stats (key, value)
+VALUES ('total_views', 0)
+ON CONFLICT (key) DO NOTHING;
 
-ALTER TABLE site_views ENABLE ROW LEVEL SECURITY;
+ALTER TABLE site_stats ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Allow anyone to insert site_views" ON site_views;
-DROP POLICY IF EXISTS "Allow anyone to read site_views" ON site_views;
+DROP POLICY IF EXISTS "Allow anyone to read site_stats" ON site_stats;
 
-CREATE POLICY "Allow anyone to insert site_views"
-  ON site_views FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY "Allow anyone to read site_views"
-  ON site_views FOR SELECT
+CREATE POLICY "Allow anyone to read site_stats"
+  ON site_stats FOR SELECT
   USING (true);
+
+CREATE OR REPLACE FUNCTION increment_site_view()
+RETURNS BIGINT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  next_value BIGINT;
+BEGIN
+  INSERT INTO site_stats AS stats (key, value, updated_at)
+  VALUES ('total_views', 1, TIMEZONE('utc', NOW()))
+  ON CONFLICT (key)
+  DO UPDATE SET
+    value = stats.value + 1,
+    updated_at = EXCLUDED.updated_at
+  RETURNING value INTO next_value;
+
+  RETURN next_value;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION get_today_hot_links(limit_count integer DEFAULT 5)
 RETURNS TABLE (
@@ -236,13 +252,14 @@ AS $$
     jsonb_build_object(
       'categoryCount', (SELECT COUNT(*) FROM categories),
       'linkCount', (SELECT COUNT(*) FROM links),
-      'totalViewCount', (SELECT COUNT(*) FROM site_views)
+      'totalViewCount', COALESCE((SELECT value FROM site_stats WHERE key = 'total_views'), 0)
     ),
     'generatedAt', now()
   );
 $$;
 
 GRANT EXECUTE ON FUNCTION get_today_hot_links(integer) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION increment_site_view() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_nav_snapshot_data(integer) TO anon, authenticated;`;
 
 function isMissingDatabaseObject(message: string) {
@@ -312,8 +329,8 @@ export default function DatabaseInit() {
           core: false,
         },
         {
-          name: 'site_views',
-          query: () => supabase.from('site_views').select('id, path, viewed_at').limit(1),
+          name: 'site_stats',
+          query: () => supabase.from('site_stats').select('key, value, updated_at').limit(1),
           core: false,
         },
       ];

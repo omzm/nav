@@ -211,7 +211,7 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
         <header ref={headerRef} className="relative overflow-hidden border-b border-gray-200 dark:border-gray-700/50 shadow-sm">
           <div
             className="absolute inset-0 bg-cover bg-center bg-gradient-to-br from-blue-400 to-indigo-600"
-            style={{ backgroundImage: 'url(https://bing.img.run/uhd.php)' }}
+            style={{ backgroundImage: "url('/api/bing-wallpaper')" }}
           />
 
           <div className="relative px-4 py-3">

@@ -57,14 +57,18 @@ function normalizeRpcSnapshot(data: SnapshotRpcData): NavSnapshot {
 }
 
 async function getTotalViewCount(supabase: ReturnType<typeof createServerSupabaseClient>) {
-  const { count, error } = await supabase.from('site_views').select('id', { count: 'exact', head: true });
+  const { data, error } = await supabase
+    .from('site_stats')
+    .select('value')
+    .eq('key', 'total_views')
+    .maybeSingle();
 
   if (error) {
     console.error('Failed to load total site view count:', error);
     return 0;
   }
 
-  return count || 0;
+  return Number(data?.value) || 0;
 }
 
 async function loadNavSnapshotFromTables(
