@@ -28,6 +28,7 @@ export interface NavSnapshot {
   stats: {
     categoryCount: number;
     linkCount: number;
+    totalViewCount: number;
   };
   generatedAt: string;
 }

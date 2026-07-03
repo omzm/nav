@@ -3,6 +3,29 @@
 -- This does not change table SELECT policies. It exposes only this prepared homepage
 -- snapshot shape through a SECURITY DEFINER RPC.
 
+CREATE TABLE IF NOT EXISTS site_views (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  path TEXT NOT NULL DEFAULT '/',
+  user_agent TEXT,
+  viewed_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_views_viewed_at ON site_views(viewed_at);
+CREATE INDEX IF NOT EXISTS idx_site_views_path ON site_views(path);
+
+ALTER TABLE site_views ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow anyone to insert site_views" ON site_views;
+DROP POLICY IF EXISTS "Allow anyone to read site_views" ON site_views;
+
+CREATE POLICY "Allow anyone to insert site_views"
+  ON site_views FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "Allow anyone to read site_views"
+  ON site_views FOR SELECT
+  USING (true);
+
 CREATE OR REPLACE FUNCTION get_nav_snapshot_data(limit_count integer DEFAULT 5)
 RETURNS jsonb
 LANGUAGE sql
@@ -55,7 +78,8 @@ AS $$
     'stats',
     jsonb_build_object(
       'categoryCount', (SELECT COUNT(*) FROM categories),
-      'linkCount', (SELECT COUNT(*) FROM links)
+      'linkCount', (SELECT COUNT(*) FROM links),
+      'totalViewCount', (SELECT COUNT(*) FROM site_views)
     ),
     'generatedAt', now()
   );

@@ -13,6 +13,7 @@ interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   hotLinks?: HotLink[];
+  totalViewCount?: number;
 }
 
 const START_DATE = new Date('2026-02-16T00:00:00');
@@ -152,6 +153,7 @@ export default function Sidebar({
   isOpen,
   onToggle,
   hotLinks,
+  totalViewCount = 0,
 }: SidebarProps) {
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
@@ -168,6 +170,10 @@ export default function Sidebar({
   };
 
   const categoryCountText = useMemo(() => `共 ${categories.length} 个分类`, [categories.length]);
+  const totalViewText = useMemo(
+    () => `累计浏览 ${totalViewCount.toLocaleString('zh-CN')} 次`,
+    [totalViewCount]
+  );
 
   return (
     <>
@@ -212,6 +218,9 @@ export default function Sidebar({
         <div className="p-2.5 sm:p-3 border-t border-gray-200 dark:border-gray-700/50 space-y-2">
           <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
             {categoryCountText}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+            {totalViewText}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
             <RunTimer />

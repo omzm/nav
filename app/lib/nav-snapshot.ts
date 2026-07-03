@@ -33,6 +33,7 @@ type SnapshotRpcData = Partial<{
   stats: {
     categoryCount: number;
     linkCount: number;
+    totalViewCount: number;
   };
   generatedAt: string;
 }>;
@@ -49,16 +50,28 @@ function normalizeRpcSnapshot(data: SnapshotRpcData): NavSnapshot {
       linkCount:
         Number(data.stats?.linkCount) ||
         categories.reduce((sum, category) => sum + category.links.length, 0),
+      totalViewCount: Number(data.stats?.totalViewCount) || 0,
     },
     generatedAt: data.generatedAt ? new Date(data.generatedAt).toISOString() : new Date().toISOString(),
   };
+}
+
+async function getTotalViewCount(supabase: ReturnType<typeof createServerSupabaseClient>) {
+  const { count, error } = await supabase.from('site_views').select('id', { count: 'exact', head: true });
+
+  if (error) {
+    console.error('Failed to load total site view count:', error);
+    return 0;
+  }
+
+  return count || 0;
 }
 
 async function loadNavSnapshotFromTables(
   supabase: ReturnType<typeof createServerSupabaseClient>
 ): Promise<NavSnapshot> {
   try {
-    const [categoriesResult, linksResult, hotLinksResult] = await Promise.all([
+    const [categoriesResult, linksResult, hotLinksResult, totalViewCount] = await Promise.all([
       supabase
         .from('categories')
         .select('id,name,icon,is_private')
@@ -68,6 +81,7 @@ async function loadNavSnapshotFromTables(
         .select('id,category_id,title,url,description,icon,is_private')
         .order('order', { ascending: true }),
       supabase.rpc('get_today_hot_links', { limit_count: 5 }),
+      getTotalViewCount(supabase),
     ]);
 
     if (categoriesResult.error) throw categoriesResult.error;
@@ -118,6 +132,7 @@ async function loadNavSnapshotFromTables(
       stats: {
         categoryCount: categories.length,
         linkCount: linkRows.length,
+        totalViewCount,
       },
       generatedAt: new Date().toISOString(),
     };
@@ -129,6 +144,7 @@ async function loadNavSnapshotFromTables(
       stats: {
         categoryCount: fallbackCategories.length,
         linkCount: fallbackCategories.reduce((sum, category) => sum + category.links.length, 0),
+        totalViewCount: 0,
       },
       generatedAt: new Date().toISOString(),
     };
@@ -143,7 +159,19 @@ async function loadNavSnapshot(): Promise<NavSnapshot> {
 
     if (error) throw error;
 
-    return normalizeRpcSnapshot((data || {}) as SnapshotRpcData);
+    const snapshot = normalizeRpcSnapshot((data || {}) as SnapshotRpcData);
+
+    if (snapshot.stats.totalViewCount === 0 && !((data as SnapshotRpcData | null)?.stats?.totalViewCount)) {
+      return {
+        ...snapshot,
+        stats: {
+          ...snapshot.stats,
+          totalViewCount: await getTotalViewCount(supabase),
+        },
+      };
+    }
+
+    return snapshot;
   } catch (error) {
     console.error('Failed to load nav snapshot via RPC:', error);
     return loadNavSnapshotFromTables(supabase);

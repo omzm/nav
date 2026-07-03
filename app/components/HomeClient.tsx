@@ -32,6 +32,30 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
   const isOpenDoorCommand = searchQuery.trim() === '开门';
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const path = window.location.pathname || '/';
+      const body = JSON.stringify({ path });
+
+      if (navigator.sendBeacon) {
+        const blob = new Blob([body], { type: 'application/json' });
+        navigator.sendBeacon('/api/site-view', blob);
+        return;
+      }
+
+      fetch('/api/site-view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+      }).catch((error) => {
+        console.error('Failed to report site view:', error);
+      });
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     const handleScroll = () => {
       if (!headerRef.current) return;
       setScrolledPastHeader(headerRef.current.getBoundingClientRect().bottom <= 0);
@@ -158,6 +182,7 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen((value) => !value)}
         hotLinks={snapshot.hotLinks}
+        totalViewCount={snapshot.stats.totalViewCount}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
