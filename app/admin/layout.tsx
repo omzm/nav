@@ -229,6 +229,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           visible={navOpen}
           placement="left"
           width={272}
+          closeOnEsc
           onCancel={() => setNavOpen(false)}
           className="admin-theme admin-mobile-nav"
           bodyStyle={{ padding: 0 }}
