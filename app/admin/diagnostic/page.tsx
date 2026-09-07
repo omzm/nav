@@ -26,10 +26,10 @@ type DiagnosticResult = {
 };
 
 const statusMeta: Record<CheckStatus, { color?: 'green' | 'red' | 'orange'; label: string; icon: ReactNode }> = {
-  ok: { color: 'green', label: '正常', icon: <IconTickCircle /> },
-  fail: { color: 'red', label: '失败', icon: <IconAlertCircle /> },
-  warn: { color: 'orange', label: '警告', icon: <IconAlertTriangle /> },
-  info: { label: '信息', icon: <IconInfoCircle /> },
+  ok: { color: 'green', label: '正常', icon: <IconTickCircle aria-hidden="true" /> },
+  fail: { color: 'red', label: '失败', icon: <IconAlertCircle aria-hidden="true" /> },
+  warn: { color: 'orange', label: '警告', icon: <IconAlertTriangle aria-hidden="true" /> },
+  info: { label: '信息', icon: <IconInfoCircle aria-hidden="true" /> },
 };
 
 export default function AuthDiagnostic() {
@@ -258,7 +258,7 @@ export default function AuthDiagnostic() {
   };
 
   return (
-    <main className="admin-shell">
+    <div className="admin-utility-page">
       <div className="admin-form-page">
         <Space vertical spacing={24} style={{ width: '100%' }}>
           <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
@@ -267,11 +267,11 @@ export default function AuthDiagnostic() {
               <p className="admin-page-subtitle">检查 Supabase Auth、Cookie、Session、RLS 和管理员邮箱配置。</p>
             </div>
             <Space wrap>
-              <Button icon={<IconArrowLeft />} onClick={() => router.push('/admin/dashboard')}>
+              <Button icon={<IconArrowLeft aria-hidden="true" />} onClick={() => router.push('/admin/dashboard')}>
                 返回后台
               </Button>
               <Button
-                icon={<IconRefresh />}
+                icon={<IconRefresh aria-hidden="true" />}
                 loading={loading}
                 onClick={() => void runDiagnostics()}
               >
@@ -287,7 +287,7 @@ export default function AuthDiagnostic() {
               <Space vertical spacing="medium" align="start" style={{ width: '100%' }}>
                 <Tag
                   color={failCount > 0 ? 'red' : 'green'}
-                  prefixIcon={failCount > 0 ? <IconAlertCircle /> : <IconTickCircle />}
+                  prefixIcon={failCount > 0 ? <IconAlertCircle aria-hidden="true" /> : <IconTickCircle aria-hidden="true" />}
                 >
                   {failCount === 0 ? '关键检查通过' : `发现 ${failCount} 个问题`}
                 </Tag>
@@ -355,6 +355,6 @@ export default function AuthDiagnostic() {
           )}
         </Space>
       </div>
-    </main>
+    </div>
   );
 }

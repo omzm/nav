@@ -8,7 +8,6 @@ import {
   Empty,
   Input,
   Modal,
-  Space,
   Spin,
   Table,
   Tag,
@@ -19,7 +18,6 @@ import {
   IconDelete,
   IconEdit,
   IconEyeOpened,
-  IconFolder,
   IconHandle,
   IconPlus,
   IconRefresh,
@@ -131,80 +129,43 @@ export default function CategoriesPage() {
     {
       title: '排序',
       dataIndex: 'order',
-      width: 96,
+      width: 80,
       render: (_text: unknown, record: Category) => (
-        <Space spacing={6} align="center">
-          <IconHandle className="admin-drag-handle" />
-          <Text type="tertiary">#{record.order}</Text>
-        </Space>
+        <span className="admin-sort-cell"><IconHandle className="admin-drag-handle" /><span>{String(record.order).padStart(2, '0')}</span></span>
       ),
     },
     {
-      title: '分类',
+      title: '分类名称',
       dataIndex: 'name',
       render: (_text: unknown, record: Category) => (
-        <Space spacing="medium" align="center">
-          <div className="admin-icon-preview">
-            <CategoryIcon icon={record.icon} />
-          </div>
-          <Space vertical spacing={2} align="start" style={{ minWidth: 0 }}>
-            <Space spacing={8} wrap>
-              <Text strong ellipsis={{ showTooltip: true }}>
-                {record.name}
-              </Text>
-              {record.is_private && <Tag color="orange">私密</Tag>}
-            </Space>
-            <Text type="tertiary" size="small">
-              {record.icon?.trim().startsWith('<svg') ? 'SVG 图标已配置' : '请编辑为 SVG 代码'}
-            </Text>
-          </Space>
-        </Space>
+        <div className="admin-cell">
+          <div className="admin-icon-preview"><CategoryIcon icon={record.icon} /></div>
+          <span className="admin-cell-title">{record.name}</span>
+        </div>
       ),
     },
     {
-      title: '链接数',
-      width: 160,
+      title: '收录链接',
+      width: 130,
       render: (_text: unknown, record: Category) => {
         const count = linkCountByCategory.get(record.id) || { total: 0, privateCount: 0 };
-
-        return (
-          <Space spacing={8} wrap>
-            <Tag>{count.total} 个链接</Tag>
-            {count.privateCount > 0 && <Tag color="orange">私密 {count.privateCount}</Tag>}
-          </Space>
-        );
+        return <span className="admin-cell-content"><span>{count.total} 个链接</span>{count.privateCount > 0 && <span className="admin-cell-caption">含 {count.privateCount} 个私密链接</span>}</span>;
       },
     },
     {
+      title: '可见性',
+      width: 100,
+      render: (_text: unknown, record: Category) => <span className={'admin-visibility' + (record.is_private ? ' is-private' : '')}>{record.is_private ? '私密' : '公开'}</span>,
+    },
+    {
       title: '操作',
-      width: 260,
+      width: 132,
       render: (_text: unknown, record: Category) => (
-        <Space spacing={8} wrap>
-          <Button
-            size="small"
-            icon={<IconEyeOpened />}
-            onClick={() => router.push(`/admin/dashboard/links?category=${record.id}`)}
-          >
-            查看链接
-          </Button>
-          <Button
-            size="small"
-            icon={<IconEdit />}
-            onClick={() => router.push(`/admin/dashboard/category/${record.id}`)}
-          >
-            编辑
-          </Button>
-          <Button
-            size="small"
-            type="danger"
-            theme="borderless"
-            icon={<IconDelete />}
-            loading={deletingId === record.id}
-            onClick={() => confirmDelete(record)}
-          >
-            删除
-          </Button>
-        </Space>
+        <div className="admin-table-actions">
+          <Button size="small" theme="borderless" type="tertiary" icon={<IconEyeOpened aria-hidden="true" />} aria-label={'查看 ' + record.name + ' 的链接'} title="查看链接" onClick={() => router.push('/admin/dashboard/links?category=' + record.id)} />
+          <Button size="small" theme="borderless" type="tertiary" icon={<IconEdit aria-hidden="true" />} aria-label={'编辑 ' + record.name} title="编辑分类" onClick={() => router.push('/admin/dashboard/category/' + record.id)} />
+          <Button size="small" type="danger" theme="borderless" icon={<IconDelete aria-hidden="true" />} aria-label={'删除 ' + record.name} title="删除分类" loading={deletingId === record.id} onClick={() => confirmDelete(record)} />
+        </div>
       ),
     },
   ];
@@ -219,20 +180,20 @@ export default function CategoriesPage() {
 
   return (
     <div className="admin-content">
-      <Space vertical spacing={24} style={{ width: '100%' }}>
+      <div className="admin-page-stack">
         <div className="admin-page-head">
           <div>
             <h1 className="admin-page-title">分类管理</h1>
-            <p className="admin-page-subtitle">维护首页导航分组，拖动行可以调整展示顺序。</p>
+            <p className="admin-page-subtitle">整理导航分组，让每个链接各就其位。</p>
           </div>
           <div className="admin-actions-row">
-            <Button icon={<IconRefresh />} loading={refreshing} onClick={() => void loadData(true)}>
+            <Button icon={<IconRefresh aria-hidden="true" />} loading={refreshing} onClick={() => void loadData(true)}>
               刷新
             </Button>
             <Button
               theme="solid"
               type="primary"
-              icon={<IconPlus />}
+              icon={<IconPlus aria-hidden="true" />}
               onClick={() => router.push('/admin/dashboard/category/new')}
             >
               添加分类
@@ -242,25 +203,16 @@ export default function CategoriesPage() {
 
         <Card bordered={false} shadows="hover" className="admin-table-card">
           <div className="admin-list-toolbar">
-            <Input
-              value={keyword}
-              onChange={setKeyword}
-              prefix={<IconSearch />}
-              placeholder="搜索分类名称"
-              showClear
-              style={{ width: 320, maxWidth: '100%' }}
-            />
-            <Space spacing={8} wrap>
-              <Tag>
-                <IconFolder style={{ marginRight: 4 }} />
-                {filteredCategories.length} / {categories.length} 个分类
-              </Tag>
-              {keyword && <Tag>搜索结果可直接拖拽排序</Tag>}
-            </Space>
+            <div className="admin-toolbar-filters">
+              <Input className="admin-search-input" value={keyword} onChange={setKeyword} prefix={<IconSearch aria-hidden="true" />} placeholder="搜索分类名称…" aria-label="搜索分类" showClear />
+              {keyword && <Button theme="borderless" type="tertiary" size="small" onClick={() => setKeyword('')}>清除筛选</Button>}
+            </div>
+            <span className="admin-result-count">共 <strong>{filteredCategories.length}</strong> 个分类{keyword && ' / ' + categories.length + ' 个'}</span>
           </div>
 
           <div className="admin-table-scroll">
             <Table<Category>
+              size="small"
               rowKey="id"
               columns={columns}
               dataSource={filteredCategories}
@@ -317,14 +269,14 @@ export default function CategoriesPage() {
                     <div className="admin-mobile-card-actions">
                       <Button
                         size="small"
-                        icon={<IconEyeOpened />}
+                        icon={<IconEyeOpened aria-hidden="true" />}
                         onClick={() => router.push(`/admin/dashboard/links?category=${category.id}`)}
                       >
                         查看链接
                       </Button>
                       <Button
                         size="small"
-                        icon={<IconEdit />}
+                        icon={<IconEdit aria-hidden="true" />}
                         onClick={() => router.push(`/admin/dashboard/category/${category.id}`)}
                       >
                         编辑
@@ -333,7 +285,7 @@ export default function CategoriesPage() {
                         size="small"
                         type="danger"
                         theme="borderless"
-                        icon={<IconDelete />}
+                        icon={<IconDelete aria-hidden="true" />}
                         loading={deletingId === category.id}
                         onClick={() => confirmDelete(category)}
                       >
@@ -347,8 +299,9 @@ export default function CategoriesPage() {
               <Empty title="暂无分类" description="添加分类后，首页导航会按排序展示。" />
             )}
           </div>
+          <div className="admin-table-note"><IconHandle aria-hidden="true" /><span>拖动表格行，即可调整分类在首页的顺序。</span></div>
         </Card>
-      </Space>
+      </div>
 
       <Modal
         title="删除分类"

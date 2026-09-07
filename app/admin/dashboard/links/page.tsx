@@ -9,7 +9,6 @@ import {
   Input,
   Modal,
   Select,
-  Space,
   Spin,
   Table,
   Tag,
@@ -22,50 +21,16 @@ import {
   IconExternalOpen,
   IconFilter,
   IconHandle,
-  IconLink,
   IconPlus,
   IconRefresh,
   IconSearch,
 } from '@douyinfe/semi-icons';
-import { getFaviconUrl } from '@/app/utils/favicon';
+import LinkIcon from '../../_components/LinkIcon';
 import { Category, Link as NavLink, supabase } from '@/app/lib/supabase';
 import { useAdminData } from '../_components/useAdminData';
 
 const { Text } = Typography;
 const ALL_CATEGORIES = 'all';
-
-function isEmojiIcon(value: string) {
-  return /[\p{Emoji}]/u.test(value);
-}
-
-function renderLinkIcon(link: NavLink) {
-  const customIcon = link.icon?.trim() || '';
-
-  if (customIcon && isEmojiIcon(customIcon)) {
-    return <span style={{ fontSize: 24, lineHeight: 1 }}>{customIcon}</span>;
-  }
-
-  const iconUrl = customIcon && /^https?:\/\//i.test(customIcon) ? customIcon : getFaviconUrl(link.url);
-
-  if (iconUrl) {
-    return (
-      <span
-        aria-label="链接图标"
-        role="img"
-        style={{
-          width: 28,
-          height: 28,
-          backgroundImage: `url("${iconUrl}")`,
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: 'contain',
-        }}
-      />
-    );
-  }
-
-  return <IconLink size="large" style={{ color: 'var(--semi-color-text-2)' }} />;
-}
 
 function sortLinksByContext(links: NavLink[], categories: Category[], categoryFilter: string) {
   const categoryOrder = new Map(categories.map((category) => [category.id, category.order]));
@@ -217,80 +182,49 @@ export default function LinksPage() {
     {
       title: '排序',
       dataIndex: 'order',
-      width: 120,
+      width: 80,
       render: (_text: unknown, record: NavLink) => (
-        <Space spacing={6} align="center">
-          <IconHandle className={canSort ? 'admin-drag-handle' : 'admin-drag-handle disabled'} />
-          <Text type="tertiary">#{record.order}</Text>
-        </Space>
+        <span className="admin-sort-cell"><IconHandle className={canSort ? 'admin-drag-handle' : 'admin-drag-handle disabled'} /><span>{String(record.order).padStart(2, '0')}</span></span>
       ),
     },
     {
-      title: '网站',
+      title: '网站信息',
       dataIndex: 'title',
       render: (_text: unknown, record: NavLink) => (
-        <Space spacing="medium" align="center">
-          <div className="admin-icon-preview">{renderLinkIcon(record)}</div>
-          <Space vertical spacing={2} align="start" style={{ minWidth: 0 }}>
-            <Space spacing={8} wrap>
-              <Text strong ellipsis={{ showTooltip: true }}>
-                {record.title}
-              </Text>
-              {record.is_private && <Tag color="orange">私密</Tag>}
-            </Space>
-            <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }}>
-              {record.description}
-            </Text>
-            <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }}>
-              {record.url}
-            </Text>
-          </Space>
-        </Space>
+        <div className="admin-cell">
+          <div className="admin-icon-preview"><LinkIcon link={record} /></div>
+          <div className="admin-cell-content">
+            <a className="admin-cell-title" href={record.url} target="_blank" rel="noopener noreferrer" title={record.url}>{record.title}</a>
+            <span className="admin-cell-caption" title={record.description}>{record.description}</span>
+          </div>
+        </div>
       ),
     },
     {
-      title: '分类',
-      width: 180,
+      title: '所属分类',
+      width: 130,
       render: (_text: unknown, record: NavLink) => {
         const category = categoryMap.get(record.category_id);
-
-        return category ? (
-          <Tag>{category.name}</Tag>
-        ) : (
-          <Tag color="red">分类不存在</Tag>
-        );
+        return category ? <Tag>{category.name}</Tag> : <Tag color="red">分类不存在</Tag>;
+      },
+    },
+    {
+      title: '可见性',
+      width: 94,
+      render: (_text: unknown, record: NavLink) => {
+        const isPrivate = record.is_private || categoryMap.get(record.category_id)?.is_private;
+        return <span className={'admin-visibility' + (isPrivate ? ' is-private' : '')}>{isPrivate ? '私密' : '公开'}</span>;
       },
     },
     {
       title: '操作',
-      width: 240,
+      width: 124,
       render: (_text: unknown, record: NavLink) => (
-        <Space spacing={8} wrap>
-          <Button
-            size="small"
-            icon={<IconExternalOpen />}
-            onClick={() => window.open(record.url, '_blank', 'noopener,noreferrer')}
-          >
-            打开
-          </Button>
-          <Button
-            size="small"
-            icon={<IconEdit />}
-            onClick={() => router.push(`/admin/dashboard/link/${record.id}`)}
-          >
-            编辑
-          </Button>
-          <Button
-            size="small"
-            type="danger"
-            theme="borderless"
-            icon={<IconDelete />}
-            loading={deletingId === record.id}
-            onClick={() => confirmDelete(record)}
-          >
-            删除
-          </Button>
-        </Space>
+        <div className="admin-table-actions">
+          <Button size="small" theme="borderless" type="tertiary" icon={<IconExternalOpen aria-hidden="true" />} aria-label={'打开 ' + record.title} title="打开网站" onClick={() => window.open(record.url, '_blank', 'noopener,noreferrer')} />
+          <Button size="small" theme="borderless" type="tertiary" icon={<IconEdit aria-hidden="true" />} aria-label={'编辑 ' + record.title} title="编辑链接" onClick={() => router.push('/admin/dashboard/link/' + record.id)} />
+          <Button size="small" type="danger" theme="borderless" icon={<IconDelete aria-hidden="true" />} aria-label={'删除 ' + record.title} title="删除链接" loading={deletingId === record.id} onClick={() => confirmDelete(record)} />
+        </div>
       ),
     },
   ];
@@ -305,22 +239,22 @@ export default function LinksPage() {
 
   return (
     <div className="admin-content">
-      <Space vertical spacing={24} style={{ width: '100%' }}>
+      <div className="admin-page-stack">
         <div className="admin-page-head">
           <div>
             <h1 className="admin-page-title">链接管理</h1>
             <p className="admin-page-subtitle">
-              搜索、筛选并维护首页链接；选择具体分类后可以拖动调整该分类内的顺序。
+              管理收录的网站，快速查找、编辑与整理。
             </p>
           </div>
           <div className="admin-actions-row">
-            <Button icon={<IconRefresh />} loading={refreshing} onClick={() => void loadData(true)}>
+            <Button icon={<IconRefresh aria-hidden="true" />} loading={refreshing} onClick={() => void loadData(true)}>
               刷新
             </Button>
             <Button
               theme="solid"
               type="primary"
-              icon={<IconPlus />}
+              icon={<IconPlus aria-hidden="true" />}
               onClick={() => router.push('/admin/dashboard/link/new')}
             >
               添加链接
@@ -330,45 +264,20 @@ export default function LinksPage() {
 
         <Card bordered={false} shadows="hover" className="admin-table-card">
           <div className="admin-list-toolbar">
-            <Space wrap>
-              <Input
-                value={keyword}
-                onChange={setKeyword}
-                prefix={<IconSearch />}
-                placeholder="搜索标题、描述、URL 或分类"
-                showClear
-                style={{ width: 320, maxWidth: '100%' }}
-              />
-              <Select
-                value={categoryFilter}
-                onChange={(value) => syncCategoryFilter(value ? String(value) : ALL_CATEGORIES)}
-                prefix={<IconFilter />}
-                style={{ width: 220 }}
-              >
+            <div className="admin-toolbar-filters">
+              <Input className="admin-search-input" value={keyword} onChange={setKeyword} prefix={<IconSearch aria-hidden="true" />} placeholder="搜索标题、描述或网址…" aria-label="搜索链接" showClear />
+              <Select className="admin-category-filter" value={categoryFilter} onChange={(value) => syncCategoryFilter(value ? String(value) : ALL_CATEGORIES)} prefix={<IconFilter aria-hidden="true" />} aria-label="筛选分类">
                 <Select.Option value={ALL_CATEGORIES}>全部分类</Select.Option>
-                {categories.map((category) => (
-                  <Select.Option key={category.id} value={category.id}>
-                    {category.name}
-                  </Select.Option>
-                ))}
+                {categories.map((category) => <Select.Option key={category.id} value={category.id}>{category.name}</Select.Option>)}
               </Select>
-            </Space>
-
-            <Space spacing={8} wrap>
-              <Tag>
-                <IconLink style={{ marginRight: 4 }} />
-                {filteredLinks.length} / {links.length} 个链接
-              </Tag>
-              {canSort ? (
-                <Tag>当前排序范围：{selectedCategory?.name}</Tag>
-              ) : (
-                <Tag>选择分类后可拖拽排序</Tag>
-              )}
-            </Space>
+              {(keyword || categoryFilter !== ALL_CATEGORIES) && <Button theme="borderless" type="tertiary" size="small" onClick={() => { setKeyword(''); syncCategoryFilter(ALL_CATEGORIES); }}>重置</Button>}
+            </div>
+            <span className="admin-result-count">共 <strong>{filteredLinks.length}</strong> 条链接</span>
           </div>
 
           <div className="admin-table-scroll">
             <Table<NavLink>
+              size="small"
               rowKey="id"
               columns={columns}
               dataSource={filteredLinks}
@@ -405,7 +314,7 @@ export default function LinksPage() {
                 return (
                   <article className="admin-mobile-card" key={link.id}>
                     <div className="admin-mobile-card-head">
-                      <div className="admin-icon-preview">{renderLinkIcon(link)}</div>
+                      <div className="admin-icon-preview"><LinkIcon link={link} /></div>
                       <div className="admin-mobile-card-title">
                         <Text strong>{link.title}</Text>
                         <Text type="tertiary" size="small">
@@ -429,14 +338,14 @@ export default function LinksPage() {
                     <div className="admin-mobile-card-actions">
                       <Button
                         size="small"
-                        icon={<IconExternalOpen />}
+                        icon={<IconExternalOpen aria-hidden="true" />}
                         onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
                       >
                         打开
                       </Button>
                       <Button
                         size="small"
-                        icon={<IconEdit />}
+                        icon={<IconEdit aria-hidden="true" />}
                         onClick={() => router.push(`/admin/dashboard/link/${link.id}`)}
                       >
                         编辑
@@ -445,7 +354,7 @@ export default function LinksPage() {
                         size="small"
                         type="danger"
                         theme="borderless"
-                        icon={<IconDelete />}
+                        icon={<IconDelete aria-hidden="true" />}
                         loading={deletingId === link.id}
                         onClick={() => confirmDelete(link)}
                       >
@@ -459,8 +368,9 @@ export default function LinksPage() {
               <Empty title="暂无链接" description="添加链接后，首页会按分类与排序展示。" />
             )}
           </div>
+          <div className="admin-table-note"><IconHandle aria-hidden="true" /><span>{canSort ? selectedCategory?.name + ' · 拖动表格行调整链接顺序' : '选择一个分类后，即可拖动调整链接顺序。'}</span></div>
         </Card>
-      </Space>
+      </div>
 
       <Modal
         title="删除链接"

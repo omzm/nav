@@ -126,17 +126,17 @@ export default function CategoryForm() {
           <div>
             <h1 className="admin-page-title">{isEdit ? '编辑分类' : '添加分类'}</h1>
             <p className="admin-page-subtitle">
-              分类用于组织首页导航区域，图标请直接粘贴阿里巴巴 iconfont 的 SVG 代码。
+              设置分类名称、图标与展示方式。
             </p>
           </div>
           <div className="admin-actions-row">
-            <Button icon={<IconArrowLeft />} onClick={() => router.back()}>
+            <Button icon={<IconArrowLeft aria-hidden="true" />} onClick={() => router.back()}>
               返回
             </Button>
           </div>
         </div>
 
-        <Card bordered={false} shadows="hover" className="admin-form-card">
+        <Card title="分类信息" bordered={false} className="admin-form-card">
           <form onSubmit={handleSubmit}>
             <div className="admin-form-grid">
               <div className="admin-form-fields">
@@ -145,9 +145,9 @@ export default function CategoryForm() {
                 <Input
                   value={name}
                   onChange={setName}
-                  prefix={<IconFolder />}
+                  prefix={<IconFolder aria-hidden="true" />}
                   placeholder="例如：开发工具"
-                  size="large"
+                  size="default"
                   showClear
                   required
                   style={{ marginTop: 8 }}
@@ -168,7 +168,7 @@ export default function CategoryForm() {
                   style={{ marginTop: 8 }}
                 />
                 <Text type="tertiary" size="small" style={{ display: 'block', marginTop: 6 }}>
-                  只使用 SVG 代码，不再使用 iconfont 类名或图标名称。
+                  支持从 iconfont 复制的完整 SVG 代码。
                 </Text>
               </label>
 
@@ -179,7 +179,7 @@ export default function CategoryForm() {
                   onChange={(value) => setOrder(Number(value) || 0)}
                   min={0}
                   step={1}
-                  size="large"
+                  size="default"
                   style={{ width: '100%', marginTop: 8 }}
                 />
               </label>
@@ -205,7 +205,7 @@ export default function CategoryForm() {
               <Card bordered className="admin-form-option-card" style={{ background: 'var(--semi-color-fill-0)' }}>
                 <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
                   <Space spacing="medium">
-                    <IconLock />
+                    <IconLock aria-hidden="true" />
                     <Space vertical spacing={2} align="start">
                       <Text strong>设为私密分类</Text>
                       <Text type="tertiary" size="small">
@@ -220,7 +220,7 @@ export default function CategoryForm() {
 
               <Space className="admin-form-actions" wrap>
                 <Button onClick={() => router.back()}>取消</Button>
-                <Button htmlType="submit" theme="solid" type="primary" icon={<IconSave />} loading={saving}>
+                <Button htmlType="submit" theme="solid" type="primary" icon={<IconSave aria-hidden="true" />} loading={saving}>
                   保存
                 </Button>
               </Space>

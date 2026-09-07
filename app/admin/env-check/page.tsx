@@ -57,16 +57,16 @@ export default function EnvCheck() {
 
   if (checking) {
     return (
-      <main className="admin-login-shell admin-loading-shell">
+      <div className="admin-loading-shell">
         <Spin size="large" tip="正在验证登录状态..." />
-      </main>
+      </div>
     );
   }
 
   if (!authenticated) return null;
 
   return (
-    <main className="admin-shell">
+    <div className="admin-utility-page">
       <div className="admin-form-page">
         <Space vertical spacing={24} style={{ width: '100%' }}>
           <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
@@ -75,10 +75,10 @@ export default function EnvCheck() {
               <p className="admin-page-subtitle">确认 Supabase 客户端配置是否已在当前运行环境中生效。</p>
             </div>
             <Space wrap>
-              <Button icon={<IconArrowLeft />} onClick={() => router.push('/admin/dashboard')}>
+              <Button icon={<IconArrowLeft aria-hidden="true" />} onClick={() => router.push('/admin/dashboard')}>
                 返回后台
               </Button>
-              <Button icon={<IconRefresh />} onClick={() => window.location.reload()}>
+              <Button icon={<IconRefresh aria-hidden="true" />} onClick={() => window.location.reload()}>
                 刷新检查
               </Button>
             </Space>
@@ -138,17 +138,17 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here`}
             <Space wrap>
               <Button onClick={() => router.push('/')}>返回首页</Button>
               <Button onClick={() => router.push('/admin')}>后台登录</Button>
-              <Button icon={<IconExternalOpen />} onClick={() => window.open('https://supabase.com', '_blank', 'noopener,noreferrer')}>
+              <Button icon={<IconExternalOpen aria-hidden="true" />} onClick={() => window.open('https://supabase.com', '_blank', 'noopener,noreferrer')}>
                 Supabase 官网
               </Button>
-              <Button icon={<IconExternalOpen />} onClick={() => window.open('/SUPABASE_SETUP.md', '_blank', 'noopener,noreferrer')}>
+              <Button icon={<IconExternalOpen aria-hidden="true" />} onClick={() => window.open('/SUPABASE_SETUP.md', '_blank', 'noopener,noreferrer')}>
                 设置文档
               </Button>
             </Space>
           </Card>
         </Space>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -158,7 +158,7 @@ function ConfigRow({ label, configured }: { label: string; configured: boolean }
       <Text strong>{label}</Text>
       <Tag
         color={configured ? 'green' : 'orange'}
-        prefixIcon={configured ? <IconTickCircle /> : <IconAlertTriangle />}
+        prefixIcon={configured ? <IconTickCircle aria-hidden="true" /> : <IconAlertTriangle aria-hidden="true" />}
       >
         {configured ? '已配置' : '未配置'}
       </Tag>

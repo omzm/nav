@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Card, Input, Space, Toast, Typography } from '@douyinfe/semi-ui';
-import { IconArrowLeft, IconLock, IconMail, IconUserSetting } from '@douyinfe/semi-icons';
+import { Button, Input, Toast } from '@douyinfe/semi-ui';
+import { IconArrowRight, IconExternalOpen, IconLock, IconMail } from '@douyinfe/semi-icons';
 import { supabase, isSupabaseConfigured } from '@/app/lib/supabase';
 import {
   LOCAL_ADMIN_EMAIL,
@@ -11,8 +12,7 @@ import {
   isLocalAdminCredentials,
   signInLocalAdmin,
 } from '@/app/lib/local-admin';
-
-const { Text, Title } = Typography;
+import AdminBrand from './_components/AdminBrand';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState(process.env.NODE_ENV === 'development' ? LOCAL_ADMIN_EMAIL : '');
@@ -28,13 +28,8 @@ export default function AdminLogin() {
       const isLocalCredentials = isLocalAdminCredentials(email, password);
 
       if (!isLocalCredentials || isSupabaseConfigured) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (!isLocalCredentials && error) throw error;
-
         if (data.user) {
           Toast.success('登录成功');
           router.push('/admin/dashboard');
@@ -46,11 +41,9 @@ export default function AdminLogin() {
         signInLocalAdmin();
         Toast.success('本地测试登录成功');
         router.push('/admin/dashboard');
-        return;
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '登录失败，请检查账号和密码';
-      Toast.error(message);
+      Toast.error(error instanceof Error ? error.message : '登录失败，请检查账号和密码');
     } finally {
       setLoading(false);
     }
@@ -58,60 +51,35 @@ export default function AdminLogin() {
 
   return (
     <main className="admin-login-shell">
-      <Card className="admin-login-card" bordered={false} shadows="always">
-        <Space vertical align="center" spacing={10} style={{ width: '100%', marginBottom: 28 }}>
-          <div className="admin-icon-preview admin-login-logo">
-            <IconUserSetting size="extra-large" />
+      <header className="admin-login-topbar">
+        <AdminBrand compact />
+        <Link href="/" className="admin-inline-link"><span>返回首页</span><IconExternalOpen aria-hidden="true" /></Link>
+      </header>
+      <div className="admin-login-main">
+        <section className="admin-login-card">
+          <div className="admin-login-heading">
+            <h1>管理员登录</h1>
+            <p>欢迎回来，登录后继续整理你的收藏。</p>
           </div>
-          <Title heading={3} style={{ margin: 0 }}>
-            后台管理
-          </Title>
-          <Text type="tertiary">登录后维护首页分类、链接和展示数据</Text>
-        </Space>
-
-        <form className="admin-login-form" onSubmit={handleLogin}>
-          <label className="admin-login-form-field">
-            <Text strong>邮箱地址</Text>
-            <Input
-              value={email}
-              onChange={setEmail}
-              prefix={<IconMail />}
-              placeholder="admin@example.com"
-              type="email"
-              size="large"
-              showClear
-              required
-            />
-          </label>
-
-          <label className="admin-login-form-field">
-            <Text strong>登录密码</Text>
-            <Input
-              value={password}
-              onChange={setPassword}
-              prefix={<IconLock />}
-              placeholder="请输入密码"
-              mode="password"
-              size="large"
-              required
-            />
-          </label>
-
-          <Button block htmlType="submit" loading={loading} theme="solid" type="primary" size="large">
-            登录
-          </Button>
-
-          <Button block icon={<IconArrowLeft />} theme="borderless" onClick={() => router.push('/')}>
-            返回首页
-          </Button>
-
-          {process.env.NODE_ENV === 'development' && (
-            <Text type="tertiary" size="small" style={{ textAlign: 'center' }}>
-              本地测试账号：{LOCAL_ADMIN_EMAIL} / {LOCAL_ADMIN_PASSWORD}
-            </Text>
-          )}
-        </form>
-      </Card>
+          <form className="admin-login-form" onSubmit={handleLogin}>
+            <label className="admin-login-form-field">
+              <span>邮箱地址</span>
+              <Input value={email} onChange={setEmail} prefix={<IconMail aria-hidden="true" />} placeholder="请输入管理员邮箱" type="email" autoComplete="username" showClear required />
+            </label>
+            <label className="admin-login-form-field">
+              <span>登录密码</span>
+              <Input value={password} onChange={setPassword} prefix={<IconLock aria-hidden="true" />} placeholder="请输入密码" mode="password" autoComplete="current-password" required />
+            </label>
+            <Button block htmlType="submit" loading={loading} theme="solid" type="primary" icon={<IconArrowRight aria-hidden="true" />} iconPosition="right">
+              登录工作台
+            </Button>
+            {process.env.NODE_ENV === 'development' && (
+              <p className="admin-login-dev-note">开发环境 · 本地测试账号已预填</p>
+            )}
+          </form>
+        </section>
+      </div>
+      <footer className="admin-login-footer">收藏夹 · 内容管理工作台</footer>
     </main>
   );
 }

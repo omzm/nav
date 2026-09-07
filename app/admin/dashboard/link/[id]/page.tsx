@@ -30,6 +30,7 @@ import { supabase, Category, Link as NavLink } from '@/app/lib/supabase';
 import { getFallbackFaviconUrl, getFaviconUrl } from '@/app/utils/favicon';
 import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
 import CategoryIcon from '@/app/components/CategoryIcon';
+import { isEmojiIcon } from '@/app/admin/_components/LinkIcon';
 
 const { Text, Title } = Typography;
 
@@ -71,7 +72,7 @@ export default function LinkForm() {
     return Array.isArray(value) ? value[0] : value;
   }, [params.id]);
   const isEdit = Boolean(linkId && linkId !== 'new');
-  const iconIsEmoji = Boolean(icon.trim() && /[\p{Emoji}]/u.test(icon.trim()));
+  const iconIsEmoji = Boolean(icon.trim() && isEmojiIcon(icon.trim()));
 
   const loadCategories = useCallback(async () => {
     try {
@@ -398,17 +399,17 @@ export default function LinkForm() {
           <div>
             <h1 className="admin-page-title">{isEdit ? '编辑链接' : '添加链接'}</h1>
             <p className="admin-page-subtitle">
-              维护首页展示的网站信息，图标留空时会自动使用网站 favicon。
+              填写网站信息，选择一个合适的分类。
             </p>
           </div>
           <div className="admin-actions-row">
-            <Button icon={<IconArrowLeft />} onClick={() => router.back()}>
+            <Button icon={<IconArrowLeft aria-hidden="true" />} onClick={() => router.back()}>
               返回
             </Button>
           </div>
         </div>
 
-        <Card bordered={false} shadows="hover" className="admin-form-card">
+        <Card title="链接信息" bordered={false} className="admin-form-card">
           <div className="admin-form-grid">
             <div className="admin-form-fields">
             <label className="admin-form-field">
@@ -417,8 +418,8 @@ export default function LinkForm() {
                 value={categoryId}
                 onChange={(value) => void handleCategoryChange(value ? String(value) : '')}
                 placeholder="请选择分类"
-                prefix={<IconFolder />}
-                size="large"
+                prefix={<IconFolder aria-hidden="true" />}
+                size="default"
                 style={{ width: '100%', marginTop: 8 }}
               >
                 {categories.map((category) => (
@@ -437,9 +438,9 @@ export default function LinkForm() {
               <Input
                 value={title}
                 onChange={setTitle}
-                prefix={<IconLink />}
+                prefix={<IconLink aria-hidden="true" />}
                 placeholder="例如：GitHub"
-                size="large"
+                size="default"
                 showClear
                 style={{ marginTop: 8 }}
               />
@@ -450,9 +451,9 @@ export default function LinkForm() {
               <Input
                 value={url}
                 onChange={setUrl}
-                prefix={<IconGlobe />}
+                prefix={<IconGlobe aria-hidden="true" />}
                 placeholder="https://github.com"
-                size="large"
+                size="default"
                 showClear
                 style={{ marginTop: 8 }}
               />
@@ -475,8 +476,8 @@ export default function LinkForm() {
               <Input
                 value={icon}
                 onChange={setIcon}
-                placeholder="可填写 Emoji 或图标 URL，留空自动使用 favicon"
-                size="large"
+                placeholder="Emoji 或图片链接，留空自动获取"
+                size="default"
                 showClear
                 style={{ marginTop: 8 }}
               />
@@ -489,7 +490,7 @@ export default function LinkForm() {
                 onChange={(value) => setOrder(Number(value) || 0)}
                 min={0}
                 step={1}
-                size="large"
+                size="default"
                 style={{ width: '100%', marginTop: 8 }}
               />
               <Text type="tertiary" size="small" style={{ display: 'block', marginTop: 6 }}>
@@ -513,12 +514,12 @@ export default function LinkForm() {
                       ? '自动图标获取失败，可以手动填写 Emoji'
                       : icon.trim()
                         ? '正在使用自定义图标'
-                        : '留空时自动使用网站 favicon'}
+                        : '自动获取网站图标'}
                   </Text>
                   <Space wrap>
                     <Button
                       size="small"
-                      icon={<IconRefresh />}
+                      icon={<IconRefresh aria-hidden="true" />}
                       loading={iconLoading}
                       disabled={!url.trim()}
                       onClick={() => void handleAutoFetchIcon()}
@@ -557,7 +558,7 @@ export default function LinkForm() {
               <Button onClick={() => router.back()}>取消</Button>
               {!isEdit && (
                 <Button
-                  icon={<IconSave />}
+                  icon={<IconSave aria-hidden="true" />}
                   loading={saveAndContinueLoading}
                   disabled={saving}
                   onClick={() => void validateAndSave(true)}
@@ -568,7 +569,7 @@ export default function LinkForm() {
               <Button
                 theme="solid"
                 type="primary"
-                icon={<IconSave />}
+                icon={<IconSave aria-hidden="true" />}
                 loading={saving}
                 disabled={saveAndContinueLoading}
                 onClick={() => void validateAndSave(false)}

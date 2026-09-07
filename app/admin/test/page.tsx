@@ -126,7 +126,7 @@ export default function TestConnection() {
   }, [checkAuth]);
 
   return (
-    <main className="admin-shell">
+    <div className="admin-utility-page">
       <div className="admin-form-page">
         <Space vertical spacing={24} style={{ width: '100%' }}>
           <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
@@ -135,10 +135,10 @@ export default function TestConnection() {
               <p className="admin-page-subtitle">验证登录、读写权限和数据库连通性。</p>
             </div>
             <Space wrap>
-              <Button icon={<IconArrowLeft />} onClick={() => router.push('/admin/dashboard')}>
+              <Button icon={<IconArrowLeft aria-hidden="true" />} onClick={() => router.push('/admin/dashboard')}>
                 返回后台
               </Button>
-              <Button icon={<IconRefresh />} loading={status === 'checking'} onClick={() => void testConnection()}>
+              <Button icon={<IconRefresh aria-hidden="true" />} loading={status === 'checking'} onClick={() => void testConnection()}>
                 重新测试
               </Button>
             </Space>
@@ -151,7 +151,7 @@ export default function TestConnection() {
               <Space vertical spacing="medium" align="start" style={{ width: '100%' }}>
                 <Tag
                   color={status === 'success' ? 'green' : 'red'}
-                  prefixIcon={status === 'success' ? <IconTickCircle /> : <IconAlertTriangle />}
+                  prefixIcon={status === 'success' ? <IconTickCircle aria-hidden="true" /> : <IconAlertTriangle aria-hidden="true" />}
                 >
                   {status === 'success' ? '测试通过' : '测试失败'}
                 </Tag>
@@ -180,6 +180,6 @@ export default function TestConnection() {
           </Card>
         </Space>
       </div>
-    </main>
+    </div>
   );
 }

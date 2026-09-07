@@ -453,7 +453,7 @@ export default function DatabaseInit() {
             : '需要处理';
 
   return (
-    <main className="admin-shell">
+    <div className="admin-utility-page">
       <div className="admin-content">
         <Space vertical spacing={24} style={{ width: '100%' }}>
           <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
@@ -462,7 +462,7 @@ export default function DatabaseInit() {
               <p className="admin-page-subtitle">检查 Supabase 表结构、RPC 和基础数据，判断是否需要去数据库同步。</p>
             </div>
             <Space wrap>
-              <Button icon={<IconRefresh />} loading={status === 'checking'} onClick={() => void checkAndInitDatabase()}>
+              <Button icon={<IconRefresh aria-hidden="true" />} loading={status === 'checking'} onClick={() => void checkAndInitDatabase()}>
                 检查数据库
               </Button>
               <Button onClick={() => router.push('/admin/test')}>连接测试</Button>
@@ -475,11 +475,11 @@ export default function DatabaseInit() {
                 color={statusColor}
                 prefixIcon={
                   status === 'success' ? (
-                    <IconTickCircle />
+                    <IconTickCircle aria-hidden="true" />
                   ) : status === 'error' || status === 'warning' ? (
-                    <IconAlertTriangle />
+                    <IconAlertTriangle aria-hidden="true" />
                   ) : (
-                    <IconServer />
+                    <IconServer aria-hidden="true" />
                   )
                 }
               >
@@ -533,7 +533,7 @@ export default function DatabaseInit() {
               bordered={false}
               shadows="hover"
               headerExtraContent={
-                <Button icon={<IconCopy />} onClick={() => void copySql()}>
+                <Button icon={<IconCopy aria-hidden="true" />} onClick={() => void copySql()}>
                   复制 SQL
                 </Button>
               }
@@ -547,7 +547,7 @@ export default function DatabaseInit() {
                     <Text>2. 新建 Query，粘贴 SQL 并点击 Run。</Text>
                     <Text>3. 回到本页重新点击“检查数据库”。</Text>
                     <Button
-                      icon={<IconExternalOpen />}
+                      icon={<IconExternalOpen aria-hidden="true" />}
                       onClick={() => window.open('https://supabase.com', '_blank', 'noopener,noreferrer')}
                     >
                       打开 Supabase
@@ -570,6 +570,6 @@ export default function DatabaseInit() {
           )}
         </Space>
       </div>
-    </main>
+    </div>
   );
 }

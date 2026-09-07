@@ -1,0 +1,265 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import type { User } from '@supabase/supabase-js';
+import { Button, Modal, SideSheet, Spin, Toast, semiGlobal } from '@douyinfe/semi-ui';
+import {
+  IconChevronRight,
+  IconExit,
+  IconExternalOpen,
+  IconFolder,
+  IconHistogram,
+  IconInfoCircle,
+  IconLink,
+  IconMenu,
+  IconPlus,
+  IconServer,
+  IconSetting,
+} from '@douyinfe/semi-icons';
+import { ADMIN_EMAIL, supabase } from '@/app/lib/supabase';
+import { getLocalAdminUser, signOutLocalAdmin } from '@/app/lib/local-admin';
+import { clearAdminCache } from '@/app/utils/adminCache';
+import { UserContext } from './dashboard/context';
+import AdminBrand from './_components/AdminBrand';
+import './admin.css';
+
+// Semi's imperative components (Toast, Modal) need the React 19 root API.
+semiGlobal.config.createRoot = createRoot;
+
+const navGroups = [
+  {
+    title: '内容管理',
+    items: [
+      { label: '工作台', path: '/admin/dashboard', icon: IconHistogram },
+      { label: '分类管理', path: '/admin/dashboard/categories', icon: IconFolder },
+      { label: '链接管理', path: '/admin/dashboard/links', icon: IconLink },
+    ],
+  },
+  {
+    title: '系统工具',
+    items: [
+      { label: '认证诊断', path: '/admin/diagnostic', icon: IconInfoCircle },
+      { label: '数据库检查', path: '/admin/init', icon: IconServer },
+      { label: '环境配置', path: '/admin/env-check', icon: IconSetting },
+    ],
+  },
+];
+
+function isActivePath(pathname: string, path: string) {
+  if (path === '/admin/dashboard/categories') {
+    return pathname === path || pathname.startsWith('/admin/dashboard/category/');
+  }
+  if (path === '/admin/dashboard/links') {
+    return pathname === path || pathname.startsWith('/admin/dashboard/link/');
+  }
+  return pathname === path;
+}
+
+function getPageLabel(pathname: string) {
+  if (pathname.startsWith('/admin/dashboard/category/')) return pathname.endsWith('/new') ? '添加分类' : '编辑分类';
+  if (pathname.startsWith('/admin/dashboard/link/')) return pathname.endsWith('/new') ? '添加链接' : '编辑链接';
+  if (pathname === '/admin/test') return '连接测试';
+  return navGroups.flatMap((group) => group.items).find((item) => item.path === pathname)?.label || '工作台';
+}
+
+function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [navOpen, setNavOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    let active = true;
+
+    const checkUser = async () => {
+      try {
+        const localUser = getLocalAdminUser();
+        if (localUser) {
+          if (active) setUser(localUser);
+          return;
+        }
+
+        const { data: { user: currentUser }, error } = await supabase.auth.getUser();
+        if (error || !currentUser) {
+          if (active) router.replace('/admin');
+          return;
+        }
+        if (ADMIN_EMAIL && currentUser.email !== ADMIN_EMAIL) {
+          await supabase.auth.signOut();
+          if (active) router.replace('/admin');
+          return;
+        }
+        if (active) setUser(currentUser);
+      } catch (error) {
+        console.error('验证后台登录状态失败:', error);
+        if (active) router.replace('/admin');
+      } finally {
+        if (active) setChecking(false);
+      }
+    };
+
+    const timer = window.setTimeout(() => void checkUser(), 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [router]);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      signOutLocalAdmin();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      clearAdminCache();
+      router.replace('/admin');
+    } catch (error) {
+      console.error('退出登录失败:', error);
+      Toast.error('退出失败，请重试');
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
+  if (checking) {
+    return (
+      <div className="admin-theme admin-loading-shell">
+        <AdminBrand />
+        <Spin tip="正在进入工作台…" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  const parentPage = pathname.startsWith('/admin/dashboard/category/')
+    ? { label: '分类管理', path: '/admin/dashboard/categories' }
+    : pathname.startsWith('/admin/dashboard/link/')
+      ? { label: '链接管理', path: '/admin/dashboard/links' }
+      : null;
+
+  const navigation = (
+    <>
+      <Link href="/admin/dashboard" className="admin-sidebar-brand" onClick={() => setNavOpen(false)}>
+        <AdminBrand />
+      </Link>
+
+      <div className="admin-sidebar-create">
+        <Button block theme="solid" icon={<IconPlus aria-hidden="true" />} onClick={() => {
+          setNavOpen(false);
+          router.push('/admin/dashboard/link/new');
+        }}>
+          添加链接
+        </Button>
+      </div>
+
+      <nav className="admin-sidebar-nav" aria-label="后台主导航">
+        {navGroups.map((group) => (
+          <div className="admin-nav-group" key={group.title}>
+            <p className="admin-nav-group-title">{group.title}</p>
+            {group.items.map(({ label, path, icon: Icon }) => {
+              const active = isActivePath(pathname, path);
+              return (
+                <Link
+                  key={path}
+                  href={path}
+                  className={`admin-nav-item${active ? ' is-active' : ''}`}
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => setNavOpen(false)}
+                >
+                  <Icon aria-hidden="true" />
+                  <span>{label}</span>
+                  {active && <span className="admin-nav-active-dot" />}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      <div className="admin-sidebar-bottom">
+        <a className="admin-nav-item admin-site-link" href="/" target="_blank" rel="noopener noreferrer">
+          <IconExternalOpen aria-hidden="true" />
+          <span>访问首页</span>
+          <IconChevronRight className="admin-nav-trailing" aria-hidden="true" />
+        </a>
+        <div className="admin-account">
+          <span className="admin-account-avatar">{(user.email?.[0] || 'A').toUpperCase()}</span>
+          <div className="admin-account-text">
+            <strong>管理员</strong>
+            <span title={user.email}>{user.email}</span>
+          </div>
+          <Button theme="borderless" type="tertiary" icon={<IconExit aria-hidden="true" />} aria-label="退出登录" title="退出登录" onClick={() => { setNavOpen(false); setShowLogoutConfirm(true); }} />
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <UserContext.Provider value={user}>
+      <div className="admin-theme admin-shell">
+        <a className="admin-skip-link" href="#admin-main">跳到主要内容</a>
+        <aside className="admin-sidebar">{navigation}</aside>
+
+        <div className="admin-workspace">
+          <header className="admin-topbar">
+            <div className="admin-topbar-start">
+              <Button className="admin-mobile-menu" theme="borderless" type="tertiary" icon={<IconMenu aria-hidden="true" />} aria-label="打开导航" aria-expanded={navOpen} onClick={() => setNavOpen(true)} />
+              <nav className="admin-breadcrumb" aria-label="面包屑导航">
+                <Link href="/admin/dashboard">管理台</Link>
+                <IconChevronRight aria-hidden="true" />
+                {parentPage && <><Link href={parentPage.path}>{parentPage.label}</Link><IconChevronRight aria-hidden="true" /></>}
+                <span aria-current="page">{getPageLabel(pathname)}</span>
+              </nav>
+            </div>
+            <span className="admin-topbar-caption">让每一份收藏井然有序</span>
+          </header>
+          <main id="admin-main" className="admin-main" tabIndex={-1}>{children}</main>
+          <footer className="admin-workspace-footer">收藏夹 · 内容管理工作台</footer>
+        </div>
+
+        <SideSheet
+          title="导航菜单"
+          visible={navOpen}
+          placement="left"
+          width={272}
+          onCancel={() => setNavOpen(false)}
+          className="admin-theme admin-mobile-nav"
+          bodyStyle={{ padding: 0 }}
+        >
+          <div className="admin-mobile-nav-body">{navigation}</div>
+        </SideSheet>
+
+        <Modal
+          title="退出登录"
+          visible={showLogoutConfirm}
+          okText="退出登录"
+          cancelText="取消"
+          okButtonProps={{ type: 'danger', theme: 'solid', loading: loggingOut }}
+          onOk={() => void handleLogout()}
+          onCancel={() => { if (!loggingOut) setShowLogoutConfirm(false); }}
+        >
+          退出后需要重新登录，才能继续管理分类和链接。
+        </Modal>
+      </div>
+    </UserContext.Provider>
+  );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    document.body.classList.add('admin-theme');
+    return () => document.body.classList.remove('admin-theme');
+  }, []);
+
+  if (pathname === '/admin') return <div className="admin-theme">{children}</div>;
+  return <AuthenticatedLayout>{children}</AuthenticatedLayout>;
+}

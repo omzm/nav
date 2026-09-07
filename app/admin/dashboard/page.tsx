@@ -1,31 +1,45 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Card, Empty, Space, Spin, Tag, Typography } from '@douyinfe/semi-ui';
+import { Button, Empty, Spin } from '@douyinfe/semi-ui';
 import {
+  IconChevronRight,
   IconDownload,
-  IconEyeOpened,
+  IconEdit,
   IconFolder,
-  IconFolderOpen,
-  IconHistogram,
+  IconGlobe,
   IconLink,
+  IconLock,
   IconPlus,
   IconRefresh,
+  IconServer,
 } from '@douyinfe/semi-icons';
 import CategoryIcon from '@/app/components/CategoryIcon';
+import LinkIcon from '../_components/LinkIcon';
 import { useAdminData } from './_components/useAdminData';
 
-const { Text, Title } = Typography;
+function getHostname(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
 
 export default function AdminDashboard() {
-  const { categories, links, loading, refreshing, stats, exportData, loadData } = useAdminData();
+  const {
+    categories, links, categoryMap, linkCountByCategory,
+    loading, refreshing, stats, exportData, loadData,
+  } = useAdminData();
   const router = useRouter();
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const tagName = (event.target as HTMLElement).tagName;
-      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') return;
+      const target = event.target as HTMLElement;
+      if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+      if (target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
 
       if (event.key.toLowerCase() === 'n') {
         event.preventDefault();
@@ -44,189 +58,119 @@ export default function AdminDashboard() {
   }, [loadData, router]);
 
   if (loading) {
-    return (
-      <div className="admin-content">
-        <Spin size="large" tip="正在加载后台数据..." style={{ width: '100%', padding: '96px 0' }} />
-      </div>
-    );
+    return <div className="admin-content"><Spin tip="正在加载工作台…" style={{ width: '100%', padding: '96px 0' }} /></div>;
   }
 
-  const latestLinks = links.slice(0, 6);
-  const visibleCategories = categories.slice(0, 6);
+  const latestLinks = [...links]
+    .sort((a, b) => (Date.parse(b.created_at || '') || 0) - (Date.parse(a.created_at || '') || 0))
+    .slice(0, 5);
+  const visibleCategories = [...categories]
+    .sort((a, b) => (linkCountByCategory.get(b.id)?.total || 0) - (linkCountByCategory.get(a.id)?.total || 0))
+    .slice(0, 5);
+  const maxCategoryCount = Math.max(1, ...visibleCategories.map((category) => linkCountByCategory.get(category.id)?.total || 0));
+  const statCards = [
+    { label: '收录链接', value: stats.totalLinks, icon: IconLink, tone: '', caption: '分布于 ' + stats.totalCategories + ' 个分类' },
+    { label: '公开链接', value: stats.publicLinks, icon: IconGlobe, tone: 'is-green', caption: '在首页默认展示' },
+    { label: '私密链接', value: stats.privateLinks, icon: IconLock, tone: 'is-amber', caption: '在隐私模式中展示' },
+    { label: '导航分类', value: stats.totalCategories, icon: IconFolder, tone: 'is-purple', caption: '公开 ' + stats.publicCategories + ' · 私密 ' + stats.privateCategories },
+  ];
 
   return (
     <div className="admin-content">
       <div className="admin-page-stack">
         <div className="admin-page-head">
           <div>
-            <h1 className="admin-page-title">后台概览</h1>
-            <p className="admin-page-subtitle">这里只保留数据状态和常用入口；具体维护请从左侧导航进入分类或链接页面。</p>
+            <h1 className="admin-page-title">工作台</h1>
+            <p className="admin-page-subtitle">查看收录情况，继续整理你的分类与链接。</p>
           </div>
-
           <div className="admin-actions-row">
-            <Button
-              theme="solid"
-              type="primary"
-              icon={<IconPlus />}
-              onClick={() => router.push('/admin/dashboard/link/new')}
-            >
-              添加链接
-            </Button>
-            <Button icon={<IconFolder />} onClick={() => router.push('/admin/dashboard/category/new')}>
-              添加分类
-            </Button>
-            <Button icon={<IconDownload />} onClick={exportData}>
-              导出
-            </Button>
-            <Button icon={<IconRefresh />} loading={refreshing} onClick={() => void loadData(true)}>
-              刷新
-            </Button>
+            <Button icon={<IconRefresh aria-hidden="true" />} loading={refreshing} onClick={() => void loadData(true)}>刷新数据</Button>
+            <Button theme="solid" type="primary" icon={<IconPlus aria-hidden="true" />} onClick={() => router.push('/admin/dashboard/link/new')}>添加链接</Button>
           </div>
         </div>
 
         <div className="admin-stats-grid">
-          <Card className="admin-stat-card" bordered={false} shadows="hover">
-            <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
-              <Space vertical spacing={4} align="start">
-                <Text type="tertiary">总分类</Text>
-                <Title heading={2} style={{ margin: 0 }}>
-                  {stats.totalCategories}
-                </Title>
-                <Text type="secondary" size="small">
-                  公开 {stats.publicCategories} · 私密 {stats.privateCategories}
-                </Text>
-              </Space>
-              <IconFolderOpen size="extra-large" style={{ color: 'var(--semi-color-primary)' }} />
-            </Space>
-          </Card>
-
-          <Card className="admin-stat-card" bordered={false} shadows="hover">
-            <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
-              <Space vertical spacing={4} align="start">
-                <Text type="tertiary">总链接</Text>
-                <Title heading={2} style={{ margin: 0 }}>
-                  {stats.totalLinks}
-                </Title>
-                <Text type="secondary" size="small">
-                  公开 {stats.publicLinks} · 私密 {stats.privateLinks}
-                </Text>
-              </Space>
-              <IconLink size="extra-large" style={{ color: 'var(--semi-color-success)' }} />
-            </Space>
-          </Card>
-
-          <Card className="admin-stat-card" bordered={false} shadows="hover">
-            <Space vertical spacing={8} align="start">
-              <Text type="tertiary">分类维护</Text>
-              <Title heading={4} style={{ margin: 0 }}>
-                独立页面
-              </Title>
-              <Button size="small" icon={<IconFolder />} onClick={() => router.push('/admin/dashboard/categories')}>
-                打开分类管理
-              </Button>
-            </Space>
-          </Card>
-
-          <Card className="admin-stat-card" bordered={false} shadows="hover">
-            <Space vertical spacing={8} align="start">
-              <Text type="tertiary">链接维护</Text>
-              <Title heading={4} style={{ margin: 0 }}>
-                搜索与筛选
-              </Title>
-              <Button size="small" icon={<IconLink />} onClick={() => router.push('/admin/dashboard/links')}>
-                打开链接管理
-              </Button>
-            </Space>
-          </Card>
+          {statCards.map(({ label, value, icon: Icon, tone, caption }) => (
+            <article className="admin-stat-card" key={label}>
+              <div className="admin-stat-top">
+                <span>{label}</span>
+                <span className={'admin-stat-icon ' + tone}><Icon aria-hidden="true" /></span>
+              </div>
+              <strong className="admin-stat-value">{value.toLocaleString('zh-CN')}</strong>
+              <p className="admin-stat-caption">{caption}</p>
+            </article>
+          ))}
         </div>
 
         <div className="admin-overview-grid">
-          <Card
-            title="分类概览"
-            bordered={false}
-            shadows="hover"
-            headerExtraContent={
-              <Button theme="borderless" onClick={() => router.push('/admin/dashboard/categories')}>
-                管理分类
-              </Button>
-            }
-          >
-            {visibleCategories.length > 0 ? (
-              <Space vertical spacing="medium" style={{ width: '100%' }}>
-                {visibleCategories.map((category) => (
-                  <Space key={category.id} style={{ width: '100%', justifyContent: 'space-between' }}>
-                    <Space>
-                      <div className="admin-icon-preview">
-                        <CategoryIcon icon={category.icon} />
-                      </div>
-                      <Text strong>{category.name}</Text>
-                    </Space>
-                    {category.is_private && <Tag color="orange">私密</Tag>}
-                  </Space>
-                ))}
-              </Space>
+          <section className="admin-panel">
+            <div className="admin-panel-head">
+              <div><h2>分类分布</h2><p>链接最多的 {visibleCategories.length} 个分类</p></div>
+              <Link className="admin-inline-link" href="/admin/dashboard/categories">全部分类 <IconChevronRight aria-hidden="true" /></Link>
+            </div>
+            {visibleCategories.length ? (
+              <div className="admin-category-list">
+                {visibleCategories.map((category) => {
+                  const count = linkCountByCategory.get(category.id)?.total || 0;
+                  return (
+                    <button className="admin-category-row" key={category.id} onClick={() => router.push('/admin/dashboard/links?category=' + category.id)}>
+                      <span className="admin-icon-preview"><CategoryIcon icon={category.icon} /></span>
+                      <span className="admin-category-detail">
+                        <span className="admin-category-label">
+                          <span className="admin-category-name"><span>{category.name}</span>{category.is_private && <IconLock aria-label="私密分类" />}</span>
+                          <span className="admin-category-count">{count} 个链接</span>
+                        </span>
+                        <span className="admin-category-bar" aria-hidden="true"><span style={{ width: (count / maxCategoryCount) * 100 + '%' }} /></span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
-              <Empty title="暂无分类" description="先添加分类，再添加链接。" />
+              <Empty title="从第一个分类开始" description="为收藏建立分类，让好用的网站各就其位。">
+                <Button size="small" onClick={() => router.push('/admin/dashboard/category/new')}>添加分类</Button>
+              </Empty>
             )}
-          </Card>
+          </section>
 
-          <Card
-            title="链接概览"
-            bordered={false}
-            shadows="hover"
-            headerExtraContent={
-              <Button theme="borderless" onClick={() => router.push('/admin/dashboard/links')}>
-                管理链接
-              </Button>
-            }
-          >
-            {latestLinks.length > 0 ? (
-              <Space vertical spacing="medium" style={{ width: '100%' }}>
+          <section className="admin-panel">
+            <div className="admin-panel-head">
+              <div><h2>最近添加</h2><p>最新收录的网站与工具</p></div>
+              <Link className="admin-inline-link" href="/admin/dashboard/links">全部链接 <IconChevronRight aria-hidden="true" /></Link>
+            </div>
+            {latestLinks.length ? (
+              <div className="admin-recent-list">
                 {latestLinks.map((link) => (
-                  <Space key={link.id} style={{ width: '100%', justifyContent: 'space-between' }} align="start">
-                    <Space vertical spacing={2} align="start" style={{ minWidth: 0 }}>
-                      <Text strong ellipsis={{ showTooltip: true }}>
-                        {link.title}
-                      </Text>
-                      <Text type="tertiary" size="small" ellipsis={{ showTooltip: true }}>
-                        {link.url}
-                      </Text>
-                    </Space>
-                    <Button
-                      size="small"
-                      icon={<IconEyeOpened />}
-                      onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
-                    />
-                  </Space>
+                  <div className="admin-recent-row" key={link.id}>
+                    <span className="admin-icon-preview"><LinkIcon link={link} /></span>
+                    <div className="admin-recent-info">
+                      <a className="admin-recent-title" href={link.url} target="_blank" rel="noopener noreferrer" title={link.title}>{link.title}</a>
+                      <span className="admin-recent-domain">{getHostname(link.url)}</span>
+                    </div>
+                    <span className="admin-recent-category">{categoryMap.get(link.category_id)?.name || '未分类'}</span>
+                    <Button theme="borderless" type="tertiary" icon={<IconEdit aria-hidden="true" />} aria-label={'编辑 ' + link.title} title="编辑链接" onClick={() => router.push('/admin/dashboard/link/' + link.id)} />
+                  </div>
                 ))}
-              </Space>
+              </div>
             ) : (
-              <Empty title="暂无链接" description="添加第一个链接后会在这里看到摘要。" />
+              <Empty title="还没有收录链接" description="添加一个常用网站，开始建立你的收藏夹。">
+                <Button size="small" onClick={() => router.push('/admin/dashboard/link/new')}>添加链接</Button>
+              </Empty>
             )}
-          </Card>
+          </section>
         </div>
 
-        <Card title="常用操作" bordered={false} shadows="hover">
-          <div className="admin-actions-row">
-            <Button
-              icon={<IconLink />}
-              theme="solid"
-              type="primary"
-              onClick={() => router.push('/admin/dashboard/link/new')}
-            >
-              添加链接
-            </Button>
-            <Button icon={<IconFolder />} onClick={() => router.push('/admin/dashboard/category/new')}>
-              添加分类
-            </Button>
-            <Button icon={<IconHistogram />} onClick={() => router.push('/admin/diagnostic')}>
-              认证诊断
-            </Button>
-            <Button icon={<IconEyeOpened />} onClick={() => window.open('/', '_blank', 'noopener,noreferrer')}>
-              查看网站
-            </Button>
-          </div>
-        </Card>
+        <div className="admin-quick-actions">
+          <button className="admin-quick-action" onClick={() => router.push('/admin/dashboard/category/new')}>
+            <IconFolder aria-hidden="true" /><span><strong>添加分类</strong><small>为收藏建立新的分组</small></span><IconChevronRight aria-hidden="true" />
+          </button>
+          <button className="admin-quick-action" onClick={exportData}>
+            <IconDownload aria-hidden="true" /><span><strong>导出备份</strong><small>保存全部分类与链接</small></span><IconChevronRight aria-hidden="true" />
+          </button>
+          <button className="admin-quick-action" onClick={() => router.push('/admin/init')}>
+            <IconServer aria-hidden="true" /><span><strong>数据库检查</strong><small>查看数据与连接状态</small></span><IconChevronRight aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </div>
   );
