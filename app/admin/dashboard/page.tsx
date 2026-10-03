@@ -69,10 +69,10 @@ export default function AdminDashboard() {
     .slice(0, 5);
   const maxCategoryCount = Math.max(1, ...visibleCategories.map((category) => linkCountByCategory.get(category.id)?.total || 0));
   const statCards = [
-    { label: '收录链接', value: stats.totalLinks, icon: IconLink, tone: '', caption: '分布于 ' + stats.totalCategories + ' 个分类' },
-    { label: '公开链接', value: stats.publicLinks, icon: IconGlobe, tone: 'is-green', caption: '在首页默认展示' },
-    { label: '私密链接', value: stats.privateLinks, icon: IconLock, tone: 'is-amber', caption: '在隐私模式中展示' },
-    { label: '导航分类', value: stats.totalCategories, icon: IconFolder, tone: 'is-purple', caption: '公开 ' + stats.publicCategories + ' · 私密 ' + stats.privateCategories },
+    { label: '收录链接', value: stats.totalLinks, icon: IconLink, tone: '', caption: '分布于 ' + stats.totalCategories + ' 个分类', href: '/admin/dashboard/links' },
+    { label: '公开链接', value: stats.publicLinks, icon: IconGlobe, tone: 'is-green', caption: '在首页默认展示', href: '/admin/dashboard/links?visibility=public' },
+    { label: '私密链接', value: stats.privateLinks, icon: IconLock, tone: 'is-amber', caption: '在隐私模式中展示', href: '/admin/dashboard/links?visibility=private' },
+    { label: '导航分类', value: stats.totalCategories, icon: IconFolder, tone: 'is-purple', caption: '公开 ' + stats.publicCategories + ' · 私密 ' + stats.privateCategories, href: '/admin/dashboard/categories' },
   ];
 
   return (
@@ -90,15 +90,21 @@ export default function AdminDashboard() {
         </div>
 
         <div className="admin-stats-grid">
-          {statCards.map(({ label, value, icon: Icon, tone, caption }) => (
-            <article className="admin-stat-card" key={label}>
+          {statCards.map(({ label, value, icon: Icon, tone, caption, href }) => (
+            <button
+              key={label}
+              type="button"
+              className="admin-stat-card admin-stat-card-clickable"
+              onClick={() => router.push(href)}
+              title={'查看' + label}
+            >
               <div className="admin-stat-top">
                 <span>{label}</span>
                 <span className={'admin-stat-icon ' + tone}><Icon aria-hidden="true" /></span>
               </div>
               <strong className="admin-stat-value">{value.toLocaleString('zh-CN')}</strong>
               <p className="admin-stat-caption">{caption}</p>
-            </article>
+            </button>
           ))}
         </div>
 

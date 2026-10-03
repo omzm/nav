@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
     } : false,
   },
 
+  // Semi UI 按需加载：只打包实际用到的组件，显著减小后台 bundle
+  experimental: {
+    optimizePackageImports: ['@douyinfe/semi-ui', '@douyinfe/semi-icons'],
+  },
+
   // 图片优化
   images: {
     formats: ['image/avif', 'image/webp'],

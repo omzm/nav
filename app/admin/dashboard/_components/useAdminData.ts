@@ -1,11 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { Toast } from '@douyinfe/semi-ui';
 import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
 import { supabase, Category, Link as NavLink } from '@/app/lib/supabase';
 import { loadAdminCache, saveAdminCache } from '@/app/utils/adminCache';
 import { debounce } from '@/app/utils/debounce';
+import { consumeAdminPrefetch } from '@/app/admin/_components/adminPrefetch';
 
 export function useAdminData() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -74,6 +76,21 @@ export function useAdminData() {
       }
 
       if (!forceRefresh) {
+        // 优先消费 layout 鉴权期间预取的数据（鉴权与查询并行，省一次串行等待）
+        const prefetched = consumeAdminPrefetch();
+        if (prefetched) {
+          try {
+            const { categories: prefetchedCategories, links: prefetchedLinks } = await prefetched;
+            saveAdminCache(prefetchedCategories, prefetchedLinks);
+            setCategories(prefetchedCategories);
+            setLinks(prefetchedLinks);
+            setLoading(false);
+            return;
+          } catch {
+            // 预取失败则继续走正常加载流程
+          }
+        }
+
         const cached = loadAdminCache();
         if (cached) {
           setCategories(cached.categories);
@@ -156,7 +173,39 @@ export function useAdminData() {
   }, [loadData]);
 
   useEffect(() => {
-    // realtime 回调加 400ms 防抖：连续变更（如拖拽排序触发多条事件）只拉取一次全量数据
+    type ChangePayload = {
+      eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+      new: Record<string, unknown>;
+      old: Record<string, unknown>;
+    };
+
+    const sortByOrder = <T extends { order: number }>(rows: T[]) =>
+      [...rows].sort((a, b) => a.order - b.order);
+
+    // 增量更新：realtime 事件直接修改本地对应的一条数据，即时反馈无需等待
+    const applyChange = <T extends { id: string; order: number }>(
+      setter: Dispatch<SetStateAction<T[]>>,
+      payload: ChangePayload
+    ) => {
+      const { eventType, new: newRow, old: oldRow } = payload;
+      setter((prev) => {
+        if (eventType === 'INSERT' && typeof newRow?.id === 'string') {
+          if (prev.some((row) => row.id === newRow.id)) return prev;
+          return sortByOrder([...prev, newRow as T]);
+        }
+        if (eventType === 'UPDATE' && typeof newRow?.id === 'string') {
+          return sortByOrder(
+            prev.map((row) => (row.id === newRow.id ? { ...row, ...(newRow as T) } : row))
+          );
+        }
+        if (eventType === 'DELETE' && typeof oldRow?.id === 'string') {
+          return prev.filter((row) => row.id !== oldRow.id);
+        }
+        return prev;
+      });
+    };
+
+    // 防抖全量刷新做一致性兜底（也会刷新 sessionStorage 缓存）
     const debouncedLoad = debounce(() => {
       void loadData();
     }, 400);
@@ -164,10 +213,12 @@ export function useAdminData() {
     // 分类与链接共用一个 channel（之前是两个独立订阅，两次建连往返）
     const channel = supabase
       .channel('admin-data-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, (payload) => {
+        applyChange<Category>(setCategories, payload as unknown as ChangePayload);
         debouncedLoad();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'links' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'links' }, (payload) => {
+        applyChange<NavLink>(setLinks, payload as unknown as ChangePayload);
         debouncedLoad();
       })
       .subscribe();

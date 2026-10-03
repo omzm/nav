@@ -2,7 +2,8 @@
 import type { Category, Link } from '../lib/supabase';
 
 const ADMIN_CACHE_KEY = 'admin_data_cache';
-const ADMIN_CACHE_EXPIRY = 2 * 60 * 1000; // 2分钟过期（后台更新频繁，缓存时间短）
+// 10 分钟过期：realtime 推送会触发增量更新 + 防抖全量刷新兜底，缓存久一点没问题
+const ADMIN_CACHE_EXPIRY = 10 * 60 * 1000;
 
 interface AdminCacheData {
   timestamp: number;

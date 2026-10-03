@@ -7,6 +7,7 @@ import {
   Card,
   Input,
   InputNumber,
+  Modal,
   Space,
   Spin,
   Switch,
@@ -94,6 +95,39 @@ export default function CategoryForm() {
       if (isEdit && categoryId) {
         const { error } = await supabase.from('categories').update(payload).eq('id', categoryId);
         if (error) throw error;
+
+        // 分类设为私密时，提示是否同步将旗下公开链接设为私密：
+        // 分类私密不会自动级联到链接行，不一致会导致私密链接出现在今日热门等公开位置
+        if (isPrivate) {
+          const { data: publicLinks, error: queryError } = await supabase
+            .from('links')
+            .select('id')
+            .eq('category_id', categoryId)
+            .eq('is_private', false);
+          if (queryError) throw queryError;
+
+          const publicLinkIds = (publicLinks || []).map((link) => link.id);
+          if (publicLinkIds.length > 0) {
+            const syncPrivate = await new Promise<boolean>((resolve) => {
+              Modal.confirm({
+                title: '同步设为私密？',
+                content: `该分类下还有 ${publicLinkIds.length} 个公开链接，是否同步将它们设为私密？（仅设分类私密不会影响链接自身的公开状态）`,
+                okText: '同步设为私密',
+                cancelText: '仅分类私密',
+                onOk: () => resolve(true),
+                onCancel: () => resolve(false),
+              });
+            });
+            if (syncPrivate) {
+              const { error: linkError } = await supabase
+                .from('links')
+                .update({ is_private: true })
+                .in('id', publicLinkIds);
+              if (linkError) throw linkError;
+            }
+          }
+        }
+
         Toast.success('分类已更新');
       } else {
         const { error } = await supabase.from('categories').insert([payload]);

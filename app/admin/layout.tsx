@@ -22,7 +22,8 @@ import {
 import { ADMIN_EMAIL, supabase } from '@/app/lib/supabase';
 import { getLocalAdminUser, signOutLocalAdmin } from '@/app/lib/local-admin';
 import { clearAdminSession, hasAdminSession } from '@/app/actions/adminSession';
-import { clearAdminCache } from '@/app/utils/adminCache';
+import { clearAdminCache, loadAdminCache } from '@/app/utils/adminCache';
+import { prefetchAdminData } from './_components/adminPrefetch';
 import { UserContext } from './dashboard/context';
 import AdminBrand from './_components/AdminBrand';
 import './admin.css';
@@ -100,6 +101,14 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           }
           if (active) setUser(localUser);
           return;
+        }
+
+        // 数据预取与下面的鉴权并行：无新鲜缓存时提前发起数据查询，
+        // dashboard 挂载后直接消费，省去"鉴权完再查数据"的串行等待
+        try {
+          if (!loadAdminCache()) prefetchAdminData();
+        } catch {
+          // 预取失败不影响鉴权流程，dashboard 会走正常加载
         }
 
         // 服务端会话确认（纵深防御，middleware 已在边缘侧校验过）与
