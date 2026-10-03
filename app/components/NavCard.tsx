@@ -27,20 +27,28 @@ function NavCard({ link }: NavCardProps) {
 
     const body = JSON.stringify({ linkId: link.id });
 
-    if (navigator.sendBeacon) {
+    const reportViaFetch = () => {
+      fetch('/api/link-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+      }).catch((error) => {
+        console.error('Failed to report link click:', error);
+      });
+    };
+
+    // sendBeacon 返回 false 表示未能加入发送队列，降级用 fetch 补发，避免点击静默丢失
+    if (typeof navigator.sendBeacon === 'function') {
       const blob = new Blob([body], { type: 'application/json' });
-      navigator.sendBeacon('/api/link-click', blob);
-      return;
+      try {
+        if (navigator.sendBeacon('/api/link-click', blob)) return;
+      } catch {
+        // 忽略异常，走下面的 fetch 补发
+      }
     }
 
-    fetch('/api/link-click', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-      keepalive: true,
-    }).catch((error) => {
-      console.error('Failed to report link click:', error);
-    });
+    reportViaFetch();
   };
 
   return (
