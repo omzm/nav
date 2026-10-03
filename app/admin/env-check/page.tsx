@@ -50,7 +50,7 @@ export default function EnvCheck() {
 
   const copyEnvTemplate = async () => {
     await navigator.clipboard.writeText(
-      'NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co\nNEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here'
+      'NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co\nNEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here\nNEXT_PUBLIC_ADMIN_EMAIL=admin@example.com\nADMIN_SESSION_SECRET=your-random-hex-secret-here'
     );
     Toast.success('环境变量模板已复制');
   };
@@ -109,7 +109,9 @@ export default function EnvCheck() {
                 <CodeHighlight
                   language="bash"
                   code={`NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here`}
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+NEXT_PUBLIC_ADMIN_EMAIL=admin@example.com
+ADMIN_SESSION_SECRET=your-random-hex-secret-here`}
                 />
                 <Button onClick={copyEnvTemplate}>复制模板</Button>
               </Space>
@@ -141,7 +143,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here`}
               <Button icon={<IconExternalOpen aria-hidden="true" />} onClick={() => window.open('https://supabase.com', '_blank', 'noopener,noreferrer')}>
                 Supabase 官网
               </Button>
-              <Button icon={<IconExternalOpen aria-hidden="true" />} onClick={() => window.open('/SUPABASE_SETUP.md', '_blank', 'noopener,noreferrer')}>
+              <Button icon={<IconExternalOpen aria-hidden="true" />} onClick={() => window.open('https://github.com/omzm/nav/blob/main/SETUP.md', '_blank', 'noopener,noreferrer')}>
                 设置文档
               </Button>
             </Space>

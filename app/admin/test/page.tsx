@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { Button, Card, Space, Spin, Tag, Toast, Typography } from '@douyinfe/semi-ui';
 import { IconAlertTriangle, IconArrowLeft, IconRefresh, IconTickCircle } from '@douyinfe/semi-icons';
@@ -13,6 +13,11 @@ const { Paragraph, Text } = Typography;
 type TestStatus = 'checking' | 'success' | 'error';
 
 export default function TestConnection() {
+  // 开发期调试页：生产环境直接返回 404，不随生产 bundle 暴露
+  if (process.env.NODE_ENV === 'production') {
+    notFound();
+  }
+
   const [status, setStatus] = useState<TestStatus>('checking');
   const [message, setMessage] = useState('');
   const [currentUser, setCurrentUser] = useState<User | null>(null);

@@ -16,6 +16,7 @@ interface SidebarProps {
   totalViewCount?: number;
 }
 
+// 建站日期：如需调整"已运行 N 天"的起始时间，改这里即可
 const START_DATE = new Date('2026-02-16T00:00:00');
 const ALL_CATEGORIES_ICON = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M3 10.75L12 3l9 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -29,14 +30,8 @@ function getRunDays() {
 }
 
 const RunTimer = memo(function RunTimer() {
-  const [days, setDays] = useState(getRunDays);
-
-  useEffect(() => {
-    const update = () => setDays(getRunDays());
-    update();
-    const timer = window.setInterval(update, 60 * 1000);
-    return () => window.clearInterval(timer);
-  }, []);
+  // 天数一天才变一次，挂载时计算一次即可，不需要常驻定时器
+  const [days] = useState(getRunDays);
 
   return (
     <div className="flex items-center justify-center gap-1">

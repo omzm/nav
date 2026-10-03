@@ -66,7 +66,7 @@ ADMIN_SESSION_SECRET=随机长字符串（openssl rand -hex 32 生成，用于�
 ├── app/
 │   ├── actions/                  # 服务端 action：刷新首页快照、开门解锁、管理会话
 │   ├── admin/                    # 登录、诊断、初始化和后台管理页面
-│   ├── api/                      # 点击上报 API
+│   ├── api/                      # 点击/浏览上报与壁纸代理 API
 │   ├── components/               # 首页和通用组件
 │   ├── lib/                      # Supabase、每日一言、首页快照、管理员会话签发、本地管理员
 │   ├── utils/                    # 后台缓存、favicon、节流工具
@@ -138,6 +138,7 @@ ADMIN_SESSION_SECRET=随机长字符串（openssl rand -hex 32 生成，用于�
 - `/admin/diagnostic`：诊断工具
 - `/admin/init`：数据库初始化辅助
 - `/admin/env-check`：环境变量检查
+- `/admin/test`：连接测试（开发调试用，生产环境返回 404）
 
 ## 常用命令
 

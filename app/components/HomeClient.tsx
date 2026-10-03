@@ -40,19 +40,58 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
   // 管理员会话存在时才展示刷新按钮，避免普通访客误触无权限的操作
+  // 性能优化：查询延迟到浏览器空闲时执行（避开首屏关键路径），结果缓存到
+  // sessionStorage，同一标签页会话内只查一次。注意登出不会清这个 hint，
+  // 但刷新操作本身有服务端鉴权，最坏情况只是按钮多显示一次。
   useEffect(() => {
     let active = true;
+    const ADMIN_SESSION_HINT_KEY = 'nav_admin_hint';
 
-    hasAdminSession()
-      .then((ok) => {
-        if (active) setCanRefresh(ok);
-      })
-      .catch(() => {
-        if (active) setCanRefresh(false);
-      });
+    const resolve = (ok: boolean) => {
+      if (active) setCanRefresh(ok);
+    };
+
+    try {
+      const cached = sessionStorage.getItem(ADMIN_SESSION_HINT_KEY);
+      if (cached !== null) {
+        resolve(cached === '1');
+        return;
+      }
+    } catch {
+      // sessionStorage 不可用时降级为直接查询
+    }
+
+    const query = () => {
+      hasAdminSession()
+        .then((ok) => {
+          try {
+            sessionStorage.setItem(ADMIN_SESSION_HINT_KEY, ok ? '1' : '0');
+          } catch {
+            // 忽略缓存写入失败，不影响功能
+          }
+          resolve(ok);
+        })
+        .catch(() => {
+          resolve(false);
+        });
+    };
+
+    let idleHandle: number | undefined;
+    let timeoutHandle: number | undefined;
+    if (typeof window.requestIdleCallback === 'function') {
+      idleHandle = window.requestIdleCallback(query, { timeout: 3000 });
+    } else {
+      timeoutHandle = window.setTimeout(query, 1500);
+    }
 
     return () => {
       active = false;
+      if (idleHandle !== undefined && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleHandle);
+      }
+      if (timeoutHandle !== undefined) {
+        window.clearTimeout(timeoutHandle);
+      }
     };
   }, []);
 
@@ -77,21 +116,13 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const path = window.location.pathname || '/';
-      const body = JSON.stringify({ path });
-
+      // 只上报一次浏览，不携带 path（服务端只记总数）
       if (navigator.sendBeacon) {
-        const blob = new Blob([body], { type: 'application/json' });
-        navigator.sendBeacon('/api/site-view', blob);
+        navigator.sendBeacon('/api/site-view');
         return;
       }
 
-      fetch('/api/site-view', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-        keepalive: true,
-      }).catch((error) => {
+      fetch('/api/site-view', { method: 'POST', keepalive: true }).catch((error) => {
         console.error('Failed to report site view:', error);
       });
     }, 2000);
@@ -326,7 +357,7 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
             {unlockFailed && (
               <div className="flex justify-center px-2 sm:px-0 mt-2">
                 <p className="text-xs text-red-500 dark:text-red-400">
-                  解锁失败：口令不正确，或私密数据接口尚未部署（需执行 supabase/migrations 下的 SQL 迁移）
+                  解锁失败，请稍后重试
                 </p>
               </div>
             )}
