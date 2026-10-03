@@ -21,6 +21,7 @@ import {
   IconExternalOpen,
   IconFilter,
   IconHandle,
+  IconLock,
   IconPlus,
   IconRefresh,
   IconSearch,
@@ -59,6 +60,8 @@ export default function LinksPage() {
   } = useAdminData();
   const [keyword, setKeyword] = useState('');
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
+  // 可见性筛选：all | public | private（私密 = 链接自身私密或所在分类私密）
+  const [visibilityFilter, setVisibilityFilter] = useState('all');
   const [deletingId, setDeletingId] = useState('');
   const [linkToDelete, setLinkToDelete] = useState<NavLink | null>(null);
   const dragItem = useRef<string | null>(null);
@@ -72,6 +75,11 @@ export default function LinksPage() {
     const category = params.get('category');
     if (category) {
       setCategoryFilter(category);
+    }
+    // 工作台统计卡跳过来的可见性筛选
+    const visibility = params.get('visibility');
+    if (visibility === 'public' || visibility === 'private') {
+      setVisibilityFilter(visibility);
     }
   }, []);
 
@@ -95,15 +103,21 @@ export default function LinksPage() {
 
   const filteredLinks = useMemo(() => {
     const query = keyword.trim().toLowerCase();
+    const privateCategoryIds = new Set(
+      categories.filter((category) => category.is_private).map((category) => category.id)
+    );
 
     return sortedLinks.filter((link) => {
       if (categoryFilter !== ALL_CATEGORIES && link.category_id !== categoryFilter) return false;
+      const isPrivate = link.is_private || privateCategoryIds.has(link.category_id);
+      if (visibilityFilter === 'public' && isPrivate) return false;
+      if (visibilityFilter === 'private' && !isPrivate) return false;
       if (!query) return true;
 
       const categoryName = categoryMap.get(link.category_id)?.name || '';
       return `${link.title} ${link.description} ${link.url} ${categoryName}`.toLowerCase().includes(query);
     });
-  }, [categoryFilter, categoryMap, keyword, sortedLinks]);
+  }, [categories, categoryFilter, categoryMap, keyword, sortedLinks, visibilityFilter]);
 
   const selectedCategory = categoryFilter === ALL_CATEGORIES ? null : categoryMap.get(categoryFilter);
   const canSort = Boolean(selectedCategory);
@@ -272,7 +286,12 @@ export default function LinksPage() {
                 <Select.Option value={ALL_CATEGORIES}>全部分类</Select.Option>
                 {categories.map((category) => <Select.Option key={category.id} value={category.id}>{category.name}</Select.Option>)}
               </Select>
-              {(keyword || categoryFilter !== ALL_CATEGORIES) && <Button theme="borderless" type="tertiary" size="small" onClick={() => { setKeyword(''); syncCategoryFilter(ALL_CATEGORIES); }}>重置</Button>}
+              <Select className="admin-category-filter" value={visibilityFilter} onChange={(value) => setVisibilityFilter(value ? String(value) : 'all')} prefix={<IconLock aria-hidden="true" />} aria-label="筛选可见性">
+                <Select.Option value="all">全部</Select.Option>
+                <Select.Option value="public">公开</Select.Option>
+                <Select.Option value="private">私密</Select.Option>
+              </Select>
+              {(keyword || categoryFilter !== ALL_CATEGORIES || visibilityFilter !== 'all') && <Button theme="borderless" type="tertiary" size="small" onClick={() => { setKeyword(''); syncCategoryFilter(ALL_CATEGORIES); setVisibilityFilter('all'); }}>重置</Button>}
             </div>
             <span className="admin-result-count">共 <strong>{filteredLinks.length}</strong> 条链接</span>
           </div>

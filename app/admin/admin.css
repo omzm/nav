@@ -125,6 +125,10 @@ body.admin-theme { background: var(--admin-background); }
 
 .admin-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .admin-stat-card { padding: 20px; min-width: 0; border: 1px solid var(--admin-border); border-radius: 10px; background: #fff; }
+/* 统计卡可点击：重置 button 默认样式，悬停给反馈 */
+.admin-stat-card-clickable { cursor: pointer; font: inherit; color: inherit; text-align: left; width: 100%; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.admin-stat-card-clickable:hover { border-color: #c9d8f5; box-shadow: 0 2px 10px rgba(84, 127, 219, .12); transform: translateY(-1px); }
+.admin-stat-card-clickable:focus-visible { outline: 2px solid #547fdb; outline-offset: 2px; }
 .admin-stat-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--admin-text-secondary); font-size: 12px; }
 .admin-stat-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #eff4ff; color: #547fdb; }
 .admin-stat-icon.is-green { color: #45988c; background: #eff8f5; }
