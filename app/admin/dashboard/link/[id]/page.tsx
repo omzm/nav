@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Button,
@@ -93,6 +93,8 @@ export default function LinkForm() {
   }, [params.id]);
   const isEdit = Boolean(linkId && linkId !== 'new');
   const iconIsEmoji = Boolean(icon.trim() && isEmojiIcon(icon.trim()));
+  // 从分类页"添加链接"带过来的预设分类（?category=），只在新建时应用一次
+  const presetCategoryApplied = useRef(false);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -129,6 +131,16 @@ export default function LinkForm() {
     },
     [isEdit]
   );
+
+  // 新建链接时：若 URL 带有 ?category= 预设分类，待分类列表加载完成后自动选中
+  useEffect(() => {
+    if (isEdit || presetCategoryApplied.current || categories.length === 0) return;
+    const presetId = new URLSearchParams(window.location.search).get('category');
+    if (presetId && categories.some((category) => category.id === presetId)) {
+      presetCategoryApplied.current = true;
+      void handleCategoryChange(presetId);
+    }
+  }, [categories, handleCategoryChange, isEdit]);
 
   const loadLink = useCallback(async (id: string) => {
     setDataLoading(true);

@@ -30,6 +30,27 @@ function normalizeIconName(name: string) {
   return classes.find((item) => item.startsWith('icon-')) || classes[0] || 'icon-folder';
 }
 
+// 内置图标名（供后台图标选择器使用）
+export const BUILTIN_ICON_NAMES = [
+  'icon-folder',
+  'icon-folder-open',
+  'icon-book',
+  'icon-code',
+  'icon-cloud',
+  'icon-chart',
+  'icon-design',
+  'icon-link',
+  'icon-lightning',
+  'icon-robot',
+  'icon-eye',
+  'icon-lock',
+  'icon-download',
+  'icon-edit',
+  'icon-delete',
+  'icon-plus',
+  'icon-refresh',
+];
+
 function IconFont({ name, className = '' }: IconFontProps) {
   const iconName = normalizeIconName(name);
   const path = PATHS[iconName] || PATHS['icon-folder'];

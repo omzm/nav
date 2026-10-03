@@ -81,13 +81,19 @@ export function useAdminData() {
         if (prefetched) {
           try {
             const { categories: prefetchedCategories, links: prefetchedLinks } = await prefetched;
+            // 预取可能在 supabase 会话恢复完成前发出：此时 RLS 静默过滤返回 200 空数组
+            // 而非报错。空结果不可信（会污染 10 分钟缓存并显示空后台），丢弃后走正常加载重试。
+            // 真正的空站点走正常加载同样能得到空结果，不影响正确性。
+            if (prefetchedCategories.length === 0 && prefetchedLinks.length === 0) {
+              throw new Error('suspicious empty prefetch result');
+            }
             saveAdminCache(prefetchedCategories, prefetchedLinks);
             setCategories(prefetchedCategories);
             setLinks(prefetchedLinks);
             setLoading(false);
             return;
           } catch {
-            // 预取失败则继续走正常加载流程
+            // 预取失败或结果不可信则继续走正常加载流程
           }
         }
 
@@ -125,6 +131,50 @@ export function useAdminData() {
       setRefreshing(false);
     }
   }, []);
+
+  // 导出为浏览器书签 HTML（Netscape 格式，Chrome/Edge/Safari/Firefox 均可直接导入）
+  const exportBookmarks = useCallback(() => {
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+    const now = Math.floor(Date.now() / 1000);
+    const lines = [
+      '<!DOCTYPE NETSCAPE-Bookmark-file-1>',
+      '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
+      '<TITLE>收藏夹备份</TITLE>',
+      '<H1>收藏夹备份</H1>',
+      '<DL><p>',
+    ];
+
+    const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
+    for (const category of sortedCategories) {
+      lines.push(`    <DT><H3 ADD_DATE="${now}" LAST_MODIFIED="${now}">${escapeHtml(category.name)}</H3>`);
+      lines.push('    <DL><p>');
+      const categoryLinks = links
+        .filter((link) => link.category_id === category.id)
+        .sort((a, b) => a.order - b.order);
+      for (const link of categoryLinks) {
+        lines.push(
+          `        <DT><A HREF="${escapeHtml(link.url)}" ADD_DATE="${now}">${escapeHtml(link.title)}</A>`
+        );
+      }
+      lines.push('    </DL><p>');
+    }
+    lines.push('</DL><p>');
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `nav-bookmarks-${new Date().toISOString().slice(0, 10)}.html`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    Toast.success('书签 HTML 已导出，可直接导入浏览器');
+  }, [categories, links]);
 
   const exportData = useCallback(() => {
     const exportCategories = categories.map((category) => ({
@@ -240,6 +290,7 @@ export function useAdminData() {
     refreshing,
     stats,
     exportData,
+    exportBookmarks,
     invalidateHomeCache,
     loadData,
   };

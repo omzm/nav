@@ -161,7 +161,7 @@ body.admin-theme { background: var(--admin-background); }
 .admin-recent-domain { display: block; color: #9aa3b3; font-size: 11px; margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .admin-recent-category { flex: none; max-width: 95px; font-size: 10px; color: #8a94a5; background: #f5f7fa; border-radius: 4px; padding: 3px 7px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .admin-recent-row .semi-button { flex: none; width: 26px; height: 26px; padding: 0; color: #9aa5b6; }
-.admin-quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.admin-quick-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .admin-quick-action { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 18px 20px; color: var(--admin-text); background: #fff; border: 1px solid var(--admin-border); border-radius: 9px; text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
 .admin-quick-action:hover { border-color: #c7d6f2; background: #fafcff; }
 .admin-quick-action > .semi-icon:first-child { color: #8092ad; font-size: 20px; }

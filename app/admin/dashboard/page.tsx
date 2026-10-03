@@ -8,6 +8,7 @@ import {
   IconChevronRight,
   IconDownload,
   IconEdit,
+  IconExternalOpen,
   IconFolder,
   IconGlobe,
   IconLink,
@@ -31,7 +32,7 @@ function getHostname(url: string) {
 export default function AdminDashboard() {
   const {
     categories, links, categoryMap, linkCountByCategory,
-    loading, refreshing, stats, exportData, loadData,
+    loading, refreshing, stats, exportData, exportBookmarks, loadData,
   } = useAdminData();
   const router = useRouter();
 
@@ -172,6 +173,9 @@ export default function AdminDashboard() {
           </button>
           <button className="admin-quick-action" onClick={exportData}>
             <IconDownload aria-hidden="true" /><span><strong>导出备份</strong><small>保存全部分类与链接</small></span><IconChevronRight aria-hidden="true" />
+          </button>
+          <button className="admin-quick-action" onClick={exportBookmarks}>
+            <IconExternalOpen aria-hidden="true" /><span><strong>导出书签</strong><small>生成浏览器可导入的 HTML</small></span><IconChevronRight aria-hidden="true" />
           </button>
           <button className="admin-quick-action" onClick={() => router.push('/admin/init')}>
             <IconServer aria-hidden="true" /><span><strong>数据库检查</strong><small>查看数据与连接状态</small></span><IconChevronRight aria-hidden="true" />
