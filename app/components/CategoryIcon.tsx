@@ -26,12 +26,13 @@ function sanitizeSvgCode(rawSvg: string) {
       .replace(new RegExp(`<${tag}\\b[^>]*\\/?>`, 'gi'), '');
   }
 
+  // 属性名前可能是空白，也可能是 "/"（如 <svg/onload=...> 会被 HTML 解析器视为 onload 属性）
   return svg
-    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/\s+style\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/\s+(href|xlink:href)\s*=\s*(['"])\s*(?!#)[^'"]*\2/gi, '')
-    .replace(/\s+(href|xlink:href)\s*=\s*(?!#)[^\s>]+/gi, '')
-    .replace(/\s+src\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+    .replace(/(?:\s|\/)on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/(?:\s|\/)style\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/(?:\s|\/)(href|xlink:href)\s*=\s*(['"])\s*(?!#)[^'"]*\2/gi, '')
+    .replace(/(?:\s|\/)(href|xlink:href)\s*=\s*(?!#)[^\s>]+/gi, '')
+    .replace(/(?:\s|\/)src\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
 }
 
 function CategoryIcon({ icon, className = '' }: CategoryIconProps) {

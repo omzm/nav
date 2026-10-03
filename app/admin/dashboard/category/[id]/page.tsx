@@ -11,7 +11,6 @@ import {
   Space,
   Spin,
   Switch,
-  TextArea,
   Toast,
   Typography,
 } from '@douyinfe/semi-ui';
@@ -19,18 +18,17 @@ import { IconArrowLeft, IconFolder, IconLock, IconSave } from '@douyinfe/semi-ic
 import { supabase } from '@/app/lib/supabase';
 import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
 import CategoryIcon from '@/app/components/CategoryIcon';
+import IconPicker from '../_components/IconPicker';
 
 const { Text, Title } = Typography;
-
-function isSvgCode(value: string) {
-  return /^<svg[\s\S]*<\/svg>$/i.test(value.trim());
-}
 
 export default function CategoryForm() {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');
   const [order, setOrder] = useState(0);
   const [isPrivate, setIsPrivate] = useState(false);
+  // 记录加载时的原始私密状态：仅当"公开 -> 私密"转变时才弹出级联确认，避免编辑已是私密的分类时反复打扰
+  const [originalIsPrivate, setOriginalIsPrivate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const router = useRouter();
@@ -54,6 +52,7 @@ export default function CategoryForm() {
         setIcon(data.icon);
         setOrder(data.order);
         setIsPrivate(Boolean(data.is_private));
+        setOriginalIsPrivate(Boolean(data.is_private));
       }
     } catch (error) {
       console.error('加载分类失败:', error);
@@ -77,8 +76,8 @@ export default function CategoryForm() {
       return;
     }
 
-    if (!isSvgCode(icon)) {
-      Toast.warning('请粘贴阿里巴巴 iconfont 的 SVG 代码');
+    if (!icon.trim()) {
+      Toast.warning('请选择或填写分类图标');
       return;
     }
 
@@ -96,9 +95,9 @@ export default function CategoryForm() {
         const { error } = await supabase.from('categories').update(payload).eq('id', categoryId);
         if (error) throw error;
 
-        // 分类设为私密时，提示是否同步将旗下公开链接设为私密：
+        // 仅当分类从公开变为私密时，提示是否同步将旗下公开链接设为私密：
         // 分类私密不会自动级联到链接行，不一致会导致私密链接出现在今日热门等公开位置
-        if (isPrivate) {
+        if (isPrivate && !originalIsPrivate) {
           const { data: publicLinks, error: queryError } = await supabase
             .from('links')
             .select('id')
@@ -188,23 +187,10 @@ export default function CategoryForm() {
                 />
               </label>
 
-              <label className="admin-form-field">
-                <Text strong>分类图标 SVG 代码</Text>
-                <TextArea
-                  value={icon}
-                  onChange={setIcon}
-                  placeholder={
-                    '从阿里巴巴 iconfont 复制 SVG 代码，例如：\n<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="..." /></svg>'
-                  }
-                  rows={8}
-                  showClear
-                  required
-                  style={{ marginTop: 8 }}
-                />
-                <Text type="tertiary" size="small" style={{ display: 'block', marginTop: 6 }}>
-                  支持从 iconfont 复制的完整 SVG 代码。
-                </Text>
-              </label>
+              <div className="admin-form-field">
+                <Text strong>分类图标</Text>
+                <IconPicker value={icon} onChange={setIcon} />
+              </div>
 
               <label className="admin-form-field">
                 <Text strong>排序顺序</Text>
@@ -230,7 +216,7 @@ export default function CategoryForm() {
                       图标预览
                     </Title>
                     <Text type="tertiary" size="small">
-                      {isSvgCode(icon) ? 'SVG 预览已生成' : '粘贴 SVG 代码后会在这里显示'}
+                      {icon.trim() ? '图标预览已生成' : '选择图标后会在这里显示'}
                     </Text>
                   </Space>
                 </Space>

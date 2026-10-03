@@ -96,6 +96,20 @@ export default function LinksPage() {
     window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
   }, []);
 
+  // 可见性筛选与 URL 双向同步（all 时删除参数），与分类筛选保持一致：手动切换后刷新不丢失
+  const syncVisibilityFilter = useCallback((nextValue: string) => {
+    setVisibilityFilter(nextValue);
+
+    const url = new URL(window.location.href);
+    if (nextValue === 'all') {
+      url.searchParams.delete('visibility');
+    } else {
+      url.searchParams.set('visibility', nextValue);
+    }
+
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+  }, []);
+
   const sortedLinks = useMemo(
     () => sortLinksByContext(links, categories, categoryFilter),
     [categories, categoryFilter, links]
@@ -286,12 +300,12 @@ export default function LinksPage() {
                 <Select.Option value={ALL_CATEGORIES}>全部分类</Select.Option>
                 {categories.map((category) => <Select.Option key={category.id} value={category.id}>{category.name}</Select.Option>)}
               </Select>
-              <Select className="admin-category-filter" value={visibilityFilter} onChange={(value) => setVisibilityFilter(value ? String(value) : 'all')} prefix={<IconLock aria-hidden="true" />} aria-label="筛选可见性">
+              <Select className="admin-category-filter" value={visibilityFilter} onChange={(value) => syncVisibilityFilter(value ? String(value) : 'all')} prefix={<IconLock aria-hidden="true" />} aria-label="筛选可见性">
                 <Select.Option value="all">全部</Select.Option>
                 <Select.Option value="public">公开</Select.Option>
                 <Select.Option value="private">私密</Select.Option>
               </Select>
-              {(keyword || categoryFilter !== ALL_CATEGORIES || visibilityFilter !== 'all') && <Button theme="borderless" type="tertiary" size="small" onClick={() => { setKeyword(''); syncCategoryFilter(ALL_CATEGORIES); setVisibilityFilter('all'); }}>重置</Button>}
+              {(keyword || categoryFilter !== ALL_CATEGORIES || visibilityFilter !== 'all') && <Button theme="borderless" type="tertiary" size="small" onClick={() => { setKeyword(''); syncCategoryFilter(ALL_CATEGORIES); syncVisibilityFilter('all'); }}>重置</Button>}
             </div>
             <span className="admin-result-count">共 <strong>{filteredLinks.length}</strong> 条链接</span>
           </div>

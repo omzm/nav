@@ -164,10 +164,11 @@ export default function CategoriesPage() {
     },
     {
       title: '操作',
-      width: 132,
+      width: 168,
       render: (_text: unknown, record: Category) => (
         <div className="admin-table-actions">
           <Button size="small" theme="borderless" type="tertiary" icon={<IconEyeOpened aria-hidden="true" />} aria-label={'查看 ' + record.name + ' 的链接'} title="查看链接" onClick={() => router.push('/admin/dashboard/links?category=' + record.id)} />
+          <Button size="small" theme="borderless" type="tertiary" icon={<IconPlus aria-hidden="true" />} aria-label={'在 ' + record.name + ' 下添加链接'} title="添加链接" onClick={() => router.push('/admin/dashboard/link/new?category=' + record.id)} />
           <Button size="small" theme="borderless" type="tertiary" icon={<IconEdit aria-hidden="true" />} aria-label={'编辑 ' + record.name} title="编辑分类" onClick={() => router.push('/admin/dashboard/category/' + record.id)} />
           <Button size="small" type="danger" theme="borderless" icon={<IconDelete aria-hidden="true" />} aria-label={'删除 ' + record.name} title="删除分类" loading={deletingId === record.id} onClick={() => confirmDelete(record)} />
         </div>
