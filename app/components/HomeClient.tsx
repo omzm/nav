@@ -1,13 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import SearchBar from './SearchBar';
 import CategorySection from './CategorySection';
 import ThemeToggle from './ThemeToggle';
 import BackToTop from './BackToTop';
+import RefreshButton from './RefreshButton';
 import Sidebar from './Sidebar';
 import { unlockPrivateLinks } from '../actions/unlockPrivate';
+import { hasAdminSession } from '../actions/adminSession';
+import { revalidateNavSnapshot } from '../actions/revalidateNavSnapshot';
+import type { UnlockPrivateResult } from '../actions/unlockPrivate';
 import type { NavCategory, NavSnapshot } from '../types';
 
 interface HomeClientProps {
@@ -16,6 +21,7 @@ interface HomeClientProps {
 }
 
 export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -24,10 +30,50 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
   const [privateCategories, setPrivateCategories] = useState<NavCategory[]>([]);
   const [unlocking, setUnlocking] = useState(false);
   const [unlockFailed, setUnlockFailed] = useState(false);
+  // 刷新按钮仅管理员可见（安全修复 S4：公开刷新可被滥用打穿缓存）
+  const [canRefresh, setCanRefresh] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshPending, startRefreshTransition] = useTransition();
   const [scrolledPastHeader, setScrolledPastHeader] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  // 管理员会话存在时才展示刷新按钮，避免普通访客误触无权限的操作
+  useEffect(() => {
+    let active = true;
+
+    hasAdminSession()
+      .then((ok) => {
+        if (active) setCanRefresh(ok);
+      })
+      .catch(() => {
+        if (active) setCanRefresh(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const isRefreshButtonBusy = isRefreshing || isRefreshPending;
+
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshButtonBusy) return;
+
+    setIsRefreshing(true);
+
+    try {
+      await revalidateNavSnapshot();
+    } catch (error) {
+      console.error('Failed to refresh nav snapshot:', error);
+    } finally {
+      startRefreshTransition(() => {
+        router.refresh();
+      });
+      setIsRefreshing(false);
+    }
+  }, [isRefreshButtonBusy, router, startRefreshTransition]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -78,6 +124,24 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
 
   // "开门"：口令校验与私密数据下发走服务端（安全修复 S1）。
   // 口令正确才展示；失败时给出提示，避免静默无响应。
+  //
+  // 预取优化：用户在搜索框输入"开"字时即在后台发起请求，
+  // 输入完"开门"时数据大概率已就绪，体感接近之前的即时显示。
+  // 注意只在用户交互时预取（不随页面加载），爬虫与被动访问不会触发。
+  const privatePrefetchRef = useRef<Promise<UnlockPrivateResult> | null>(null);
+
+  const prefetchPrivate = useCallback(() => {
+    if (showPrivate || privatePrefetchRef.current) {
+      return privatePrefetchRef.current;
+    }
+
+    const pending = unlockPrivateLinks('开门').catch(
+      (): UnlockPrivateResult => ({ ok: false, categories: [], reason: 'error' })
+    );
+    privatePrefetchRef.current = pending;
+    return pending;
+  }, [showPrivate]);
+
   const handleUnlock = useCallback(async () => {
     if (unlocking) return;
 
@@ -85,7 +149,13 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
     setUnlockFailed(false);
 
     try {
-      const result = await unlockPrivateLinks('开门');
+      let result = await (privatePrefetchRef.current ?? unlockPrivateLinks('开门'));
+
+      // 预取遇到服务异常时重试一次，避免缓存单次网络抖动
+      if (!result.ok && result.reason === 'error') {
+        privatePrefetchRef.current = null;
+        result = await unlockPrivateLinks('开门');
+      }
 
       if (!result.ok) {
         setUnlockFailed(true);
@@ -109,9 +179,13 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
       return;
     }
 
+    if (!showPrivate && value.includes('开')) {
+      prefetchPrivate();
+    }
+
     setUnlockFailed(false);
     setSearchQuery(value);
-  }, [handleUnlock]);
+  }, [handleUnlock, prefetchPrivate, showPrivate]);
 
   const handleSelectCategory = useCallback((categoryId: string | null) => {
     setSelectedCategory(categoryId);
@@ -176,6 +250,7 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex">
       <ThemeToggle />
+      {canRefresh && <RefreshButton onRefresh={handleRefresh} isRefreshing={isRefreshButtonBusy} />}
       <BackToTop />
 
       <Sidebar
@@ -239,6 +314,11 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
             <div className="flex justify-center px-2 sm:px-0">
               <SearchBar value={searchQuery} onChange={handleSearchChange} />
             </div>
+            {unlocking && (
+              <div className="flex justify-center px-2 sm:px-0 mt-2">
+                <p className="text-xs text-gray-400 dark:text-gray-500">正在开门…</p>
+              </div>
+            )}
             {unlockFailed && (
               <div className="flex justify-center px-2 sm:px-0 mt-2">
                 <p className="text-xs text-red-500 dark:text-red-400">
