@@ -155,23 +155,19 @@ export function useAdminData() {
   }, [loadData]);
 
   useEffect(() => {
-    const categoriesChannel = supabase
-      .channel('admin-categories-changes')
+    // 分类与链接共用一个 channel（之前是两个独立订阅，两次建连往返）
+    const channel = supabase
+      .channel('admin-data-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
         void loadData();
       })
-      .subscribe();
-
-    const linksChannel = supabase
-      .channel('admin-links-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'links' }, () => {
         void loadData();
       })
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(categoriesChannel);
-      void supabase.removeChannel(linksChannel);
+      void supabase.removeChannel(channel);
     };
   }, [loadData]);
 

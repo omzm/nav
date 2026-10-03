@@ -89,8 +89,26 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // 服务端会话二次确认：middleware 已在边缘侧校验，这里做纵深防御
-        const authed = await hasAdminSession();
+        const localUser = getLocalAdminUser();
+        if (localUser) {
+          // 本地测试账号：仍需服务端会话二次确认
+          const localAuthed = await hasAdminSession();
+          if (!localAuthed) {
+            signOutLocalAdmin();
+            if (active) router.replace('/admin?error=auth');
+            return;
+          }
+          if (active) setUser(localUser);
+          return;
+        }
+
+        // 服务端会话确认（纵深防御，middleware 已在边缘侧校验过）与
+        // Supabase 用户校验并行执行，避免两次串行网络往返
+        const [authed, { data: { user: currentUser }, error }] = await Promise.all([
+          hasAdminSession(),
+          supabase.auth.getUser(),
+        ]);
+
         if (!authed) {
           await supabase.auth.signOut();
           signOutLocalAdmin();
@@ -98,13 +116,6 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const localUser = getLocalAdminUser();
-        if (localUser) {
-          if (active) setUser(localUser);
-          return;
-        }
-
-        const { data: { user: currentUser }, error } = await supabase.auth.getUser();
         if (error || !currentUser) {
           if (active) router.replace('/admin');
           return;
