@@ -34,6 +34,26 @@ import { isEmojiIcon } from '@/app/admin/_components/LinkIcon';
 
 const { Text, Title } = Typography;
 
+/**
+ * 规范化 URL 用于去重比对：host 小写、去掉末尾斜杠。
+ * 解析失败（如输入不完整）时回退为去首尾空格的原字符串。
+ */
+function normalizeUrlForCompare(raw: string): string {
+  const trimmed = raw.trim();
+  try {
+    const parsed = new URL(trimmed);
+    parsed.hostname = parsed.hostname.toLowerCase();
+    let result = parsed.toString();
+    // https://a.com/ 与 https://a.com 视为同一地址
+    if (result.length > 1 && result.endsWith('/')) {
+      result = result.slice(0, -1);
+    }
+    return result;
+  } catch {
+    return trimmed;
+  }
+}
+
 function loadImage(src: string) {
   return new Promise<boolean>((resolve) => {
     const image = new Image();
@@ -244,17 +264,19 @@ export default function LinkForm() {
 
   const checkDuplicateUrl = async (checkUrl: string): Promise<NavLink | null> => {
     try {
-      const { data, error } = await supabase
-        .from('links')
-        .select('*')
-        .eq('url', checkUrl)
-        .limit(1);
+      const normalizedInput = normalizeUrlForCompare(checkUrl);
+
+      // 全量拉取后做规范化比对：库中存的可能是带尾斜杠的变体，精确匹配查不到
+      const { data, error } = await supabase.from('links').select('*');
 
       if (error) throw error;
-      if (data && data.length > 0) {
-        if (isEdit && data[0].id === linkId) return null;
-        return data[0];
-      }
+
+      const duplicate = (data || []).find((link) => {
+        if (isEdit && link.id === linkId) return false;
+        return normalizeUrlForCompare(link.url) === normalizedInput;
+      });
+
+      return duplicate || null;
     } catch (error) {
       console.error('检查重复链接失败:', error);
     }

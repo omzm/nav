@@ -26,6 +26,7 @@ import {
 import CategoryIcon from '@/app/components/CategoryIcon';
 import { Category, supabase } from '@/app/lib/supabase';
 import { useAdminData } from '../_components/useAdminData';
+import { useMediaQuery } from '@/app/hooks/useMediaQuery';
 
 const { Text } = Typography;
 
@@ -45,6 +46,8 @@ export default function CategoriesPage() {
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
   const router = useRouter();
+  // 与 admin.css 中 @media (max-width: 767px) 断点一致：移动端只渲染卡片列表，桌面端只渲染表格
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   const filteredCategories = useMemo(() => {
     const query = keyword.trim().toLowerCase();
@@ -56,6 +59,9 @@ export default function CategoriesPage() {
       })
       .sort((a, b) => a.order - b.order);
   }, [categories, keyword]);
+
+  // 筛选生效时禁用拖拽：此时表格只显示子集，若仍按全量列表计算拖拽位置会错位
+  const isFiltering = filteredCategories.length !== categories.length;
 
   const handleDelete = async (category: Category) => {
     setDeletingId(category.id);
@@ -108,12 +114,11 @@ export default function CategoriesPage() {
     setCategories(normalizedCategories);
 
     try {
-      const updates = normalizedCategories.map((category) =>
-        supabase.from('categories').update({ order: category.order }).eq('id', category.id)
-      );
-      const results = await Promise.all(updates);
-      const failed = results.find((result) => result.error);
-      if (failed?.error) throw failed.error;
+      // 一次 RPC 批量写入排序（替代之前的 N 条逐条 UPDATE）
+      const { error } = await supabase.rpc('reorder_categories', {
+        p_ordered_ids: normalizedCategories.map((category) => category.id),
+      });
+      if (error) throw error;
 
       Toast.success('分类排序已保存');
       await invalidateHomeCache();
@@ -206,10 +211,12 @@ export default function CategoriesPage() {
             <div className="admin-toolbar-filters">
               <Input className="admin-search-input" value={keyword} onChange={setKeyword} prefix={<IconSearch aria-hidden="true" />} placeholder="搜索分类名称…" aria-label="搜索分类" showClear />
               {keyword && <Button theme="borderless" type="tertiary" size="small" onClick={() => setKeyword('')}>清除筛选</Button>}
+              {isFiltering && <Text type="tertiary" size="small">筛选时暂不支持拖拽排序</Text>}
             </div>
             <span className="admin-result-count">共 <strong>{filteredCategories.length}</strong> 个分类{keyword && ' / ' + categories.length + ' 个'}</span>
           </div>
 
+          {!isMobile && (
           <div className="admin-table-scroll">
             <Table<Category>
               size="small"
@@ -222,7 +229,7 @@ export default function CategoriesPage() {
                 if (!record) return {};
 
                 return {
-                  draggable: true,
+                  draggable: !isFiltering,
                   className: 'admin-draggable-row',
                   onDragStart: () => {
                     dragItem.current = record.id;
@@ -240,7 +247,9 @@ export default function CategoriesPage() {
               }}
             />
           </div>
+          )}
 
+          {isMobile && (
           <div className="admin-mobile-list">
             {filteredCategories.length > 0 ? (
               filteredCategories.map((category) => {
@@ -299,7 +308,8 @@ export default function CategoriesPage() {
               <Empty title="暂无分类" description="添加分类后，首页导航会按排序展示。" />
             )}
           </div>
-          <div className="admin-table-note"><IconHandle aria-hidden="true" /><span>拖动表格行，即可调整分类在首页的顺序。</span></div>
+          )}
+          <div className="admin-table-note"><IconHandle aria-hidden="true" /><span>{isFiltering ? '清除筛选后，可拖动表格行调整分类在首页的顺序。' : '拖动表格行，即可调整分类在首页的顺序。'}</span></div>
         </Card>
       </div>
 

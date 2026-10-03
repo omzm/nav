@@ -28,6 +28,7 @@ import {
 import LinkIcon from '../../_components/LinkIcon';
 import { Category, Link as NavLink, supabase } from '@/app/lib/supabase';
 import { useAdminData } from '../_components/useAdminData';
+import { useMediaQuery } from '@/app/hooks/useMediaQuery';
 
 const { Text } = Typography;
 const ALL_CATEGORIES = 'all';
@@ -63,6 +64,8 @@ export default function LinksPage() {
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
   const router = useRouter();
+  // 与 admin.css 中 @media (max-width: 767px) 断点一致：移动端只渲染卡片列表，桌面端只渲染表格
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -161,12 +164,11 @@ export default function LinksPage() {
     );
 
     try {
-      const updates = normalizedLinks.map((link) =>
-        supabase.from('links').update({ order: link.order }).eq('id', link.id)
-      );
-      const results = await Promise.all(updates);
-      const failed = results.find((result) => result.error);
-      if (failed?.error) throw failed.error;
+      // 一次 RPC 批量写入排序（替代之前的 N 条逐条 UPDATE）
+      const { error } = await supabase.rpc('reorder_links', {
+        p_ordered_ids: normalizedLinks.map((link) => link.id),
+      });
+      if (error) throw error;
 
       Toast.success('链接排序已保存');
       await invalidateHomeCache();
@@ -275,6 +277,7 @@ export default function LinksPage() {
             <span className="admin-result-count">共 <strong>{filteredLinks.length}</strong> 条链接</span>
           </div>
 
+          {!isMobile && (
           <div className="admin-table-scroll">
             <Table<NavLink>
               size="small"
@@ -305,7 +308,9 @@ export default function LinksPage() {
               }}
             />
           </div>
+          )}
 
+          {isMobile && (
           <div className="admin-mobile-list">
             {filteredLinks.length > 0 ? (
               filteredLinks.map((link) => {
@@ -368,6 +373,7 @@ export default function LinksPage() {
               <Empty title="暂无链接" description="添加链接后，首页会按分类与排序展示。" />
             )}
           </div>
+          )}
           <div className="admin-table-note"><IconHandle aria-hidden="true" /><span>{canSort ? selectedCategory?.name + ' · 拖动表格行调整链接顺序' : '选择一个分类后，即可拖动调整链接顺序。'}</span></div>
         </Card>
       </div>

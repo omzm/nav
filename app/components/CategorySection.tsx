@@ -24,8 +24,8 @@ function CategorySection({ category }: CategorySectionProps) {
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5 sm:gap-3">
-        {category.links.map((link, index) => (
-          <NavCard key={`${link.url}-${index}`} link={link} />
+        {category.links.map((link) => (
+          <NavCard key={link.id || link.url} link={link} />
         ))}
       </div>
     </section>

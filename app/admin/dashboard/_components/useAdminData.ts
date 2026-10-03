@@ -5,6 +5,7 @@ import { Toast } from '@douyinfe/semi-ui';
 import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
 import { supabase, Category, Link as NavLink } from '@/app/lib/supabase';
 import { loadAdminCache, saveAdminCache } from '@/app/utils/adminCache';
+import { debounce } from '@/app/utils/debounce';
 
 export function useAdminData() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -155,18 +156,24 @@ export function useAdminData() {
   }, [loadData]);
 
   useEffect(() => {
+    // realtime 回调加 400ms 防抖：连续变更（如拖拽排序触发多条事件）只拉取一次全量数据
+    const debouncedLoad = debounce(() => {
+      void loadData();
+    }, 400);
+
     // 分类与链接共用一个 channel（之前是两个独立订阅，两次建连往返）
     const channel = supabase
       .channel('admin-data-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
-        void loadData();
+        debouncedLoad();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'links' }, () => {
-        void loadData();
+        debouncedLoad();
       })
       .subscribe();
 
     return () => {
+      debouncedLoad.cancel();
       void supabase.removeChannel(channel);
     };
   }, [loadData]);

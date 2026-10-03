@@ -165,7 +165,10 @@ async function loadNavSnapshot(): Promise<NavSnapshot> {
 
     const snapshot = normalizeRpcSnapshot((data || {}) as SnapshotRpcData);
 
-    if (snapshot.stats.totalViewCount === 0 && !((data as SnapshotRpcData | null)?.stats?.totalViewCount)) {
+    // 用字段是否存在（而非值是否为 0）判断 RPC 是否返回了浏览量：
+    // 新站真实浏览量为 0 时不应再多打一次查询
+    const rpcStats = (data as SnapshotRpcData | null)?.stats;
+    if (snapshot.stats.totalViewCount === 0 && !(rpcStats && 'totalViewCount' in rpcStats)) {
       return {
         ...snapshot,
         stats: {

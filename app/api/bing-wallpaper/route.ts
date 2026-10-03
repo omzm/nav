@@ -27,7 +27,10 @@ export async function GET() {
     }
 
     const imageUrl = imagePath.startsWith('http') ? imagePath : `https://www.bing.com${imagePath}`;
-    const redirect = NextResponse.redirect(imageUrl, 307);
+    // 头图只用作页面顶部横幅背景：1366x768 足够清晰，1920x1080 体积翻倍但视觉无差。
+    // 必应缩略图 URL 支持直接替换分辨率后缀；若无该后缀则原样跳转。
+    const sizedImageUrl = imageUrl.replace('_1920x1080', '_1366x768');
+    const redirect = NextResponse.redirect(sizedImageUrl, 307);
     redirect.headers.set('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800');
     return redirect;
   } catch (error) {

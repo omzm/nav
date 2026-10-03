@@ -15,8 +15,9 @@ function getFallbackQuote() {
 
 async function loadDailyQuote(): Promise<string> {
   try {
+    // 只保留外层 unstable_cache 这一层缓存，fetch 本身不再叠加 revalidate
     const response = await fetch('https://v.api.aa1.cn/api/yiyan/index.php', {
-      next: { revalidate: 3600 },
+      cache: 'no-store',
       signal: AbortSignal.timeout(3000),
     });
 
