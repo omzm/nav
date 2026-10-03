@@ -84,8 +84,8 @@ export default function AdminDashboard() {
             <p className="admin-page-subtitle">查看收录情况，继续整理你的分类与链接。</p>
           </div>
           <div className="admin-actions-row">
-            <Button icon={<IconRefresh aria-hidden="true" />} loading={refreshing} onClick={() => void loadData(true)}>刷新数据</Button>
-            <Button theme="solid" type="primary" icon={<IconPlus aria-hidden="true" />} onClick={() => router.push('/admin/dashboard/link/new')}>添加链接</Button>
+            <Button icon={<IconRefresh aria-hidden="true" />} loading={refreshing} onClick={() => void loadData(true)} title="刷新数据 (R)">刷新数据</Button>
+            <Button theme="solid" type="primary" icon={<IconPlus aria-hidden="true" />} onClick={() => router.push('/admin/dashboard/link/new')} title="添加链接 (N)">添加链接</Button>
           </div>
         </div>
 
@@ -161,7 +161,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="admin-quick-actions">
-          <button className="admin-quick-action" onClick={() => router.push('/admin/dashboard/category/new')}>
+          <button className="admin-quick-action" title="添加分类 (C)" onClick={() => router.push('/admin/dashboard/category/new')}>
             <IconFolder aria-hidden="true" /><span><strong>添加分类</strong><small>为收藏建立新的分组</small></span><IconChevronRight aria-hidden="true" />
           </button>
           <button className="admin-quick-action" onClick={exportData}>
