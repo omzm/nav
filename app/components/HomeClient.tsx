@@ -1,15 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import SearchBar from './SearchBar';
 import CategorySection from './CategorySection';
 import ThemeToggle from './ThemeToggle';
 import BackToTop from './BackToTop';
-import RefreshButton from './RefreshButton';
 import Sidebar from './Sidebar';
-import { revalidateNavSnapshot } from '../actions/revalidateNavSnapshot';
+import { unlockPrivateLinks } from '../actions/unlockPrivate';
 import type { NavCategory, NavSnapshot } from '../types';
 
 interface HomeClientProps {
@@ -18,18 +16,18 @@ interface HomeClientProps {
 }
 
 export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
-  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showPrivate, setShowPrivate] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isRefreshPending, startRefreshTransition] = useTransition();
+  // "开门"成功后由服务端下发的私密分类（不再包含在初始快照中，见安全修复 S1）
+  const [privateCategories, setPrivateCategories] = useState<NavCategory[]>([]);
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockFailed, setUnlockFailed] = useState(false);
   const [scrolledPastHeader, setScrolledPastHeader] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
-  const isOpenDoorCommand = searchQuery.trim() === '开门';
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -78,34 +76,42 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const isRefreshButtonBusy = isRefreshing || isRefreshPending;
+  // "开门"：口令校验与私密数据下发走服务端（安全修复 S1）。
+  // 口令正确才展示；失败时给出提示，避免静默无响应。
+  const handleUnlock = useCallback(async () => {
+    if (unlocking) return;
 
-  const handleRefresh = useCallback(async () => {
-    if (isRefreshButtonBusy) return;
-
-    setIsRefreshing(true);
+    setUnlocking(true);
+    setUnlockFailed(false);
 
     try {
-      await revalidateNavSnapshot();
+      const result = await unlockPrivateLinks('开门');
+
+      if (!result.ok) {
+        setUnlockFailed(true);
+        return;
+      }
+
+      setPrivateCategories(result.categories);
+      setShowPrivate(true);
     } catch (error) {
-      console.error('Failed to refresh nav snapshot:', error);
+      console.error('Failed to unlock private links:', error);
+      setUnlockFailed(true);
     } finally {
-      startRefreshTransition(() => {
-        router.refresh();
-      });
-      setIsRefreshing(false);
+      setUnlocking(false);
     }
-  }, [isRefreshButtonBusy, router, startRefreshTransition]);
+  }, [unlocking]);
 
   const handleSearchChange = useCallback((value: string) => {
     if (value.trim() === '开门') {
-      setShowPrivate(true);
       setSearchQuery('');
+      void handleUnlock();
       return;
     }
 
+    setUnlockFailed(false);
     setSearchQuery(value);
-  }, []);
+  }, [handleUnlock]);
 
   const handleSelectCategory = useCallback((categoryId: string | null) => {
     setSelectedCategory(categoryId);
@@ -127,26 +133,24 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
   }, [searchQuery]);
 
   const sidebarCategories = useMemo<NavCategory[]>(() => {
-    if (showPrivate) {
-      return snapshot.categories;
-    }
-
-    return snapshot.categories
+    // 快照只含公开数据；私密数据仅"开门"成功后由服务端下发合并展示。
+    // 这里仍显式过滤 isPrivate，保证 SQL 迁移前后的过渡期行为一致。
+    const publicCategories = snapshot.categories
       .filter((category) => !category.isPrivate)
       .map((category) => ({
         ...category,
         links: category.links.filter((link) => !link.isPrivate),
       }));
-  }, [snapshot.categories, showPrivate]);
+
+    if (showPrivate) {
+      return [...publicCategories, ...privateCategories];
+    }
+
+    return publicCategories;
+  }, [snapshot.categories, showPrivate, privateCategories]);
 
   const filteredCategories = useMemo<NavCategory[]>(() => {
     const result = sidebarCategories;
-
-    if (isOpenDoorCommand) {
-      return result.filter(
-        (category) => category.isPrivate || category.links.some((link) => link.isPrivate)
-      );
-    }
 
     if (!normalizedQuery) {
       return result;
@@ -162,7 +166,7 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
         return links.length === category.links.length ? category : { ...category, links };
       })
       .filter((category) => category.links.length > 0);
-  }, [isOpenDoorCommand, normalizedQuery, sidebarCategories]);
+  }, [normalizedQuery, sidebarCategories]);
 
   const visibleLinkCount = useMemo(
     () => sidebarCategories.reduce((acc, category) => acc + category.links.length, 0),
@@ -172,7 +176,6 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex">
       <ThemeToggle />
-      <RefreshButton onRefresh={handleRefresh} isRefreshing={isRefreshButtonBusy} />
       <BackToTop />
 
       <Sidebar
@@ -236,6 +239,13 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
             <div className="flex justify-center px-2 sm:px-0">
               <SearchBar value={searchQuery} onChange={handleSearchChange} />
             </div>
+            {unlockFailed && (
+              <div className="flex justify-center px-2 sm:px-0 mt-2">
+                <p className="text-xs text-red-500 dark:text-red-400">
+                  解锁失败：口令不正确，或私密数据接口尚未部署（需执行 supabase/migrations 下的 SQL 迁移）
+                </p>
+              </div>
+            )}
 
             <div className="flex justify-center px-2 sm:px-0 mt-3 sm:mt-4">
               <div className="w-full max-w-md px-3 py-1 rounded-full bg-white/60 dark:bg-gray-800/60 backdrop-blur-md text-gray-500 dark:text-gray-500 text-[10px] sm:text-xs text-center shadow-sm transition-all duration-300 hover:bg-white/70 dark:hover:bg-gray-800/70 hover:shadow-md leading-tight">

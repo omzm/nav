@@ -20,6 +20,13 @@
 NEXT_PUBLIC_ADMIN_EMAIL=your-admin@example.com
 ```
 
+另外需要一个服务端会话密钥（用于签发后台登录 Cookie，安全修复 S2 引入），
+生成一个随机长字符串即可，例如 `openssl rand -hex 32` 的输出：
+
+```bash
+ADMIN_SESSION_SECRET=一串随机字符
+```
+
 ## 2. 初始化数据库
 
 新项目直接执行完整 schema：
@@ -71,6 +78,7 @@ npm run dev
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=你的 anon public key
 NEXT_PUBLIC_ADMIN_EMAIL=你的管理员邮箱
+ADMIN_SESSION_SECRET=一串随机字符（openssl rand -hex 32 生成）
 ```
 
 访问地址：
@@ -94,10 +102,13 @@ NEXT_PUBLIC_ADMIN_EMAIL=你的管理员邮箱
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon public key |
 | `NEXT_PUBLIC_ADMIN_EMAIL` | 管理员邮箱 |
+| `ADMIN_SESSION_SECRET` | 随机长字符串（`openssl rand -hex 32` 生成），用于签发后台登录 Cookie |
 
 6. 点击 **Deploy**。
 
 部署完成后，打开 Vercel 分配的域名测试首页和 `/admin`。
+
+> 注意：`ADMIN_SESSION_SECRET` 变更后，所有已登录的后台会话会失效，需要重新登录。
 
 ## 6. 已有数据库升级
 
@@ -129,6 +140,28 @@ supabase/update-nav-snapshot-private-rpc.sql
 - `get_nav_snapshot_data(limit_count integer default 5)` RPC
 
 这个 RPC 让首页服务端快照能拿到完整分类和链接，浏览器端输入 `开门` 后才显示私密内容。
+
+### 私密数据服务端隔离（安全修复 S1，2026-10-03 起）
+
+此前 `get_nav_snapshot_data()` 会返回全部（含私密）分类和链接，
+私密内容会出现在首页初始 HTML 中。修复后快照只含公开数据，
+"开门"口令校验与私密数据下发走服务端。请执行：
+
+```text
+supabase/migrations/20261003_private_data_isolation.sql
+```
+
+它会：
+
+- 重定义 `get_nav_snapshot_data()`：只返回公开分类/链接，统计只计公开项
+- 新增 `get_nav_private_data(p_phrase text)` RPC：口令正确才返回私密数据
+  （默认口令 `开门`，可用 `ALTER DATABASE ... SET app.settings.unlock_phrase` 修改）
+
+**部署顺序**：先执行 SQL，再部署新代码（旧代码 + 新 SQL 会导致"开门"暂时无数据；
+新代码 + 旧 SQL 会导致"开门"提示接口未就绪，均不影响公开内容展示）。
+
+**回滚**：执行 `supabase/migrations/20261003_private_data_isolation_rollback.sql`
+可恢复旧 RPC 定义；代码侧回滚到 `backup/2026-10-03-pre-security-fix` 分支即可。
 
 ### 分类图标迁移
 
