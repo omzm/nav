@@ -153,9 +153,12 @@ AS $$
     COUNT(c.id)::BIGINT AS click_count
   FROM link_clicks c
   JOIN links l ON l.id = c.link_id
-  WHERE c.clicked_at >= date_trunc('day', now())
-    AND c.clicked_at < date_trunc('day', now()) + interval '1 day'
+  JOIN categories cat ON cat.id = l.category_id
+  WHERE c.clicked_at >= date_trunc('day', now() AT TIME ZONE 'Asia/Shanghai') AT TIME ZONE 'Asia/Shanghai'
+    AND c.clicked_at < date_trunc('day', now() AT TIME ZONE 'Asia/Shanghai') AT TIME ZONE 'Asia/Shanghai' + interval '1 day'
     AND COALESCE(l.is_private, false) = false
+    -- 私密分类下的链接不得出现在公开热门榜（与首页快照口径对齐）
+    AND COALESCE(cat.is_private, false) = false
   GROUP BY l.id, l.title, l.url, l.icon
   ORDER BY click_count DESC, l.title ASC
   LIMIT GREATEST(limit_count, 0);
