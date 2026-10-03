@@ -35,7 +35,8 @@ export default function LazyFavicon({ url, alt, className, fallback }: LazyFavic
         }
       },
       {
-        rootMargin: '240px 0px',
+        // 提前量设为 0：图标只在真正进入视口时才开始加载（对比测试用，之前为 240px）
+        rootMargin: '0px 0px',
         threshold: 0.01,
       }
     );
