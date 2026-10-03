@@ -20,6 +20,8 @@ export interface NavCategory {
   icon: string;
   links: NavLink[];
   isPrivate?: boolean;
+  /** 后台排序值（用于开门后私密分类归位；旧快照可能没有） */
+  order?: number;
 }
 
 export interface NavSnapshot {

@@ -207,7 +207,7 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
   }, [searchQuery]);
 
   const sidebarCategories = useMemo<NavCategory[]>(() => {
-    // 快照只含公开数据；私密数据仅"开门"成功后由服务端下发合并展示。
+    // 快照只含公开数据；私密数据仅"开门"成功后由服务端下发。
     // 这里仍显式过滤 isPrivate，保证 SQL 迁移前后的过渡期行为一致。
     const publicCategories = snapshot.categories
       .filter((category) => !category.isPrivate)
@@ -216,11 +216,15 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
         links: category.links.filter((link) => !link.isPrivate),
       }));
 
-    if (showPrivate) {
-      return [...publicCategories, ...privateCategories];
+    if (!showPrivate) {
+      return publicCategories;
     }
 
-    return publicCategories;
+    // 私密分类按后台 order 归位（与原来"开门"前就在快照里时的顺序一致），
+    // 而不是一律沉底；旧快照没有 order 时保持原有相对顺序。
+    return [...publicCategories, ...privateCategories].sort(
+      (a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER)
+    );
   }, [snapshot.categories, showPrivate, privateCategories]);
 
   const filteredCategories = useMemo<NavCategory[]>(() => {

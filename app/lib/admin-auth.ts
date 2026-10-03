@@ -4,7 +4,8 @@
  * 对应安全修复 S2：后台鉴权从"纯客户端校验"改为服务端签发的
  * HttpOnly Cookie，会话由 middleware 在边缘侧校验。
  *
- * - Token 格式：v1.<email>.<exp>.<hmac-sha256>
+ * - Token 格式：v1.<base64url(email)>.<exp>.<hmac-sha256 hex>
+ *   （邮箱必须做 base64url 编码，因为邮箱本身含 "."，直接拼接会破坏按点分割的解析）
  * - 使用 WebCrypto 实现，同时兼容 Edge Runtime（middleware）
  *   与 Node Runtime（server actions）。
  */
@@ -39,6 +40,23 @@ export function getRequiredAdminEmail(): string {
   return email;
 }
 
+/** base64url 编解码（btoa/atob 在 Edge 与 Node 均可用） */
+function base64UrlEncode(input: string): string {
+  const bytes = new TextEncoder().encode(input);
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlDecode(input: string): string {
+  const padded = input.replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 async function hmacSha256Hex(secret: string, message: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw',
@@ -68,7 +86,7 @@ function timingSafeEqual(a: string, b: string): boolean {
 /** 签发管理员会话 token */
 export async function signAdminToken(email: string): Promise<string> {
   const exp = Math.floor(Date.now() / 1000) + ADMIN_SESSION_TTL_SECONDS;
-  const payload = `v1.${email}.${exp}`;
+  const payload = `v1.${base64UrlEncode(email)}.${exp}`;
   const signature = await hmacSha256Hex(getSessionSecret(), payload);
 
   return `${payload}.${signature}`;
@@ -85,17 +103,17 @@ export async function verifyAdminToken(token: string | null | undefined): Promis
     const parts = token.split('.');
     if (parts.length !== 4) return null;
 
-    const [version, email, expRaw, signature] = parts;
-    if (version !== 'v1' || !email || !signature) return null;
+    const [version, emailB64, expRaw, signature] = parts;
+    if (version !== 'v1' || !emailB64 || !signature) return null;
 
     const exp = Number(expRaw);
     if (!Number.isFinite(exp) || exp * 1000 < Date.now()) return null;
 
-    const expected = await hmacSha256Hex(getSessionSecret(), `v1.${email}.${exp}`);
+    const expected = await hmacSha256Hex(getSessionSecret(), `v1.${emailB64}.${exp}`);
 
     if (!timingSafeEqual(expected, signature)) return null;
 
-    return email;
+    return base64UrlDecode(emailB64);
   } catch {
     return null;
   }
