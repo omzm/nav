@@ -17,12 +17,30 @@ import type { NavCategory, NavSnapshot } from '../types';
 
 interface HomeClientProps {
   snapshot: NavSnapshot;
-  dailyQuote: string;
 }
 
-export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
+export default function HomeClient({ snapshot }: HomeClientProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  // 每日一言：客户端挂载后异步拉取，不阻塞首屏；加载前用占位符撑住高度避免布局抖动
+  const [dailyQuote, setDailyQuote] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/daily-quote')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (active && typeof data?.quote === 'string' && data.quote) {
+          setDailyQuote(data.quote);
+        }
+      })
+      .catch(() => {
+        // 一言加载失败不影响主体功能，保持占位即可
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showPrivate, setShowPrivate] = useState(false);
@@ -371,7 +389,7 @@ export default function HomeClient({ snapshot, dailyQuote }: HomeClientProps) {
 
             <div className="flex justify-center px-2 sm:px-0 mt-3 sm:mt-4">
               <div className="w-full max-w-md px-3 py-1 rounded-full bg-white/60 dark:bg-gray-800/60 backdrop-blur-md text-gray-500 dark:text-gray-500 text-[10px] sm:text-xs text-center shadow-sm transition-all duration-300 hover:bg-white/70 dark:hover:bg-gray-800/70 hover:shadow-md leading-tight">
-                {dailyQuote}
+                {dailyQuote || ' '}
               </div>
             </div>
           </div>
