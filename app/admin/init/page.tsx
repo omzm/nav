@@ -80,35 +80,39 @@ CREATE POLICY "Allow public read access on public links"
   ON links FOR SELECT
   USING (is_private = FALSE OR auth.uid() IS NOT NULL);
 
-CREATE POLICY "Allow authenticated users to insert categories"
+-- 写策略：仅管理员邮箱可写（安全修复 S3）。
+-- 执行前请将下面所有的 your-admin@example.com 替换为你的管理员邮箱，
+-- 保持与 NEXT_PUBLIC_ADMIN_EMAIL 一致。切勿改回 USING (true)，
+-- 否则任意登录用户都可读写全表。
+CREATE POLICY "Allow admin to insert categories"
   ON categories FOR INSERT
   TO authenticated
-  WITH CHECK (true);
+  WITH CHECK (auth.jwt() ->> 'email' = 'your-admin@example.com');
 
-CREATE POLICY "Allow authenticated users to update categories"
+CREATE POLICY "Allow admin to update categories"
   ON categories FOR UPDATE
   TO authenticated
-  USING (true);
+  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
 
-CREATE POLICY "Allow authenticated users to delete categories"
+CREATE POLICY "Allow admin to delete categories"
   ON categories FOR DELETE
   TO authenticated
-  USING (true);
+  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
 
-CREATE POLICY "Allow authenticated users to insert links"
+CREATE POLICY "Allow admin to insert links"
   ON links FOR INSERT
   TO authenticated
-  WITH CHECK (true);
+  WITH CHECK (auth.jwt() ->> 'email' = 'your-admin@example.com');
 
-CREATE POLICY "Allow authenticated users to update links"
+CREATE POLICY "Allow admin to update links"
   ON links FOR UPDATE
   TO authenticated
-  USING (true);
+  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
 
-CREATE POLICY "Allow authenticated users to delete links"
+CREATE POLICY "Allow admin to delete links"
   ON links FOR DELETE
   TO authenticated
-  USING (true);
+  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
 
 CREATE TABLE IF NOT EXISTS link_clicks (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

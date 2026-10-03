@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Input, Toast } from '@douyinfe/semi-ui';
 import { IconArrowRight, IconExternalOpen, IconLock, IconMail } from '@douyinfe/semi-icons';
 import { supabase, isSupabaseConfigured } from '@/app/lib/supabase';
@@ -12,13 +12,16 @@ import {
   isLocalAdminCredentials,
   signInLocalAdmin,
 } from '@/app/lib/local-admin';
+import { establishAdminSession, establishLocalAdminSession } from '@/app/actions/adminSession';
 import AdminBrand from './_components/AdminBrand';
 
-export default function AdminLogin() {
+function AdminLoginForm() {
   const [email, setEmail] = useState(process.env.NODE_ENV === 'development' ? LOCAL_ADMIN_EMAIL : '');
   const [password, setPassword] = useState(process.env.NODE_ENV === 'development' ? LOCAL_ADMIN_PASSWORD : '');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const authError = searchParams.get('error');
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -31,6 +34,15 @@ export default function AdminLogin() {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (!isLocalCredentials && error) throw error;
         if (data.user) {
+          // 服务端建立管理员会话（校验邮箱 + 签发 HttpOnly Cookie），失败则拒绝进入后台
+          const { data: sessionData } = await supabase.auth.getSession();
+          const sessionResult = await establishAdminSession(sessionData.session?.access_token || '');
+
+          if (!sessionResult.ok) {
+            await supabase.auth.signOut();
+            throw new Error(sessionResult.error || '管理员身份校验失败');
+          }
+
           Toast.success('登录成功');
           router.push('/admin/dashboard');
           return;
@@ -39,6 +51,13 @@ export default function AdminLogin() {
 
       if (isLocalCredentials) {
         signInLocalAdmin();
+        // 本地测试账号同样需要服务端会话（仅开发环境可签发）
+        const localResult = await establishLocalAdminSession();
+
+        if (!localResult.ok) {
+          throw new Error(localResult.error || '本地管理会话建立失败');
+        }
+
         Toast.success('本地测试登录成功');
         router.push('/admin/dashboard');
       }
@@ -61,6 +80,12 @@ export default function AdminLogin() {
             <h1>管理员登录</h1>
             <p>欢迎回来，登录后继续整理你的收藏。</p>
           </div>
+          {authError === 'auth' && (
+            <p className="admin-login-auth-hint">需要管理员登录后才能访问后台。</p>
+          )}
+          {authError === 'config' && (
+            <p className="admin-login-auth-hint">管理员邮箱未配置（NEXT_PUBLIC_ADMIN_EMAIL），请先完成环境配置。</p>
+          )}
           <form className="admin-login-form" onSubmit={handleLogin}>
             <label className="admin-login-form-field">
               <span>邮箱地址</span>
@@ -81,5 +106,13 @@ export default function AdminLogin() {
       </div>
       <footer className="admin-login-footer">收藏夹 · 内容管理工作台</footer>
     </main>
+  );
+}
+
+export default function AdminLogin() {
+  return (
+    <Suspense>
+      <AdminLoginForm />
+    </Suspense>
   );
 }

@@ -21,6 +21,7 @@ import {
 } from '@douyinfe/semi-icons';
 import { ADMIN_EMAIL, supabase } from '@/app/lib/supabase';
 import { getLocalAdminUser, signOutLocalAdmin } from '@/app/lib/local-admin';
+import { clearAdminSession, hasAdminSession } from '@/app/actions/adminSession';
 import { clearAdminCache } from '@/app/utils/adminCache';
 import { UserContext } from './dashboard/context';
 import AdminBrand from './_components/AdminBrand';
@@ -79,6 +80,24 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
     const checkUser = async () => {
       try {
+        // fail closed：管理员邮箱未配置时拒绝一切后台访问（安全修复 S2）
+        if (!ADMIN_EMAIL) {
+          console.error('NEXT_PUBLIC_ADMIN_EMAIL 未配置，拒绝后台访问');
+          await supabase.auth.signOut();
+          signOutLocalAdmin();
+          if (active) router.replace('/admin?error=config');
+          return;
+        }
+
+        // 服务端会话二次确认：middleware 已在边缘侧校验，这里做纵深防御
+        const authed = await hasAdminSession();
+        if (!authed) {
+          await supabase.auth.signOut();
+          signOutLocalAdmin();
+          if (active) router.replace('/admin?error=auth');
+          return;
+        }
+
         const localUser = getLocalAdminUser();
         if (localUser) {
           if (active) setUser(localUser);
@@ -90,7 +109,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           if (active) router.replace('/admin');
           return;
         }
-        if (ADMIN_EMAIL && currentUser.email !== ADMIN_EMAIL) {
+        if ((currentUser.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
           await supabase.auth.signOut();
           if (active) router.replace('/admin');
           return;
@@ -117,6 +136,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
       signOutLocalAdmin();
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      await clearAdminSession();
       clearAdminCache();
       router.replace('/admin');
     } catch (error) {
