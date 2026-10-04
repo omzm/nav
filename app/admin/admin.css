@@ -356,3 +356,18 @@ a.admin-cell-title:hover { color: var(--admin-primary); }
 @media (prefers-reduced-motion: reduce) {
   .admin-theme *, .admin-theme *::before, .admin-theme *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* 多选框选中态：去掉蓝色实心填充，改用白底 + 主色描边 + 主色对勾，
+   深色对勾压在亮蓝底上对比度太低，看不清是否选中 */
+.admin-theme .semi-checkbox-inner-checked .semi-checkbox-inner-display,
+.admin-theme .semi-checkbox:hover .semi-checkbox-inner-checked .semi-checkbox-inner-display,
+.admin-theme .semi-checkbox:active .semi-checkbox-inner-checked .semi-checkbox-inner-display,
+.admin-theme .semi-checkbox-indeterminate .semi-checkbox-inner-display,
+.admin-theme .semi-checkbox:hover.semi-checkbox-indeterminate .semi-checkbox-inner-display,
+.admin-theme .semi-checkbox:active.semi-checkbox-indeterminate .semi-checkbox-inner-display {
+  background: #fff;
+  background-color: #fff;
+  border-color: var(--admin-primary);
+  box-shadow: inset 0 0 0 1.5px var(--admin-primary);
+  color: var(--admin-primary);
+}
