@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Button,
   Card,
+  Checkbox,
   Empty,
   Input,
   Modal,
@@ -16,6 +17,8 @@ import {
   Typography,
 } from '@douyinfe/semi-ui';
 import {
+  IconChevronDown,
+  IconChevronUp,
   IconDelete,
   IconEdit,
   IconExternalOpen,
@@ -64,6 +67,12 @@ export default function LinksPage() {
   const [visibilityFilter, setVisibilityFilter] = useState('all');
   const [deletingId, setDeletingId] = useState('');
   const [linkToDelete, setLinkToDelete] = useState<NavLink | null>(null);
+  // 批量操作：选中的链接 id
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showBatchDelete, setShowBatchDelete] = useState(false);
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [moveTargetId, setMoveTargetId] = useState('');
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
   const router = useRouter();
@@ -136,6 +145,31 @@ export default function LinksPage() {
   const selectedCategory = categoryFilter === ALL_CATEGORIES ? null : categoryMap.get(categoryFilter);
   const canSort = Boolean(selectedCategory);
 
+  // 筛选变化时清空多选，避免对看不见的行做批量操作
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [keyword, categoryFilter, visibilityFilter]);
+
+  // 数据变化后剔除已不存在的 id（如刚被删除的行）
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.length === 0) return prev;
+      const alive = new Set(links.map((link) => link.id));
+      const next = prev.filter((id) => alive.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [links]);
+
+  const toggleSelect = useCallback((id: string, checked: boolean) => {
+    setSelectedIds((prev) =>
+      checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((item) => item !== id)
+    );
+  }, []);
+
+  const selectAllFiltered = useCallback(() => {
+    setSelectedIds(filteredLinks.map((link) => link.id));
+  }, [filteredLinks]);
+
   const handleDelete = async (link: NavLink) => {
     setDeletingId(link.id);
 
@@ -158,6 +192,136 @@ export default function LinksPage() {
   const confirmDelete = (link: NavLink) => {
     setLinkToDelete(link);
   };
+
+  // ---- 批量操作 ----
+  const handleBatchDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setBatchBusy(true);
+    try {
+      const { error } = await supabase.from('links').delete().in('id', selectedIds);
+      if (error) throw error;
+      Toast.success(`已删除 ${selectedIds.length} 条链接`);
+      setSelectedIds([]);
+      setShowBatchDelete(false);
+      await invalidateHomeCache();
+      await loadData(true);
+    } catch (error) {
+      console.error('批量删除链接失败:', error);
+      Toast.error('批量删除失败，请稍后重试');
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  const handleBatchVisibility = async (isPrivate: boolean) => {
+    if (selectedIds.length === 0) return;
+    setBatchBusy(true);
+    try {
+      const { error } = await supabase
+        .from('links')
+        .update({ is_private: isPrivate })
+        .in('id', selectedIds);
+      if (error) throw error;
+      Toast.success(`已将 ${selectedIds.length} 条链接设为${isPrivate ? '私密' : '公开'}`);
+      setSelectedIds([]);
+      await invalidateHomeCache();
+      await loadData(true);
+    } catch (error) {
+      console.error('批量设置可见性失败:', error);
+      Toast.error('操作失败，请稍后重试');
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  const handleBatchMove = async () => {
+    if (selectedIds.length === 0 || !moveTargetId) {
+      Toast.warning('请选择目标分类');
+      return;
+    }
+    const targetCategory = categoryMap.get(moveTargetId);
+    if (!targetCategory) {
+      Toast.warning('目标分类不存在');
+      return;
+    }
+    // 全部已在目标分类时无需移动
+    const selectedLinks = links.filter((link) => selectedIds.includes(link.id));
+    if (selectedLinks.length > 0 && selectedLinks.every((link) => link.category_id === moveTargetId)) {
+      Toast.info('所选链接已在该分类下');
+      return;
+    }
+
+    setBatchBusy(true);
+    try {
+      // 1. 一次更新分类与可见性（可见性与目标分类保持一致，避免私密分类下出现公开链接）
+      const { error: updateError } = await supabase
+        .from('links')
+        .update({ category_id: moveTargetId, is_private: Boolean(targetCategory.is_private) })
+        .in('id', selectedIds);
+      if (updateError) throw updateError;
+
+      // 2. 重排目标分类：原有链接按序 + 移入的链接按原顺序追加
+      const { data: targetLinks, error: queryError } = await supabase
+        .from('links')
+        .select('id, order')
+        .eq('category_id', moveTargetId)
+        .order('order', { ascending: true });
+      if (queryError) throw queryError;
+      const movedSet = new Set(selectedIds);
+      const stayingIds = (targetLinks || []).filter((link) => !movedSet.has(link.id)).map((link) => link.id);
+      const movedIds = selectedLinks
+        .sort((a, b) => a.order - b.order)
+        .map((link) => link.id);
+      const { error: rpcError } = await supabase.rpc('reorder_links', {
+        p_ordered_ids: [...stayingIds, ...movedIds],
+      });
+      if (rpcError) throw rpcError;
+
+      Toast.success(`已将 ${selectedIds.length} 条链接移动到「${targetCategory.name}」`);
+      setSelectedIds([]);
+      setShowMoveModal(false);
+      setMoveTargetId('');
+      await invalidateHomeCache();
+      await loadData(true);
+    } catch (error) {
+      console.error('批量移动链接失败:', error);
+      Toast.error('移动失败，请稍后重试');
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+
+  // 手机端上移/下移（触屏无拖拽，用按钮代替；仅在选中分类可排序时可用）
+  const moveLink = useCallback(
+    async (id: string, direction: -1 | 1) => {
+      if (!canSort || !selectedCategory) return;
+      const categoryLinks = links
+        .filter((link) => link.category_id === selectedCategory.id)
+        .sort((a, b) => a.order - b.order);
+      const index = categoryLinks.findIndex((link) => link.id === id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= categoryLinks.length) return;
+
+      const next = [...categoryLinks];
+      [next[index], next[target]] = [next[target], next[index]];
+      const orderMap = new Map(next.map((link, orderIndex) => [link.id, orderIndex + 1]));
+      setLinks(links.map((link) => (orderMap.has(link.id) ? { ...link, order: orderMap.get(link.id)! } : link)));
+
+      try {
+        const { error } = await supabase.rpc('reorder_links', {
+          p_ordered_ids: next.map((link) => link.id),
+        });
+        if (error) throw error;
+        await invalidateHomeCache();
+        await loadData(true);
+      } catch (error) {
+        console.error('移动链接排序失败:', error);
+        Toast.error('移动失败，已重新加载数据');
+        await loadData(true);
+      }
+    },
+    [canSort, selectedCategory, links, setLinks, invalidateHomeCache, loadData]
+  );
 
   const handleDrop = async () => {
     const sourceId = dragItem.current;
@@ -310,6 +474,31 @@ export default function LinksPage() {
             <span className="admin-result-count">共 <strong>{filteredLinks.length}</strong> 条链接</span>
           </div>
 
+          {selectedIds.length > 0 && (
+            <div className="admin-batch-bar" role="toolbar" aria-label="批量操作">
+              <Text strong>已选 {selectedIds.length} 项</Text>
+              <Button size="small" theme="borderless" type="tertiary" onClick={selectAllFiltered}>
+                全选 {filteredLinks.length} 条
+              </Button>
+              <Button size="small" theme="borderless" type="tertiary" onClick={() => setSelectedIds([])}>
+                取消选择
+              </Button>
+              <span className="admin-batch-divider" />
+              <Button size="small" onClick={() => setShowMoveModal(true)} loading={batchBusy}>
+                移动到分类
+              </Button>
+              <Button size="small" onClick={() => void handleBatchVisibility(false)} loading={batchBusy}>
+                设为公开
+              </Button>
+              <Button size="small" onClick={() => void handleBatchVisibility(true)} loading={batchBusy}>
+                设为私密
+              </Button>
+              <Button size="small" type="danger" onClick={() => setShowBatchDelete(true)} loading={batchBusy}>
+                删除
+              </Button>
+            </div>
+          )}
+
           {!isMobile && (
           <div className="admin-table-scroll">
             <Table<NavLink>
@@ -318,6 +507,10 @@ export default function LinksPage() {
               columns={columns}
               dataSource={filteredLinks}
               pagination={filteredLinks.length > 12 ? { pageSize: 12 } : false}
+              rowSelection={{
+                selectedRowKeys: selectedIds,
+                onChange: (keys) => setSelectedIds((keys || []).map(String)),
+              }}
               empty={<Empty title="暂无链接" description="添加链接后，首页会按分类与排序展示。" />}
               onRow={(record) => {
                 if (!record || !canSort) return {};
@@ -348,10 +541,17 @@ export default function LinksPage() {
             {filteredLinks.length > 0 ? (
               filteredLinks.map((link) => {
                 const category = categoryMap.get(link.category_id);
+                const checked = selectedIds.includes(link.id);
+                const sortIndex = filteredLinks.findIndex((item) => item.id === link.id);
 
                 return (
                   <article className="admin-mobile-card" key={link.id}>
                     <div className="admin-mobile-card-head">
+                      <Checkbox
+                        checked={checked}
+                        onChange={(event) => toggleSelect(link.id, Boolean(event.target.checked))}
+                        aria-label={'选择 ' + link.title}
+                      />
                       <div className="admin-icon-preview"><LinkIcon link={link} /></div>
                       <div className="admin-mobile-card-title">
                         <Text strong>{link.title}</Text>
@@ -381,6 +581,26 @@ export default function LinksPage() {
                       >
                         打开
                       </Button>
+                      {canSort && (
+                        <>
+                          <Button
+                            size="small"
+                            icon={<IconChevronUp aria-hidden="true" />}
+                            aria-label={'上移 ' + link.title}
+                            title="上移"
+                            disabled={sortIndex <= 0}
+                            onClick={() => void moveLink(link.id, -1)}
+                          />
+                          <Button
+                            size="small"
+                            icon={<IconChevronDown aria-hidden="true" />}
+                            aria-label={'下移 ' + link.title}
+                            title="下移"
+                            disabled={sortIndex < 0 || sortIndex >= filteredLinks.length - 1}
+                            onClick={() => void moveLink(link.id, 1)}
+                          />
+                        </>
+                      )}
                       <Button
                         size="small"
                         icon={<IconEdit aria-hidden="true" />}
@@ -425,6 +645,53 @@ export default function LinksPage() {
         }}
       >
         <Text>确定删除「{linkToDelete?.title}」吗？</Text>
+      </Modal>
+
+      <Modal
+        title={`批量删除 ${selectedIds.length} 条链接`}
+        visible={showBatchDelete}
+        okText="删除"
+        cancelText="取消"
+        okButtonProps={{ type: 'danger', theme: 'solid', loading: batchBusy }}
+        onOk={() => void handleBatchDelete()}
+        onCancel={() => {
+          if (!batchBusy) setShowBatchDelete(false);
+        }}
+      >
+        <Text>确定删除已选的 {selectedIds.length} 条链接吗？此操作不可撤销。</Text>
+      </Modal>
+
+      <Modal
+        title={`移动 ${selectedIds.length} 条链接`}
+        visible={showMoveModal}
+        okText="移动"
+        cancelText="取消"
+        okButtonProps={{ loading: batchBusy }}
+        onOk={() => void handleBatchMove()}
+        onCancel={() => {
+          if (!batchBusy) {
+            setShowMoveModal(false);
+            setMoveTargetId('');
+          }
+        }}
+      >
+        <Text strong>目标分类</Text>
+        <Select
+          value={moveTargetId}
+          onChange={(value) => setMoveTargetId(value ? String(value) : '')}
+          placeholder="请选择分类"
+          style={{ width: '100%', marginTop: 8 }}
+        >
+          {categories.map((category) => (
+            <Select.Option key={category.id} value={category.id}>
+              {category.name}
+              {category.is_private ? '（私密）' : ''}
+            </Select.Option>
+          ))}
+        </Select>
+        <Text type="tertiary" size="small" style={{ display: 'block', marginTop: 8 }}>
+          链接将追加到目标分类末尾，公开/私密状态与目标分类保持一致。
+        </Text>
       </Modal>
     </div>
   );

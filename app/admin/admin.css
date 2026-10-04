@@ -203,6 +203,9 @@ a.admin-cell-title:hover { color: var(--admin-primary); }
 .admin-visibility.is-private { color: #ad8b58; background: #faf6ee; }
 .admin-visibility.is-private::before { background: #c8a571; }
 .admin-table-note { display: flex; align-items: center; gap: 7px; padding: 12px 18px; border-top: 1px solid #eef1f6; color: #9ca6b5; font-size: 11px; }
+/* 批量操作条：多选后出现在筛选行下方 */
+.admin-batch-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; background: var(--semi-color-primary-light-default); border: 1px solid var(--semi-color-border); border-radius: 8px; }
+.admin-batch-divider { width: 1px; height: 20px; background: var(--semi-color-border); }
 .admin-draggable-row { cursor: grab; }
 .admin-draggable-row:active { cursor: grabbing; }
 .admin-drag-handle { color: #b2bccb; }

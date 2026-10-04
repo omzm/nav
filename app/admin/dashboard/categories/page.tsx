@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Button,
@@ -15,6 +15,8 @@ import {
   Typography,
 } from '@douyinfe/semi-ui';
 import {
+  IconChevronDown,
+  IconChevronUp,
   IconDelete,
   IconEdit,
   IconEyeOpened,
@@ -85,6 +87,40 @@ export default function CategoriesPage() {
   const confirmDelete = (category: Category) => {
     setCategoryToDelete(category);
   };
+
+  // 手机端上移/下移（触屏无拖拽，用按钮代替；筛选时与拖拽一样禁用）
+  const moveCategory = useCallback(
+    async (id: string, direction: -1 | 1) => {
+      if (isFiltering) return;
+      const orderedCategories = [...categories].sort((a, b) => a.order - b.order);
+      const index = orderedCategories.findIndex((category) => category.id === id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= orderedCategories.length) return;
+
+      const nextCategories = [...orderedCategories];
+      [nextCategories[index], nextCategories[target]] = [nextCategories[target], nextCategories[index]];
+      const normalizedCategories = nextCategories.map((category, orderIndex) => ({
+        ...category,
+        order: orderIndex + 1,
+      }));
+      setCategories(normalizedCategories);
+
+      try {
+        const { error } = await supabase.rpc('reorder_categories', {
+          p_ordered_ids: normalizedCategories.map((category) => category.id),
+        });
+        if (error) throw error;
+        Toast.success('分类排序已保存');
+        await invalidateHomeCache();
+        await loadData(true);
+      } catch (error) {
+        console.error('移动分类排序失败:', error);
+        Toast.error('移动失败，已重新加载数据');
+        await loadData(true);
+      }
+    },
+    [isFiltering, categories, setCategories, invalidateHomeCache, loadData]
+  );
 
   const categoryToDeleteLinkCount = categoryToDelete ? linkCountByCategory.get(categoryToDelete.id)?.total || 0 : 0;
 
@@ -284,6 +320,24 @@ export default function CategoriesPage() {
                       >
                         查看链接
                       </Button>
+                      {!isFiltering && (
+                        <>
+                          <Button
+                            size="small"
+                            icon={<IconChevronUp aria-hidden="true" />}
+                            aria-label={'上移 ' + category.name}
+                            title="上移"
+                            onClick={() => void moveCategory(category.id, -1)}
+                          />
+                          <Button
+                            size="small"
+                            icon={<IconChevronDown aria-hidden="true" />}
+                            aria-label={'下移 ' + category.name}
+                            title="下移"
+                            onClick={() => void moveCategory(category.id, 1)}
+                          />
+                        </>
+                      )}
                       <Button
                         size="small"
                         icon={<IconEdit aria-hidden="true" />}
