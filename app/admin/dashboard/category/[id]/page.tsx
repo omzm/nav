@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Button,
@@ -49,7 +49,7 @@ export default function CategoryForm() {
 
       if (data) {
         setName(data.name);
-        setIcon(data.icon);
+        setIcon(data.icon || '');
         setOrder(data.order);
         setIsPrivate(Boolean(data.is_private));
         setOriginalIsPrivate(Boolean(data.is_private));
@@ -68,8 +68,12 @@ export default function CategoryForm() {
     }
   }, [categoryId, isEdit, loadCategory]);
 
+  // 同步互斥：防止快速双击导致重复提交（setState 是异步的，靠 state 守不住）
+  const savingRef = useRef(false);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (savingRef.current) return;
 
     if (!name.trim()) {
       Toast.warning('请填写分类名称');
@@ -81,6 +85,38 @@ export default function CategoryForm() {
       return;
     }
 
+    // 分类从公开变为私密时，先确认是否级联旗下链接，再执行更新：
+    // 若先更新分类、用户中途刷新/关闭页面，会留下"私密分类下有公开链接"的不一致
+    // （私密链接可能出现在今日热门等公开位置）
+    let publicLinkIds: string[] = [];
+    let syncPrivate = false;
+    if (isEdit && categoryId && isPrivate && !originalIsPrivate) {
+      const { data: publicLinks, error: queryError } = await supabase
+        .from('links')
+        .select('id')
+        .eq('category_id', categoryId)
+        .eq('is_private', false);
+      if (queryError) {
+        console.error('查询分类下公开链接失败:', queryError);
+        Toast.error('查询失败，请重试');
+        return;
+      }
+      publicLinkIds = (publicLinks || []).map((link) => link.id);
+      if (publicLinkIds.length > 0) {
+        syncPrivate = await new Promise<boolean>((resolve) => {
+          Modal.confirm({
+            title: '同步设为私密？',
+            content: `该分类下还有 ${publicLinkIds.length} 个公开链接，是否同步将它们设为私密？（仅设分类私密不会影响链接自身的公开状态）`,
+            okText: '同步设为私密',
+            cancelText: '仅分类私密',
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false),
+          });
+        });
+      }
+    }
+
+    savingRef.current = true;
     setSaving(true);
 
     try {
@@ -92,39 +128,22 @@ export default function CategoryForm() {
       };
 
       if (isEdit && categoryId) {
-        const { error } = await supabase.from('categories').update(payload).eq('id', categoryId);
+        const { data: updated, error } = await supabase
+          .from('categories')
+          .update(payload)
+          .eq('id', categoryId)
+          .select('id');
         if (error) throw error;
+        if (!updated || updated.length === 0) {
+          throw new Error('该分类不存在，可能已被删除');
+        }
 
-        // 仅当分类从公开变为私密时，提示是否同步将旗下公开链接设为私密：
-        // 分类私密不会自动级联到链接行，不一致会导致私密链接出现在今日热门等公开位置
-        if (isPrivate && !originalIsPrivate) {
-          const { data: publicLinks, error: queryError } = await supabase
+        if (syncPrivate && publicLinkIds.length > 0) {
+          const { error: linkError } = await supabase
             .from('links')
-            .select('id')
-            .eq('category_id', categoryId)
-            .eq('is_private', false);
-          if (queryError) throw queryError;
-
-          const publicLinkIds = (publicLinks || []).map((link) => link.id);
-          if (publicLinkIds.length > 0) {
-            const syncPrivate = await new Promise<boolean>((resolve) => {
-              Modal.confirm({
-                title: '同步设为私密？',
-                content: `该分类下还有 ${publicLinkIds.length} 个公开链接，是否同步将它们设为私密？（仅设分类私密不会影响链接自身的公开状态）`,
-                okText: '同步设为私密',
-                cancelText: '仅分类私密',
-                onOk: () => resolve(true),
-                onCancel: () => resolve(false),
-              });
-            });
-            if (syncPrivate) {
-              const { error: linkError } = await supabase
-                .from('links')
-                .update({ is_private: true })
-                .in('id', publicLinkIds);
-              if (linkError) throw linkError;
-            }
-          }
+            .update({ is_private: true })
+            .in('id', publicLinkIds);
+          if (linkError) throw linkError;
         }
 
         Toast.success('分类已更新');
@@ -140,6 +159,7 @@ export default function CategoryForm() {
       const message = error instanceof Error ? error.message : '保存失败，请重试';
       Toast.error(message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

@@ -1,6 +1,6 @@
 export default function AdminBrand({ compact = false }: { compact?: boolean }) {
   return (
-    <span className={`admin-brand${compact ? ' admin-brand-compact' : ''}`}>
+    <span className="admin-brand">
       <span className="admin-brand-mark" aria-hidden="true">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
           <path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.5L6 20V5.5a1 1 0 0 1 1-1Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />

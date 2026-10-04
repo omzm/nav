@@ -121,7 +121,8 @@ export default function AuthDiagnostic() {
         checks.push({
           label: 'Session Token',
           status: 'info',
-          detail: `access_token 前 30 位：${session.access_token.substring(0, 30)}...`,
+          // 安全起见只展示元数据，不展示 token 明文（截屏即泄露）
+          detail: `已签发（长度 ${session.access_token.length} 位，前缀 ${session.access_token.substring(0, 4)}…）`,
         });
         checks.push({
           label: 'Token 过期时间',
@@ -327,9 +328,10 @@ export default function AuthDiagnostic() {
                   <Space vertical align="start" style={{ width: '100%' }}>
                     {cookies.map((cookie) => {
                       const name = cookie.split('=')[0];
+                      const valueLength = cookie.substring(name.length + 1).length;
                       return (
                         <Text key={cookie} code style={{ wordBreak: 'break-all', whiteSpace: 'normal' }}>
-                          {name} = {cookie.substring(name.length + 1).substring(0, 60)}...
+                          {name}（{valueLength} 位，已脱敏）
                         </Text>
                       );
                     })}

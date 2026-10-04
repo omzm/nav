@@ -9,7 +9,7 @@ interface CategorySectionProps {
 
 function CategorySection({ category }: CategorySectionProps) {
   return (
-    <section id={`category-${category.id}`} className="mb-8 sm:mb-10 lg:mb-12 animate-fade-in scroll-mt-4">
+    <section id={`category-${category.id}`} className="mb-8 sm:mb-10 lg:mb-12 animate-fade-in scroll-mt-14">
       <div className="flex items-center space-x-2 sm:space-x-2.5 mb-3 sm:mb-4 group">
         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-300">
           <CategoryIcon icon={category.icon} className="text-sm sm:text-base" />

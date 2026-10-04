@@ -77,7 +77,7 @@ export default function CategoriesPage() {
       Toast.success('分类已删除');
       setCategoryToDelete(null);
       await invalidateHomeCache();
-      await loadData(true);
+      await loadData(true, { silent: true });
     } catch (error) {
       console.error('删除分类失败:', error);
       Toast.error('删除分类失败，请稍后重试');
@@ -114,11 +114,11 @@ export default function CategoriesPage() {
         if (error) throw error;
         Toast.success('分类排序已保存');
         await invalidateHomeCache();
-        await loadData(true);
+        await loadData(true, { silent: true });
       } catch (error) {
         console.error('移动分类排序失败:', error);
         Toast.error('移动失败，已重新加载数据');
-        await loadData(true);
+        await loadData(true, { silent: true });
       }
     },
     [isFiltering, categories, setCategories, invalidateHomeCache, loadData]
@@ -142,7 +142,9 @@ export default function CategoriesPage() {
 
     const nextCategories = [...orderedCategories];
     const [movedCategory] = nextCategories.splice(sourceIndex, 1);
-    nextCategories.splice(targetIndex, 0, movedCategory);
+    // 移除源行后，向下拖时目标下标前移 1，需修正插入位置（向上拖不受影响）
+    const insertAt = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+    nextCategories.splice(insertAt, 0, movedCategory);
 
     const normalizedCategories = nextCategories.map((category, index) => ({
       ...category,
@@ -160,11 +162,11 @@ export default function CategoriesPage() {
 
       Toast.success('分类排序已保存');
       await invalidateHomeCache();
-      await loadData(true);
+      await loadData(true, { silent: true });
     } catch (error) {
       console.error('保存分类排序失败:', error);
       Toast.error('保存排序失败，已重新加载数据');
-      await loadData(true);
+      await loadData(true, { silent: true });
     }
   };
 
@@ -270,8 +272,15 @@ export default function CategoriesPage() {
                 return {
                   draggable: !isFiltering,
                   className: 'admin-draggable-row',
-                  onDragStart: () => {
+                  onDragStart: (event) => {
                     dragItem.current = record.id;
+                    // Firefox 要求 dataTransfer 写入数据才会触发拖拽
+                    try {
+                      event.dataTransfer?.setData('text/plain', record.id);
+                      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+                    } catch {
+                      // 忽略不支持 dataTransfer 的环境
+                    }
                   },
                   onDragEnter: () => {
                     dragOverItem.current = record.id;
@@ -369,7 +378,7 @@ export default function CategoriesPage() {
             )}
           </div>
           )}
-          <div className="admin-table-note"><IconHandle aria-hidden="true" /><span>{isFiltering ? '清除筛选后，可拖动表格行调整分类在首页的顺序。' : '拖动表格行，即可调整分类在首页的顺序。'}</span></div>
+          <div className="admin-table-note"><IconHandle aria-hidden="true" /><span>{isFiltering ? '清除筛选后，可调整分类在首页的顺序。' : (isMobile ? '用卡片上的上移 / 下移按钮，即可调整分类在首页的顺序。' : '拖动表格行，即可调整分类在首页的顺序。')}</span></div>
         </Card>
       </div>
 
