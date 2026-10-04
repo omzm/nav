@@ -206,6 +206,15 @@ a.admin-cell-title:hover { color: var(--admin-primary); }
 /* 批量操作条：多选后出现在筛选行下方 */
 .admin-batch-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; background: var(--semi-color-primary-light-default); border: 1px solid var(--semi-color-border); border-radius: 8px; }
 .admin-batch-divider { width: 1px; height: 20px; background: var(--semi-color-border); }
+/* 手机卡片第二行：上移/下移，平分宽度方便触控 */
+.admin-mobile-card-sort { margin-top: 8px; }
+.admin-mobile-card-sort .semi-button { flex: 1; }
+/* 危险操作按钮：明确的红色（手机卡片、批量工具条） */
+.admin-mobile-card-actions .semi-button-danger,
+.admin-batch-bar .semi-button-danger { color: #d92d20; }
+.admin-mobile-card-actions .semi-button-danger:hover,
+.admin-batch-bar .semi-button-danger:hover { color: #b42318; background: #fef3f2; }
+.admin-batch-bar .semi-button-light.semi-button-danger { background: #fef3f2; border: 1px solid #f3c2bd; }
 .admin-draggable-row { cursor: grab; }
 .admin-draggable-row:active { cursor: grabbing; }
 .admin-drag-handle { color: #b2bccb; }

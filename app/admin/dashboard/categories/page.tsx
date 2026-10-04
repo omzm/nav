@@ -320,24 +320,6 @@ export default function CategoriesPage() {
                       >
                         查看链接
                       </Button>
-                      {!isFiltering && (
-                        <>
-                          <Button
-                            size="small"
-                            icon={<IconChevronUp aria-hidden="true" />}
-                            aria-label={'上移 ' + category.name}
-                            title="上移"
-                            onClick={() => void moveCategory(category.id, -1)}
-                          />
-                          <Button
-                            size="small"
-                            icon={<IconChevronDown aria-hidden="true" />}
-                            aria-label={'下移 ' + category.name}
-                            title="下移"
-                            onClick={() => void moveCategory(category.id, 1)}
-                          />
-                        </>
-                      )}
                       <Button
                         size="small"
                         icon={<IconEdit aria-hidden="true" />}
@@ -356,6 +338,24 @@ export default function CategoriesPage() {
                         删除
                       </Button>
                     </div>
+                    {!isFiltering && (
+                      <div className="admin-mobile-card-actions admin-mobile-card-sort">
+                        <Button
+                          size="small"
+                          icon={<IconChevronUp aria-hidden="true" />}
+                          onClick={() => void moveCategory(category.id, -1)}
+                        >
+                          上移
+                        </Button>
+                        <Button
+                          size="small"
+                          icon={<IconChevronDown aria-hidden="true" />}
+                          onClick={() => void moveCategory(category.id, 1)}
+                        >
+                          下移
+                        </Button>
+                      </div>
+                    )}
                   </article>
                 );
               })

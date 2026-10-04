@@ -581,26 +581,6 @@ export default function LinksPage() {
                       >
                         打开
                       </Button>
-                      {canSort && (
-                        <>
-                          <Button
-                            size="small"
-                            icon={<IconChevronUp aria-hidden="true" />}
-                            aria-label={'上移 ' + link.title}
-                            title="上移"
-                            disabled={sortIndex <= 0}
-                            onClick={() => void moveLink(link.id, -1)}
-                          />
-                          <Button
-                            size="small"
-                            icon={<IconChevronDown aria-hidden="true" />}
-                            aria-label={'下移 ' + link.title}
-                            title="下移"
-                            disabled={sortIndex < 0 || sortIndex >= filteredLinks.length - 1}
-                            onClick={() => void moveLink(link.id, 1)}
-                          />
-                        </>
-                      )}
                       <Button
                         size="small"
                         icon={<IconEdit aria-hidden="true" />}
@@ -619,6 +599,26 @@ export default function LinksPage() {
                         删除
                       </Button>
                     </div>
+                    {canSort && (
+                      <div className="admin-mobile-card-actions admin-mobile-card-sort">
+                        <Button
+                          size="small"
+                          icon={<IconChevronUp aria-hidden="true" />}
+                          disabled={sortIndex <= 0}
+                          onClick={() => void moveLink(link.id, -1)}
+                        >
+                          上移
+                        </Button>
+                        <Button
+                          size="small"
+                          icon={<IconChevronDown aria-hidden="true" />}
+                          disabled={sortIndex < 0 || sortIndex >= filteredLinks.length - 1}
+                          onClick={() => void moveLink(link.id, 1)}
+                        >
+                          下移
+                        </Button>
+                      </div>
+                    )}
                   </article>
                 );
               })
