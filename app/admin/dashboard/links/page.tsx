@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Checkbox,
+  Dropdown,
   Empty,
   Input,
   Modal,
@@ -25,6 +26,7 @@ import {
   IconFilter,
   IconHandle,
   IconLock,
+  IconMore,
   IconPlus,
   IconRefresh,
   IconSearch,
@@ -554,51 +556,57 @@ export default function LinksPage() {
                       />
                       <div className="admin-icon-preview"><LinkIcon link={link} /></div>
                       <div className="admin-mobile-card-title">
-                        <Text strong>{link.title}</Text>
-                        <Text type="tertiary" size="small">
-                          排序 #{link.order}
+                        <span className="admin-mobile-card-title-row">
+                          <Text strong className="admin-mobile-card-title-text">{link.title}</Text>
+                          {link.is_private && <Tag color="orange" size="small">私密</Tag>}
+                        </span>
+                        <Text type="tertiary" size="small" className="admin-mobile-card-meta">
+                          {category ? category.name : '分类不存在'} · 排序 #{link.order}
                         </Text>
                       </div>
-                      {link.is_private && <Tag color="orange">私密</Tag>}
+                      <Dropdown
+                        trigger="click"
+                        position="bottomRight"
+                        menu={[
+                          {
+                            node: 'item',
+                            name: '打开',
+                            icon: <IconExternalOpen aria-hidden="true" />,
+                            onClick: () => window.open(link.url, '_blank', 'noopener,noreferrer'),
+                          },
+                          {
+                            node: 'item',
+                            name: '编辑',
+                            icon: <IconEdit aria-hidden="true" />,
+                            onClick: () => router.push(`/admin/dashboard/link/${link.id}`),
+                          },
+                          {
+                            node: 'item',
+                            name: '删除',
+                            icon: <IconDelete aria-hidden="true" />,
+                            type: 'danger',
+                            onClick: () => confirmDelete(link),
+                          },
+                        ]}
+                      >
+                        <Button
+                          size="small"
+                          theme="borderless"
+                          icon={<IconMore aria-hidden="true" />}
+                          aria-label={'更多操作：' + link.title}
+                        />
+                      </Dropdown>
                     </div>
 
-                    <Text type="tertiary" size="small" className="admin-mobile-card-text">
-                      {link.description}
-                    </Text>
-                    <Text type="tertiary" size="small" className="admin-mobile-card-text">
+                    {link.description ? (
+                      <Text type="tertiary" size="small" className="admin-mobile-card-text">
+                        {link.description}
+                      </Text>
+                    ) : null}
+                    <Text type="tertiary" size="small" className="admin-mobile-card-text admin-mobile-card-url">
                       {link.url}
                     </Text>
 
-                    <div className="admin-mobile-card-tags">
-                      {category ? <Tag>{category.name}</Tag> : <Tag color="red">分类不存在</Tag>}
-                    </div>
-
-                    <div className="admin-mobile-card-actions">
-                      <Button
-                        size="small"
-                        icon={<IconExternalOpen aria-hidden="true" />}
-                        onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
-                      >
-                        打开
-                      </Button>
-                      <Button
-                        size="small"
-                        icon={<IconEdit aria-hidden="true" />}
-                        onClick={() => router.push(`/admin/dashboard/link/${link.id}`)}
-                      >
-                        编辑
-                      </Button>
-                      <Button
-                        size="small"
-                        type="danger"
-                        theme="borderless"
-                        icon={<IconDelete aria-hidden="true" />}
-                        loading={deletingId === link.id}
-                        onClick={() => confirmDelete(link)}
-                      >
-                        删除
-                      </Button>
-                    </div>
                     {canSort && (
                       <div className="admin-mobile-card-actions admin-mobile-card-sort">
                         <Button
