@@ -22,7 +22,7 @@ export default function Loading() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="relative overflow-hidden border-b border-gray-200 dark:border-gray-700/50 shadow-sm">
           <div
-            className="absolute inset-0 bg-cover bg-center bg-gradient-to-br from-blue-400 to-indigo-600"
+            className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: "url('/api/bing-wallpaper')" }}
           />
           <div className="relative px-4 py-3">
@@ -52,7 +52,7 @@ export default function Loading() {
                     <div className="h-3 w-14 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5 sm:gap-3">
+                <div className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5 sm:gap-3">
                   {Array.from({ length: 8 }).map((_, cardIndex) => (
                     <div
                       key={cardIndex}

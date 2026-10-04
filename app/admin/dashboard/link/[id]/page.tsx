@@ -80,7 +80,7 @@ export default function LinkForm() {
   const [iconError, setIconError] = useState(false);
   const [duplicateDialog, setDuplicateDialog] = useState<{
     open: boolean;
-    existingLink: NavLink | null;
+    existingLink: { id: string; url: string; title: string } | null;
     continueAdding: boolean;
   }>({ open: false, existingLink: null, continueAdding: false });
 
@@ -95,6 +95,8 @@ export default function LinkForm() {
   const iconIsEmoji = Boolean(icon.trim() && isEmojiIcon(icon.trim()));
   // 从分类页"添加链接"带过来的预设分类（?category=），只在新建时应用一次
   const presetCategoryApplied = useRef(false);
+  // 同步互斥：防止快速双击导致重复提交（setState 是异步的，靠 state 守不住）
+  const savingRef = useRef(false);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -274,19 +276,20 @@ export default function LinkForm() {
     }
   };
 
-  const checkDuplicateUrl = async (checkUrl: string): Promise<NavLink | null> => {
+  const checkDuplicateUrl = async (checkUrl: string): Promise<{ id: string; url: string; title: string } | null> => {
     try {
       const normalizedInput = normalizeUrlForCompare(checkUrl);
 
-      // 全量拉取后做规范化比对：库中存的可能是带尾斜杠的变体，精确匹配查不到
-      const { data, error } = await supabase.from('links').select('*');
+      // 存量 URL 已规范化（host 小写、无尾斜杠），精确匹配即可；自排除编辑中的行
+      const { data, error } = await supabase
+        .from('links')
+        .select('id,url,title')
+        .eq('url', normalizedInput)
+        .limit(2);
 
       if (error) throw error;
 
-      const duplicate = (data || []).find((link) => {
-        if (isEdit && link.id === linkId) return false;
-        return normalizeUrlForCompare(link.url) === normalizedInput;
-      });
+      const duplicate = (data || []).find((link) => !(isEdit && link.id === linkId));
 
       return duplicate || null;
     } catch (error) {
@@ -297,6 +300,9 @@ export default function LinkForm() {
   };
 
   const saveLink = async (continueAdding: boolean) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+
     if (continueAdding) {
       setSaveAndContinueLoading(true);
     } else {
@@ -307,7 +313,7 @@ export default function LinkForm() {
       const linkData = {
         category_id: categoryId,
         title: title.trim(),
-        url: url.trim(),
+        url: normalizeUrlForCompare(url.trim()),
         description: description.trim(),
         icon: icon.trim() || null,
         order,
@@ -315,8 +321,15 @@ export default function LinkForm() {
       };
 
       if (isEdit && linkId) {
-        const { error } = await supabase.from('links').update(linkData).eq('id', linkId);
+        const { data: updated, error } = await supabase
+          .from('links')
+          .update(linkData)
+          .eq('id', linkId)
+          .select('id');
         if (error) throw error;
+        if (!updated || updated.length === 0) {
+          throw new Error('该链接不存在，可能已被删除');
+        }
         Toast.success('链接已更新');
       } else {
         const { error } = await supabase.from('links').insert([linkData]);
@@ -335,6 +348,7 @@ export default function LinkForm() {
       console.error('保存链接失败:', error);
       Toast.error('保存失败，请重试');
     } finally {
+      savingRef.current = false;
       setSaving(false);
       setSaveAndContinueLoading(false);
     }
@@ -343,26 +357,25 @@ export default function LinkForm() {
   const validateAndSave = async (continueAdding = false) => {
     if (!validateForm()) return;
 
-    if (!isEdit) {
-      if (continueAdding) {
-        setSaveAndContinueLoading(true);
-      } else {
-        setSaving(true);
-      }
+    // 新建与编辑都做 URL 去重检查（编辑时排除自身）
+    if (continueAdding) {
+      setSaveAndContinueLoading(true);
+    } else {
+      setSaving(true);
+    }
 
-      const existing = await checkDuplicateUrl(url.trim());
+    const existing = await checkDuplicateUrl(url.trim());
 
-      setSaving(false);
-      setSaveAndContinueLoading(false);
+    setSaving(false);
+    setSaveAndContinueLoading(false);
 
-      if (existing) {
-        setDuplicateDialog({
-          open: true,
-          existingLink: existing,
-          continueAdding,
-        });
-        return;
-      }
+    if (existing) {
+      setDuplicateDialog({
+        open: true,
+        existingLink: existing,
+        continueAdding,
+      });
+      return;
     }
 
     await saveLink(continueAdding);

@@ -110,11 +110,13 @@ export async function submitLink(input: SubmitLinkInput): Promise<SubmitLinkResu
     return { ok: false, error: 'invalid_category' };
   }
 
-  // 频率限制：全站每小时最多提交 20 条
+  // 频率限制：访客提交通道每小时最多 20 条（只统计 source='public'，
+  // 后台管理员添加的不计入，避免管理员批量整理时误封访客提交）
   const oneHourAgo = new Date(Date.now() - 3600_000).toISOString();
   const { count: recentCount, error: countError } = await supabase
     .from('links')
     .select('id', { count: 'exact', head: true })
+    .eq('source', 'public')
     .gte('created_at', oneHourAgo);
   if (countError) {
     console.error('提交收录：频率检查失败', countError);
@@ -124,14 +126,18 @@ export async function submitLink(input: SubmitLinkInput): Promise<SubmitLinkResu
     return { ok: false, error: 'rate_limited' };
   }
 
-  // 去重：规范化后比对
+  // 去重：URL 入库即规范化（host 小写、无尾斜杠），精确匹配即可，无需全表拉取
   const normalized = normalizeUrlForCompare(rawUrl);
-  const { data: existingLinks, error: dupError } = await supabase.from('links').select('url');
+  const { data: existing, error: dupError } = await supabase
+    .from('links')
+    .select('id')
+    .eq('url', normalized)
+    .limit(1);
   if (dupError) {
     console.error('提交收录：去重检查失败', dupError);
     return { ok: false, error: 'server_error' };
   }
-  if ((existingLinks || []).some((link) => normalizeUrlForCompare(link.url) === normalized)) {
+  if ((existing || []).length > 0) {
     return { ok: false, error: 'duplicate' };
   }
 
@@ -147,11 +153,12 @@ export async function submitLink(input: SubmitLinkInput): Promise<SubmitLinkResu
   const { error: insertError } = await supabase.from('links').insert({
     category_id: categoryId,
     title,
-    url: rawUrl,
+    url: normalized,
     description,
     icon: '',
     order: (categoryCount || 0) + 1,
     is_private: Boolean(category.is_private),
+    source: 'public',
   });
   if (insertError) {
     console.error('提交收录：写入失败', insertError);

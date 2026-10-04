@@ -50,6 +50,16 @@ function evictOldestFromCache() {
   }
 }
 
+export function removeFaviconFromStorage(domain: string) {
+  if (!domain) return;
+  faviconCache.delete(domain);
+  try {
+    localStorage.removeItem(FAVICON_CACHE_KEY_PREFIX + domain);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 export function getFaviconUrl(url: string): string {
   const domain = extractDomain(url);
   if (!domain) return '';

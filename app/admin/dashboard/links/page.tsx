@@ -182,7 +182,7 @@ export default function LinksPage() {
       Toast.success('链接已删除');
       setLinkToDelete(null);
       await invalidateHomeCache();
-      await loadData(true);
+      await loadData(true, { silent: true });
     } catch (error) {
       console.error('删除链接失败:', error);
       Toast.error('删除链接失败，请稍后重试');
@@ -206,7 +206,7 @@ export default function LinksPage() {
       setSelectedIds([]);
       setShowBatchDelete(false);
       await invalidateHomeCache();
-      await loadData(true);
+      await loadData(true, { silent: true });
     } catch (error) {
       console.error('批量删除链接失败:', error);
       Toast.error('批量删除失败，请稍后重试');
@@ -217,6 +217,16 @@ export default function LinksPage() {
 
   const handleBatchVisibility = async (isPrivate: boolean) => {
     if (selectedIds.length === 0) return;
+    const selectedLinks = links.filter((link) => selectedIds.includes(link.id));
+    // 私密分类下的链接有效可见性由分类决定：设为公开不会生效，提前说明避免误导
+    let shadowedCount = 0;
+    if (!isPrivate && selectedLinks.length > 0) {
+      shadowedCount = selectedLinks.filter((link) => categoryMap.get(link.category_id)?.is_private).length;
+      if (shadowedCount === selectedLinks.length) {
+        Toast.warning('所选链接都在私密分类下，设为公开不会生效（请先将分类设为公开）');
+        return;
+      }
+    }
     setBatchBusy(true);
     try {
       const { error } = await supabase
@@ -224,10 +234,14 @@ export default function LinksPage() {
         .update({ is_private: isPrivate })
         .in('id', selectedIds);
       if (error) throw error;
-      Toast.success(`已将 ${selectedIds.length} 条链接设为${isPrivate ? '私密' : '公开'}`);
+      if (shadowedCount > 0) {
+        Toast.warning(`已设置，其中 ${shadowedCount} 条位于私密分类下仍显示为私密`);
+      } else {
+        Toast.success(`已将 ${selectedIds.length} 条链接设为${isPrivate ? '私密' : '公开'}`);
+      }
       setSelectedIds([]);
       await invalidateHomeCache();
-      await loadData(true);
+      await loadData(true, { silent: true });
     } catch (error) {
       console.error('批量设置可见性失败:', error);
       Toast.error('操作失败，请稍后重试');
@@ -254,6 +268,8 @@ export default function LinksPage() {
     }
 
     setBatchBusy(true);
+    // 标记分类更新是否已成功：若后续排序失败，链接实际已移动，提示必须准确
+    let moved = false;
     try {
       // 1. 一次更新分类与可见性（可见性与目标分类保持一致，避免私密分类下出现公开链接）
       const { error: updateError } = await supabase
@@ -261,6 +277,7 @@ export default function LinksPage() {
         .update({ category_id: moveTargetId, is_private: Boolean(targetCategory.is_private) })
         .in('id', selectedIds);
       if (updateError) throw updateError;
+      moved = true;
 
       // 2. 重排目标分类：原有链接按序 + 移入的链接按原顺序追加
       const { data: targetLinks, error: queryError } = await supabase
@@ -284,10 +301,16 @@ export default function LinksPage() {
       setShowMoveModal(false);
       setMoveTargetId('');
       await invalidateHomeCache();
-      await loadData(true);
+      await loadData(true, { silent: true });
     } catch (error) {
       console.error('批量移动链接失败:', error);
-      Toast.error('移动失败，请稍后重试');
+      if (moved) {
+        // 分类已更新成功：刷新展示真实状态，并准确告知用户排序未保存
+        Toast.error('链接已移动，但排序保存失败，请手动调整顺序');
+        await loadData(true, { silent: true });
+      } else {
+        Toast.error('移动失败，请稍后重试');
+      }
     } finally {
       setBatchBusy(false);
     }
@@ -315,11 +338,11 @@ export default function LinksPage() {
         });
         if (error) throw error;
         await invalidateHomeCache();
-        await loadData(true);
+        await loadData(true, { silent: true });
       } catch (error) {
         console.error('移动链接排序失败:', error);
         Toast.error('移动失败，已重新加载数据');
-        await loadData(true);
+        await loadData(true, { silent: true });
       }
     },
     [canSort, selectedCategory, links, setLinks, invalidateHomeCache, loadData]
@@ -343,7 +366,9 @@ export default function LinksPage() {
 
     const nextCategoryLinks = [...categoryLinks];
     const [movedLink] = nextCategoryLinks.splice(sourceIndex, 1);
-    nextCategoryLinks.splice(targetIndex, 0, movedLink);
+    // 移除源行后，向下拖时目标下标前移 1，需修正插入位置（向上拖不受影响）
+    const insertAt = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+    nextCategoryLinks.splice(insertAt, 0, movedLink);
 
     const normalizedLinks = nextCategoryLinks.map((link, index) => ({
       ...link,
@@ -366,11 +391,11 @@ export default function LinksPage() {
 
       Toast.success('链接排序已保存');
       await invalidateHomeCache();
-      await loadData(true);
+      await loadData(true, { silent: true });
     } catch (error) {
       console.error('保存链接排序失败:', error);
       Toast.error('保存排序失败，已重新加载数据');
-      await loadData(true);
+      await loadData(true, { silent: true });
     }
   };
 
@@ -520,8 +545,15 @@ export default function LinksPage() {
                 return {
                   draggable: true,
                   className: 'admin-draggable-row',
-                  onDragStart: () => {
+                  onDragStart: (event) => {
                     dragItem.current = record.id;
+                    // Firefox 要求 dataTransfer 写入数据才会触发拖拽
+                    try {
+                      event.dataTransfer?.setData('text/plain', record.id);
+                      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+                    } catch {
+                      // 忽略不支持 dataTransfer 的环境
+                    }
                   },
                   onDragEnter: () => {
                     dragOverItem.current = record.id;

@@ -235,7 +235,7 @@ a.admin-cell-title:hover { color: var(--admin-primary); }
 .admin-mobile-card-title-row .semi-tag { flex: none; }
 .admin-mobile-card-head > .semi-button { flex: none; width: 30px; height: 30px; padding: 0; color: #8f9aac; }
 .admin-mobile-card-text { overflow-wrap: anywhere; }
-.admin-mobile-card-tags, .admin-mobile-card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-mobile-card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .admin-form-card .semi-card-body { padding: 26px; }
 .admin-form-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(240px, .8fr); gap: 26px; align-items: start; }
@@ -245,10 +245,10 @@ a.admin-cell-title:hover { color: var(--admin-primary); }
 .admin-form-field > .semi-typography:first-child { font-size: 12px; }
 .admin-form-field .semi-input-wrapper, .admin-form-field .semi-select, .admin-form-field .semi-input-number, .admin-form-field .semi-textarea-wrapper { width: 100% !important; }
 .admin-theme .semi-input-number { border: 1px solid #dfe5ee; border-radius: 7px; background: #fff; }
-.admin-theme .semi-input-textarea-wrapper { border: 1px solid #dfe5ee; border-radius: 7px; background: #fff; }
-.admin-theme .semi-input-textarea { background: transparent; }
-.admin-theme .semi-input-number:hover, .admin-theme .semi-input-textarea-wrapper:hover { border-color: #bdc9dc; }
-.admin-theme .semi-input-number:focus-within, .admin-theme .semi-input-textarea-wrapper:focus-within { border-color: var(--admin-primary); box-shadow: 0 0 0 3px #3568d40d; }
+.admin-theme .semi-textarea-wrapper { border: 1px solid #dfe5ee; border-radius: 7px; background: #fff; }
+.admin-theme .semi-textarea { background: transparent; }
+.admin-theme .semi-input-number:hover, .admin-theme .semi-textarea-wrapper:hover { border-color: #bdc9dc; }
+.admin-theme .semi-input-number:focus-within, .admin-theme .semi-textarea-wrapper:focus-within { border-color: var(--admin-primary); box-shadow: 0 0 0 3px #3568d40d; }
 .admin-form-preview-card .semi-card-body, .admin-form-option-card .semi-card-body { padding: 17px; }
 .admin-form-preview-card .semi-space-align-center, .admin-form-option-card .semi-space-align-center { min-width: 0; }
 .admin-form-option-card .semi-space { min-width: 0; }
@@ -340,7 +340,6 @@ a.admin-cell-title:hover { color: var(--admin-primary); }
   .admin-form-card .semi-card-header { padding: 17px 18px; }
   .admin-form-fields { gap: 20px; }
   .admin-form-aside { grid-template-columns: 1fr; }
-  .admin-form-actions { justify-content: stretch; }
   .admin-form-actions > .semi-space-item { flex: 1; }
   .admin-form-actions .semi-button { width: 100%; min-width: 0; }
   .admin-workspace-footer { padding-top: 8px; padding-bottom: 22px; }

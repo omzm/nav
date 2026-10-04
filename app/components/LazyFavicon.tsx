@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { getFallbackFaviconUrl, getFaviconUrl } from '../utils/favicon';
+import { getFallbackFaviconUrl, getFaviconUrl, extractDomain, removeFaviconFromStorage } from '../utils/favicon';
 
 interface LazyFaviconProps {
   url: string;
@@ -52,6 +52,8 @@ export default function LazyFavicon({ url, alt, className, fallback }: LazyFavic
 
   const handleImageError = () => {
     if (!useFallback) {
+      // 主源失败：删掉已持久化的坏 URL，下次重载直接走降级，不再踩坑
+      removeFaviconFromStorage(extractDomain(url));
       setUseFallback(true);
       setImgError(false);
       return;

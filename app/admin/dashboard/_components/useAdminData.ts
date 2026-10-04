@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Toast } from '@douyinfe/semi-ui';
 import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
@@ -14,6 +14,8 @@ export function useAdminData() {
   const [links, setLinks] = useState<NavLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // 请求版本控制：并发 loadData 时只有最新一次能写入 state，避免旧快照覆盖新数据
+  const loadRequestId = useRef(0);
 
   const categoryMap = useMemo(() => {
     return new Map(categories.map((category) => [category.id, category]));
@@ -69,13 +71,16 @@ export function useAdminData() {
     }
   }, []);
 
-  const loadData = useCallback(async (forceRefresh = false) => {
+  const loadData = useCallback(async (forceRefresh = false, options?: { skipCache?: boolean; silent?: boolean }) => {
+    const requestId = ++loadRequestId.current;
+    const isStale = () => requestId !== loadRequestId.current;
+
     try {
       if (forceRefresh) {
         setRefreshing(true);
       }
 
-      if (!forceRefresh) {
+      if (!forceRefresh && !options?.skipCache) {
         // 优先消费 layout 鉴权期间预取的数据（鉴权与查询并行，省一次串行等待）
         const prefetched = consumeAdminPrefetch();
         if (prefetched) {
@@ -87,6 +92,7 @@ export function useAdminData() {
             if (prefetchedCategories.length === 0 && prefetchedLinks.length === 0) {
               throw new Error('suspicious empty prefetch result');
             }
+            if (isStale()) return;
             saveAdminCache(prefetchedCategories, prefetchedLinks);
             setCategories(prefetchedCategories);
             setLinks(prefetchedLinks);
@@ -99,6 +105,7 @@ export function useAdminData() {
 
         const cached = loadAdminCache();
         if (cached) {
+          if (isStale()) return;
           setCategories(cached.categories);
           setLinks(cached.links);
           setLoading(false);
@@ -110,6 +117,8 @@ export function useAdminData() {
         supabase.from('links').select('*').order('order', { ascending: true }),
       ]);
 
+      if (isStale()) return;
+
       if (categoriesResult.error) throw categoriesResult.error;
       if (linksResult.error) throw linksResult.error;
 
@@ -120,7 +129,7 @@ export function useAdminData() {
       setCategories(nextCategories);
       setLinks(nextLinks);
 
-      if (forceRefresh) {
+      if (forceRefresh && !options?.silent) {
         Toast.success('数据已刷新');
       }
     } catch (error) {
@@ -255,9 +264,9 @@ export function useAdminData() {
       });
     };
 
-    // 防抖全量刷新做一致性兜底（也会刷新 sessionStorage 缓存）
+    // 防抖全量刷新做一致性兜底：跳过读缓存，避免旧缓存闪回冲掉乐观更新
     const debouncedLoad = debounce(() => {
-      void loadData();
+      void loadData(false, { skipCache: true });
     }, 400);
 
     // 分类与链接共用一个 channel（之前是两个独立订阅，两次建连往返）

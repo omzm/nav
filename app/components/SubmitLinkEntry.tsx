@@ -75,7 +75,13 @@ export default function SubmitLinkEntry({ categories, enabled, defaultCategoryId
       if (event.key === 'Escape') close();
     };
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    // 弹窗打开时锁定背后页面滚动（与侧边栏行为一致）
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [open, close]);
 
   const handleSubmit = async () => {
@@ -232,6 +238,7 @@ export default function SubmitLinkEntry({ categories, enabled, defaultCategoryId
                     placeholder="请输入提交密码"
                     className={inputClass}
                     autoComplete="off"
+                    autoFocus
                   />
                 </label>
               )}

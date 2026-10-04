@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Input, Toast } from '@douyinfe/semi-ui';
@@ -12,7 +12,7 @@ import {
   isLocalAdminCredentials,
   signInLocalAdmin,
 } from '@/app/lib/local-admin';
-import { establishAdminSession, establishLocalAdminSession } from '@/app/actions/adminSession';
+import { establishAdminSession, establishLocalAdminSession, hasAdminSession } from '@/app/actions/adminSession';
 import AdminBrand from './_components/AdminBrand';
 
 function AdminLoginForm() {
@@ -22,6 +22,19 @@ function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const authError = searchParams.get('error');
+
+  // 已登录直接进工作台，不用重复登录
+  useEffect(() => {
+    let active = true;
+    hasAdminSession()
+      .then((ok) => {
+        if (active && ok) router.replace('/admin/dashboard');
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -50,14 +63,15 @@ function AdminLoginForm() {
       }
 
       if (isLocalCredentials) {
-        signInLocalAdmin();
-        // 本地测试账号同样需要服务端会话（仅开发环境可签发）
+        // 本地测试账号同样需要服务端会话（仅开发环境可签发）：
+        // 先完成服务端校验，成功后再写本地登录标记，避免失败时残留
         const localResult = await establishLocalAdminSession();
 
         if (!localResult.ok) {
           throw new Error(localResult.error || '本地管理会话建立失败');
         }
 
+        signInLocalAdmin();
         Toast.success('本地测试登录成功');
         router.push('/admin/dashboard');
       }
