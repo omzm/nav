@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { HotLink, NavCategory } from '../types';
 import CategoryIcon from './CategoryIcon';
 import LazyFavicon from './LazyFavicon';
+import SubmitLinkEntry, { SubmitCategory } from './SubmitLinkEntry';
 
 interface SidebarProps {
   categories: NavCategory[];
@@ -14,6 +15,7 @@ interface SidebarProps {
   onToggle: () => void;
   hotLinks?: HotLink[];
   totalViewCount?: number;
+  submitEnabled?: boolean;
 }
 
 // 建站日期：如需调整"已运行 N 天"的起始时间，改这里即可
@@ -149,6 +151,7 @@ export default function Sidebar({
   onToggle,
   hotLinks,
   totalViewCount = 0,
+  submitEnabled = false,
 }: SidebarProps) {
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
@@ -165,6 +168,16 @@ export default function Sidebar({
   };
 
   const categoryCountText = useMemo(() => `共 ${categories.length} 个分类`, [categories.length]);
+  // 提交收录弹窗用的分类下拉数据（只取需要的字段）
+  const submitCategories = useMemo<SubmitCategory[]>(
+    () =>
+      categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+        isPrivate: Boolean(category.isPrivate),
+      })),
+    [categories]
+  );
   const totalViewText = useMemo(
     () => `累计浏览 ${totalViewCount.toLocaleString('zh-CN')} 次`,
     [totalViewCount]
@@ -211,6 +224,11 @@ export default function Sidebar({
         <HotLinksPanel hotLinks={hotLinks} />
 
         <div className="p-2.5 sm:p-3 border-t border-gray-200 dark:border-gray-700/50 space-y-2">
+          <SubmitLinkEntry
+            categories={submitCategories}
+            enabled={submitEnabled}
+            defaultCategoryId={selectedCategory}
+          />
           <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
             {categoryCountText}
           </div>
