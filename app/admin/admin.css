@@ -243,6 +243,8 @@ a.admin-cell-title:hover { color: var(--admin-primary); }
 .admin-form-aside { gap: 16px; }
 .admin-form-field { display: block; min-width: 0; }
 .admin-form-field > .semi-typography:first-child { font-size: 12px; }
+/* 必填项标记：与 validateForm 的必填校验保持一致 */
+.admin-required-mark { color: #e6252d; margin-right: 4px; font-weight: 700; }
 .admin-form-field .semi-input-wrapper, .admin-form-field .semi-select, .admin-form-field .semi-input-number, .admin-form-field .semi-textarea-wrapper { width: 100% !important; }
 .admin-theme .semi-input-number { border: 1px solid #dfe5ee; border-radius: 7px; background: #fff; }
 .admin-theme .semi-textarea-wrapper { border: 1px solid #dfe5ee; border-radius: 7px; background: #fff; }
