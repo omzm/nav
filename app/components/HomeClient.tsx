@@ -17,9 +17,10 @@ import type { NavCategory, NavSnapshot } from '../types';
 
 interface HomeClientProps {
   snapshot: NavSnapshot;
+  submitEnabled: boolean;
 }
 
-export default function HomeClient({ snapshot }: HomeClientProps) {
+export default function HomeClient({ snapshot, submitEnabled }: HomeClientProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   // 每日一言：客户端挂载后异步拉取，不阻塞首屏；加载前用占位符撑住高度避免布局抖动
@@ -321,6 +322,7 @@ export default function HomeClient({ snapshot }: HomeClientProps) {
         onToggle={() => setIsSidebarOpen((value) => !value)}
         hotLinks={snapshot.hotLinks}
         totalViewCount={snapshot.stats.totalViewCount}
+        submitEnabled={submitEnabled}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
