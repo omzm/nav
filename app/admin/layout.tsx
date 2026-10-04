@@ -121,22 +121,35 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         if (!authed) {
           await supabase.auth.signOut();
           signOutLocalAdmin();
+          await clearAdminSession();
           if (active) router.replace('/admin?error=auth');
           return;
         }
 
         if (error || !currentUser) {
+          // 服务端会话有效但 Supabase 客户端会话缺失/失效：
+          // 必须先清掉服务端会话，否则登录页的"已登录直达工作台"
+          // 会把用户弹回工作台，形成 /admin ↔ /admin/dashboard 死循环
+          await clearAdminSession();
+          await supabase.auth.signOut();
           if (active) router.replace('/admin');
           return;
         }
         if ((currentUser.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
           await supabase.auth.signOut();
+          await clearAdminSession();
           if (active) router.replace('/admin');
           return;
         }
         if (active) setUser(currentUser);
       } catch (error) {
         console.error('验证后台登录状态失败:', error);
+        // 鉴权异常同样清掉可能残留的服务端会话，避免登录页弹回死循环
+        try {
+          await clearAdminSession();
+        } catch {
+          /* 忽略清理失败，不影响跳转 */
+        }
         if (active) router.replace('/admin');
       } finally {
         if (active) setChecking(false);
