@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { submitLink } from '@/app/actions/submitLink';
 
 export interface SubmitCategory {
@@ -38,6 +39,12 @@ export default function SubmitLinkEntry({ categories, enabled, defaultCategoryId
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [successCount, setSuccessCount] = useState(0);
+  // portal 需要 document，挂载后才渲染弹窗（SSR 安全）
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 同一标签页内记住密码，免得每提交一条都要输一次；关掉标签页即失效
   useEffect(() => {
@@ -168,14 +175,15 @@ export default function SubmitLinkEntry({ categories, enabled, defaultCategoryId
         提交收录
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={close}
-          role="dialog"
-          aria-modal="true"
-          aria-label="提交收录"
-        >
+      {open && mounted
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+              onClick={close}
+              role="dialog"
+              aria-modal="true"
+              aria-label="提交收录"
+            >
           <div
             className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl overflow-hidden"
             onClick={(event) => event.stopPropagation()}
@@ -302,8 +310,10 @@ export default function SubmitLinkEntry({ categories, enabled, defaultCategoryId
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+            document.body
+          )
+        : null}
     </>
   );
 }
