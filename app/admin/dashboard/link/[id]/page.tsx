@@ -460,7 +460,7 @@ export default function LinkForm() {
           <div className="admin-form-grid">
             <div className="admin-form-fields">
             <label className="admin-form-field">
-              <Text strong>所属分类</Text>
+              <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>所属分类</Text>
               <Select
                 value={categoryId}
                 onChange={(value) => void handleCategoryChange(value ? String(value) : '')}
@@ -481,7 +481,7 @@ export default function LinkForm() {
             </label>
 
             <label className="admin-form-field">
-              <Text strong>网站名称</Text>
+              <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>网站名称</Text>
               <Input
                 value={title}
                 onChange={setTitle}
@@ -494,7 +494,7 @@ export default function LinkForm() {
             </label>
 
             <label className="admin-form-field">
-              <Text strong>网站 URL</Text>
+              <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>网站 URL</Text>
               <Input
                 value={url}
                 onChange={setUrl}
@@ -507,7 +507,7 @@ export default function LinkForm() {
             </label>
 
             <label className="admin-form-field">
-              <Text strong>网站描述</Text>
+              <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>网站描述</Text>
               <TextArea
                 value={description}
                 onChange={setDescription}

@@ -194,7 +194,7 @@ export default function CategoryForm() {
             <div className="admin-form-grid">
               <div className="admin-form-fields">
               <label className="admin-form-field">
-                <Text strong>分类名称</Text>
+                <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>分类名称</Text>
                 <Input
                   value={name}
                   onChange={setName}
@@ -208,7 +208,7 @@ export default function CategoryForm() {
               </label>
 
               <div className="admin-form-field">
-                <Text strong>分类图标</Text>
+                <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>分类图标</Text>
                 <IconPicker value={icon} onChange={setIcon} />
               </div>
 
