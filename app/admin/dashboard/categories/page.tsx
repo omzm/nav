@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Button,
   Card,
+  Dropdown,
   Empty,
   Input,
   Modal,
@@ -21,6 +22,7 @@ import {
   IconEdit,
   IconEyeOpened,
   IconHandle,
+  IconMore,
   IconPlus,
   IconRefresh,
   IconSearch,
@@ -299,45 +301,48 @@ export default function CategoriesPage() {
                         <CategoryIcon icon={category.icon} />
                       </div>
                       <div className="admin-mobile-card-title">
-                        <Text strong>{category.name}</Text>
-                        <Text type="tertiary" size="small">
-                          排序 #{category.order}
+                        <span className="admin-mobile-card-title-row">
+                          <Text strong className="admin-mobile-card-title-text">{category.name}</Text>
+                          {category.is_private && <Tag color="orange" size="small">私密</Tag>}
+                        </span>
+                        <Text type="tertiary" size="small" className="admin-mobile-card-meta">
+                          {count.total} 个链接{count.privateCount > 0 ? ` · 私密 ${count.privateCount}` : ''} · 排序 #{category.order}
                         </Text>
                       </div>
-                      {category.is_private && <Tag color="orange">私密</Tag>}
+                      <Dropdown
+                        trigger="click"
+                        position="bottomRight"
+                        menu={[
+                          {
+                            node: 'item',
+                            name: '查看链接',
+                            icon: <IconEyeOpened aria-hidden="true" />,
+                            onClick: () => router.push(`/admin/dashboard/links?category=${category.id}`),
+                          },
+                          {
+                            node: 'item',
+                            name: '编辑',
+                            icon: <IconEdit aria-hidden="true" />,
+                            onClick: () => router.push(`/admin/dashboard/category/${category.id}`),
+                          },
+                          {
+                            node: 'item',
+                            name: '删除',
+                            icon: <IconDelete aria-hidden="true" />,
+                            type: 'danger',
+                            onClick: () => confirmDelete(category),
+                          },
+                        ]}
+                      >
+                        <Button
+                          size="small"
+                          theme="borderless"
+                          icon={<IconMore aria-hidden="true" />}
+                          aria-label={'更多操作：' + category.name}
+                        />
+                      </Dropdown>
                     </div>
 
-                    <div className="admin-mobile-card-tags">
-                      <Tag>{count.total} 个链接</Tag>
-                      {count.privateCount > 0 && <Tag color="orange">私密 {count.privateCount}</Tag>}
-                    </div>
-
-                    <div className="admin-mobile-card-actions">
-                      <Button
-                        size="small"
-                        icon={<IconEyeOpened aria-hidden="true" />}
-                        onClick={() => router.push(`/admin/dashboard/links?category=${category.id}`)}
-                      >
-                        查看链接
-                      </Button>
-                      <Button
-                        size="small"
-                        icon={<IconEdit aria-hidden="true" />}
-                        onClick={() => router.push(`/admin/dashboard/category/${category.id}`)}
-                      >
-                        编辑
-                      </Button>
-                      <Button
-                        size="small"
-                        type="danger"
-                        theme="borderless"
-                        icon={<IconDelete aria-hidden="true" />}
-                        loading={deletingId === category.id}
-                        onClick={() => confirmDelete(category)}
-                      >
-                        删除
-                      </Button>
-                    </div>
                     {!isFiltering && (
                       <div className="admin-mobile-card-actions admin-mobile-card-sort">
                         <Button
