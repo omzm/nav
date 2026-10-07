@@ -14,13 +14,13 @@ import {
   Toast,
   Typography,
 } from '@douyinfe/semi-ui';
-import { IconArrowLeft, IconFolder, IconLock, IconSave } from '@douyinfe/semi-icons';
+import { IconArrowLeft, IconFolder, IconSave } from '@douyinfe/semi-icons';
 import { supabase } from '@/app/lib/supabase';
 import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
 import CategoryIcon from '@/app/components/CategoryIcon';
 import IconPicker from '../_components/IconPicker';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 export default function CategoryForm() {
   const [name, setName] = useState('');
@@ -226,36 +226,25 @@ export default function CategoryForm() {
               </div>
 
               <aside className="admin-form-aside">
-              <Card bordered className="admin-form-preview-card" style={{ background: 'var(--semi-color-fill-0)' }}>
-                <Space align="center" spacing="medium">
-                  <div className="admin-icon-preview">
+                <section className="admin-form-section" aria-label="图标预览">
+                  <h3 className="admin-form-section-title">图标预览</h3>
+                  <p className="admin-form-section-desc">
+                    {icon.trim() ? '图标预览已生成' : '选择图标后会在这里显示'}
+                  </p>
+                  <div className="admin-icon-preview" style={{ marginTop: 12 }}>
                     <CategoryIcon icon={icon} />
                   </div>
-                  <Space vertical spacing={2} align="start">
-                    <Title heading={6} style={{ margin: 0 }}>
-                      图标预览
-                    </Title>
-                    <Text type="tertiary" size="small">
-                      {icon.trim() ? '图标预览已生成' : '选择图标后会在这里显示'}
-                    </Text>
-                  </Space>
-                </Space>
-              </Card>
+                </section>
 
-              <Card bordered className="admin-form-option-card" style={{ background: 'var(--semi-color-fill-0)' }}>
-                <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
-                  <Space spacing="medium">
-                    <IconLock aria-hidden="true" />
-                    <Space vertical spacing={2} align="start">
-                      <Text strong>设为私密分类</Text>
-                      <Text type="tertiary" size="small">
-                        私密分类只会在首页隐私模式中显示。
-                      </Text>
-                    </Space>
+                <section className="admin-form-section" aria-label="可见性">
+                  <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <div>
+                      <h3 className="admin-form-section-title">设为私密分类</h3>
+                      <p className="admin-form-section-desc">私密分类只会在首页隐私模式中显示。</p>
+                    </div>
+                    <Switch checked={isPrivate} onChange={setIsPrivate} aria-label="设为私密分类" />
                   </Space>
-                  <Switch checked={isPrivate} onChange={setIsPrivate} />
-                </Space>
-              </Card>
+                </section>
               </aside>
 
               <Space className="admin-form-actions" wrap>
