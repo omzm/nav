@@ -11,9 +11,11 @@ import {
   IconChevronRight,
   IconExit,
   IconExternalOpen,
+  IconFolder,
   IconHistogram,
   IconMenu,
   IconPlus,
+  IconSetting,
 } from '@douyinfe/semi-icons';
 import { ADMIN_EMAIL, supabase } from '@/app/lib/supabase';
 import { getLocalAdminUser, signOutLocalAdmin } from '@/app/lib/local-admin';
@@ -33,6 +35,7 @@ const navStandalone = { label: '工作台', path: '/admin/dashboard', icon: Icon
 const navGroups = [
   {
     title: '内容管理',
+    icon: IconFolder,
     items: [
       { label: '分类管理', path: '/admin/dashboard/categories' },
       { label: '链接管理', path: '/admin/dashboard/links' },
@@ -40,6 +43,7 @@ const navGroups = [
   },
   {
     title: '系统工具',
+    icon: IconSetting,
     items: [
       { label: '认证诊断', path: '/admin/diagnostic' },
       { label: '数据库检查', path: '/admin/init' },
@@ -276,6 +280,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           const groupActive = group.items.some((item) => isActivePath(pathname, item.path));
           const isCollapsed = !!collapsed[group.title];
           const childrenId = `admin-nav-group-${group.title}`;
+          const GroupIcon = group.icon;
           return (
             <div className={`admin-nav-group${groupActive ? ' is-active-group' : ''}`} key={group.title}>
               <button
@@ -285,7 +290,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                 aria-controls={childrenId}
                 onClick={() => toggleGroup(group.title)}
               >
-                <span>{group.title}</span>
+                <span className="admin-nav-group-label">
+                  <GroupIcon className="admin-nav-group-icon" aria-hidden="true" />
+                  <span>{group.title}</span>
+                </span>
                 <IconChevronDown
                   className={`admin-nav-group-chevron${isCollapsed ? ' is-collapsed' : ''}`}
                   aria-hidden="true"
