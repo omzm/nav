@@ -3,11 +3,9 @@
   --admin-primary-hover: #1a3378;
   --admin-primary-soft: #e9eefa;
   --admin-teal: #0d9488;
-  --admin-teal-soft: #e0f5f2;
   --admin-surface: #fff;
   --admin-background: #f4f5f7;
   --admin-sidebar-bg: #fafbfc;
-  --admin-muted: #f1f3f6;
   --admin-border: #e5e9f0;
   --admin-divider: #eef1f6;
   --admin-text: #202b3d;
@@ -97,8 +95,8 @@ body.admin-theme { background: var(--admin-background); }
 .admin-nav-group-chevron { font-size: 12px; transition: transform .2s ease; }
 .admin-nav-group-chevron.is-collapsed { transform: rotate(-90deg); }
 /* 二级容器：平滑折叠 + 左竖线 */
-.admin-nav-children { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .2s ease; }
-.admin-nav-children.is-collapsed { grid-template-rows: 0fr; }
+.admin-nav-children { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .2s ease, visibility 0s; }
+.admin-nav-children.is-collapsed { grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows .2s ease, visibility 0s .2s; }
 .admin-nav-children-inner { overflow: hidden; min-height: 0; margin-left: 24px; padding-left: 8px; border-left: 1px solid var(--admin-border); }
 .admin-nav-item.is-sub { min-height: 36px; margin: 3px 0 3px 4px; padding: 8px 12px; font-weight: 400; }
 .admin-nav-item { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 10px 13px; margin: 3px 0; border-radius: 7px; font-size: 13px; font-weight: 450; color: #637087; transition: background .15s, color .15s; }
@@ -320,7 +318,6 @@ a.admin-cell-title:hover { color: var(--admin-primary); }
 @media (max-width: 767px) {
   .admin-content, .admin-form-page { padding: 24px 16px; }
   .admin-topbar { padding: 0 16px; }
-  .admin-topbar-caption { display: none; }
   .admin-breadcrumb { gap: 8px; font-size: 11px; }
   .admin-page-title { font-size: 21px; }
   .admin-page-head { align-items: flex-start; flex-direction: column; gap: 16px; }
