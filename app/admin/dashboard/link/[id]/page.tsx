@@ -22,7 +22,6 @@ import {
   IconGlobe,
   IconImage,
   IconLink,
-  IconLock,
   IconRefresh,
   IconSave,
 } from '@douyinfe/semi-icons';
@@ -32,7 +31,7 @@ import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
 import CategoryIcon from '@/app/components/CategoryIcon';
 import { isEmojiIcon } from '@/app/admin/_components/LinkIcon';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 /**
  * 规范化 URL 用于去重比对：host 小写、去掉末尾斜杠。
@@ -547,22 +546,19 @@ export default function LinkForm() {
             </div>
 
             <aside className="admin-form-aside">
-            <Card bordered className="admin-form-preview-card" style={{ background: 'var(--semi-color-fill-0)' }}>
-              <Space align="center" spacing="medium">
-                <div className="admin-icon-preview" style={{ width: 64, height: 64 }}>
-                  {renderIconPreview()}
-                </div>
-                <Space vertical spacing={4} align="start" style={{ flex: 1 }}>
-                  <Title heading={6} style={{ margin: 0 }}>
-                    图标预览
-                  </Title>
-                  <Text type={iconError ? 'danger' : 'tertiary'} size="small">
-                    {iconError
-                      ? '自动图标获取失败，可以手动填写 Emoji'
-                      : icon.trim()
-                        ? '正在使用自定义图标'
-                        : '自动获取网站图标'}
-                  </Text>
+              <section className="admin-form-section" aria-label="图标预览">
+                <h3 className="admin-form-section-title">图标预览</h3>
+                <p className="admin-form-section-desc" style={iconError ? { color: 'var(--semi-color-danger)' } : undefined}>
+                  {iconError
+                    ? '自动图标获取失败，可以手动填写 Emoji'
+                    : icon.trim()
+                      ? '正在使用自定义图标'
+                      : '自动获取网站图标'}
+                </p>
+                <Space align="center" spacing="medium" style={{ marginTop: 12 }}>
+                  <div className="admin-icon-preview" style={{ width: 64, height: 64 }}>
+                    {renderIconPreview()}
+                  </div>
                   <Space wrap>
                     <Button
                       size="small"
@@ -582,23 +578,17 @@ export default function LinkForm() {
                     </Button>
                   </Space>
                 </Space>
-              </Space>
-            </Card>
+              </section>
 
-            <Card bordered className="admin-form-option-card" style={{ background: 'var(--semi-color-fill-0)' }}>
-              <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
-                <Space spacing="medium">
-                  <IconLock style={{ color: 'var(--semi-color-warning)' }} />
-                  <Space vertical spacing={2} align="start">
-                    <Text strong>设为私密链接</Text>
-                    <Text type="tertiary" size="small">
-                      私密链接只会在首页隐私模式中显示。
-                    </Text>
-                  </Space>
+              <section className="admin-form-section" aria-label="可见性">
+                <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                  <div>
+                    <h3 className="admin-form-section-title">设为私密链接</h3>
+                    <p className="admin-form-section-desc">私密链接只会在首页隐私模式中显示。</p>
+                  </div>
+                  <Switch checked={isPrivate} onChange={setIsPrivate} aria-label="设为私密链接" />
                 </Space>
-                <Switch checked={isPrivate} onChange={setIsPrivate} />
-              </Space>
-            </Card>
+              </section>
             </aside>
 
             <Space className="admin-form-actions" wrap>

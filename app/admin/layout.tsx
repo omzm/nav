@@ -271,10 +271,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
                 <span aria-current="page">{getPageLabel(pathname)}</span>
               </nav>
             </div>
-            <span className="admin-topbar-caption">让每一份收藏井然有序</span>
           </header>
           <main id="admin-main" className="admin-main" tabIndex={-1}>{children}</main>
-          <footer className="admin-workspace-footer">收藏夹 · 内容管理工作台</footer>
         </div>
 
         <SideSheet
