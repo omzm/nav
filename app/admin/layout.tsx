@@ -7,17 +7,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { Button, Modal, SideSheet, Spin, Toast, semiGlobal } from '@douyinfe/semi-ui';
 import {
+  IconChevronDown,
   IconChevronRight,
   IconExit,
   IconExternalOpen,
-  IconFolder,
   IconHistogram,
-  IconInfoCircle,
-  IconLink,
   IconMenu,
   IconPlus,
-  IconServer,
-  IconSetting,
 } from '@douyinfe/semi-icons';
 import { ADMIN_EMAIL, supabase } from '@/app/lib/supabase';
 import { getLocalAdminUser, signOutLocalAdmin } from '@/app/lib/local-admin';
@@ -31,24 +27,29 @@ import './admin.css';
 // Semi's imperative components (Toast, Modal) need the React 19 root API.
 semiGlobal.config.createRoot = createRoot;
 
+// 一级独立项：工作台（首页性质，不归入任何分组）
+const navStandalone = { label: '工作台', path: '/admin/dashboard', icon: IconHistogram };
+// 一级分组：标题可点击折叠，页面为二级项
 const navGroups = [
   {
     title: '内容管理',
     items: [
-      { label: '工作台', path: '/admin/dashboard', icon: IconHistogram },
-      { label: '分类管理', path: '/admin/dashboard/categories', icon: IconFolder },
-      { label: '链接管理', path: '/admin/dashboard/links', icon: IconLink },
+      { label: '分类管理', path: '/admin/dashboard/categories' },
+      { label: '链接管理', path: '/admin/dashboard/links' },
     ],
   },
   {
     title: '系统工具',
     items: [
-      { label: '认证诊断', path: '/admin/diagnostic', icon: IconInfoCircle },
-      { label: '数据库检查', path: '/admin/init', icon: IconServer },
-      { label: '环境配置', path: '/admin/env-check', icon: IconSetting },
+      { label: '认证诊断', path: '/admin/diagnostic' },
+      { label: '数据库检查', path: '/admin/init' },
+      { label: '环境配置', path: '/admin/env-check' },
     ],
   },
 ];
+const allNavItems = [navStandalone, ...navGroups.flatMap((group) => group.items)];
+
+const NAV_COLLAPSED_KEY = 'nav-admin-nav-collapsed';
 
 function isActivePath(pathname: string, path: string) {
   if (path === '/admin/dashboard/categories') {
@@ -64,7 +65,7 @@ function getPageLabel(pathname: string) {
   if (pathname.startsWith('/admin/dashboard/category/')) return pathname.endsWith('/new') ? '添加分类' : '编辑分类';
   if (pathname.startsWith('/admin/dashboard/link/')) return pathname.endsWith('/new') ? '添加链接' : '编辑链接';
   if (pathname === '/admin/test') return '连接测试';
-  return navGroups.flatMap((group) => group.items).find((item) => item.path === pathname)?.label || '工作台';
+  return allNavItems.find((item) => item.path === pathname)?.label || '工作台';
 }
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -73,6 +74,14 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const [navOpen, setNavOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  // 二级导航折叠状态：默认全部展开，手动折叠后记住（localStorage）
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(NAV_COLLAPSED_KEY) || '{}') as Record<string, boolean>;
+    } catch {
+      return {};
+    }
+  });
   const router = useRouter();
   const pathname = usePathname();
 
@@ -180,6 +189,37 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // 当前页面所在的分组自动展开（覆盖手动折叠，保证"你在哪"永远可见）
+  useEffect(() => {
+    const activeGroup = navGroups.find((group) =>
+      group.items.some((item) => isActivePath(pathname, item.path)),
+    );
+    if (activeGroup) {
+      setCollapsed((prev) => {
+        if (!prev[activeGroup.title]) return prev;
+        const next = { ...prev, [activeGroup.title]: false };
+        try {
+          localStorage.setItem(NAV_COLLAPSED_KEY, JSON.stringify(next));
+        } catch {
+          // 记住折叠状态失败不影响导航
+        }
+        return next;
+      });
+    }
+  }, [pathname]);
+
+  const toggleGroup = (title: string) => {
+    setCollapsed((prev) => {
+      const next = { ...prev, [title]: !prev[title] };
+      try {
+        localStorage.setItem(NAV_COLLAPSED_KEY, JSON.stringify(next));
+      } catch {
+        // 记住折叠状态失败不影响导航
+      }
+      return next;
+    });
+  };
+
   if (checking) {
     return (
       <div className="admin-theme admin-loading-shell">
@@ -213,27 +253,66 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       <nav className="admin-sidebar-nav" aria-label="后台主导航">
-        {navGroups.map((group) => (
-          <div className="admin-nav-group" key={group.title}>
-            <p className="admin-nav-group-title">{group.title}</p>
-            {group.items.map(({ label, path, icon: Icon }) => {
-              const active = isActivePath(pathname, path);
-              return (
-                <Link
-                  key={path}
-                  href={path}
-                  className={`admin-nav-item${active ? ' is-active' : ''}`}
-                  aria-current={active ? 'page' : undefined}
-                  onClick={() => setNavOpen(false)}
-                >
-                  <Icon aria-hidden="true" />
-                  <span>{label}</span>
-                  {active && <span className="admin-nav-active-dot" />}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+        <div className="admin-nav-standalone">
+          {(() => {
+            const active = isActivePath(pathname, navStandalone.path);
+            const StandaloneIcon = navStandalone.icon;
+            return (
+              <Link
+                href={navStandalone.path}
+                className={`admin-nav-item${active ? ' is-active' : ''}`}
+                aria-current={active ? 'page' : undefined}
+                onClick={() => setNavOpen(false)}
+              >
+                <StandaloneIcon aria-hidden="true" />
+                <span>{navStandalone.label}</span>
+                {active && <span className="admin-nav-active-dot" />}
+              </Link>
+            );
+          })()}
+        </div>
+
+        {navGroups.map((group) => {
+          const groupActive = group.items.some((item) => isActivePath(pathname, item.path));
+          const isCollapsed = !!collapsed[group.title];
+          const childrenId = `admin-nav-group-${group.title}`;
+          return (
+            <div className={`admin-nav-group${groupActive ? ' is-active-group' : ''}`} key={group.title}>
+              <button
+                type="button"
+                className="admin-nav-group-header"
+                aria-expanded={!isCollapsed}
+                aria-controls={childrenId}
+                onClick={() => toggleGroup(group.title)}
+              >
+                <span>{group.title}</span>
+                <IconChevronDown
+                  className={`admin-nav-group-chevron${isCollapsed ? ' is-collapsed' : ''}`}
+                  aria-hidden="true"
+                />
+              </button>
+              <div id={childrenId} className={`admin-nav-children${isCollapsed ? ' is-collapsed' : ''}`}>
+                <div className="admin-nav-children-inner">
+                  {group.items.map(({ label, path }) => {
+                    const active = isActivePath(pathname, path);
+                    return (
+                      <Link
+                        key={path}
+                        href={path}
+                        className={`admin-nav-item is-sub${active ? ' is-active' : ''}`}
+                        aria-current={active ? 'page' : undefined}
+                        onClick={() => setNavOpen(false)}
+                      >
+                        <span>{label}</span>
+                        {active && <span className="admin-nav-active-dot" />}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </nav>
 
       <div className="admin-sidebar-bottom">
