@@ -85,8 +85,18 @@ body.admin-theme { background: var(--admin-background); }
 .admin-sidebar-create { padding: 0 20px 22px; }
 .admin-sidebar-create .semi-button { height: 36px; }
 .admin-sidebar-nav { flex: 1; min-height: 0; overflow-y: auto; padding: 0 12px 24px; }
-.admin-nav-group + .admin-nav-group { margin-top: 28px; }
-.admin-nav-group-title { margin: 0 12px 10px; color: var(--admin-text-tertiary); font-size: 10px; letter-spacing: 1px; font-weight: 500; }
+.admin-nav-standalone + .admin-nav-group, .admin-nav-group + .admin-nav-group { margin-top: 24px; }
+/* 一级分组头：可点击折叠 */
+.admin-nav-group-header { display: flex; align-items: center; justify-content: space-between; width: 100%; margin: 0 0 6px; padding: 6px 12px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; color: var(--admin-text-tertiary); font-size: 10px; letter-spacing: 1px; font-weight: 500; transition: background .15s, color .15s; }
+.admin-nav-group-header:hover { color: var(--admin-text-secondary); background: #f5f7fa; }
+.admin-nav-group.is-active-group .admin-nav-group-header { color: var(--admin-text-secondary); }
+.admin-nav-group-chevron { font-size: 12px; transition: transform .2s ease; }
+.admin-nav-group-chevron.is-collapsed { transform: rotate(-90deg); }
+/* 二级容器：平滑折叠 + 左竖线 */
+.admin-nav-children { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .2s ease; }
+.admin-nav-children.is-collapsed { grid-template-rows: 0fr; }
+.admin-nav-children-inner { overflow: hidden; min-height: 0; margin-left: 24px; padding-left: 8px; border-left: 1px solid var(--admin-border); }
+.admin-nav-item.is-sub { min-height: 36px; margin: 3px 0 3px 4px; padding: 8px 12px; font-weight: 400; }
 .admin-nav-item { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 10px 13px; margin: 3px 0; border-radius: 7px; font-size: 13px; font-weight: 450; color: #637087; transition: background .15s, color .15s; }
 .admin-nav-item > .semi-icon { font-size: 17px; flex: none; }
 .admin-nav-item:hover { color: var(--admin-text); background: #f5f7fa; }
