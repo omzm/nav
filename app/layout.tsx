@@ -4,8 +4,12 @@ import { ToastContainer } from "./components/Toast";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://1.145678.xyz"),
   title: "收藏夹 - 一些常用的工具",
   description: "收录了开发工具、设计资源、学习平台、效率工具等精选网站",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "收藏夹 - 一些常用的工具",
     description: "收录了开发工具、设计资源、学习平台、效率工具等精选网站",
