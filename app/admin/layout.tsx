@@ -81,7 +81,11 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   // 二级导航折叠状态：默认全部展开，手动折叠后记住（localStorage）
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     try {
-      return JSON.parse(localStorage.getItem(NAV_COLLAPSED_KEY) || '{}') as Record<string, boolean>;
+      const parsed: unknown = JSON.parse(localStorage.getItem(NAV_COLLAPSED_KEY) || '{}');
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, boolean>;
+      }
+      return {};
     } catch {
       return {};
     }
@@ -241,7 +245,8 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
       ? { label: '链接管理', path: '/admin/dashboard/links' }
       : null;
 
-  const navigation = (
+  // 桌面侧边栏与手机抽屉各渲染一份，idPrefix 保证两处的 id 不重复
+  const renderNavigation = (idPrefix: string) => (
     <>
       <Link href="/admin/dashboard" className="admin-sidebar-brand" onClick={() => setNavOpen(false)}>
         <AdminBrand />
@@ -279,7 +284,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         {navGroups.map((group) => {
           const groupActive = group.items.some((item) => isActivePath(pathname, item.path));
           const isCollapsed = !!collapsed[group.title];
-          const childrenId = `admin-nav-group-${group.title}`;
+          const childrenId = `${idPrefix}-nav-group-${group.title}`;
           const GroupIcon = group.icon;
           return (
             <div className={`admin-nav-group${groupActive ? ' is-active-group' : ''}`} key={group.title}>
@@ -345,7 +350,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     <UserContext.Provider value={user}>
       <div className="admin-theme admin-shell">
         <a className="admin-skip-link" href="#admin-main">跳到主要内容</a>
-        <aside className="admin-sidebar">{navigation}</aside>
+        <aside className="admin-sidebar">{renderNavigation('desktop-nav')}</aside>
 
         <div className="admin-workspace">
           <header className="admin-topbar">
@@ -372,7 +377,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           className="admin-theme admin-mobile-nav"
           bodyStyle={{ padding: 0 }}
         >
-          <div className="admin-mobile-nav-body">{navigation}</div>
+          <div className="admin-mobile-nav-body">{renderNavigation('mobile-nav')}</div>
         </SideSheet>
 
         <Modal

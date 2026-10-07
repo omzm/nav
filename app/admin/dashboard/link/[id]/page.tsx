@@ -25,7 +25,7 @@ import {
   IconRefresh,
   IconSave,
 } from '@douyinfe/semi-icons';
-import { supabase, Category, Link as NavLink } from '@/app/lib/supabase';
+import { supabase, Category } from '@/app/lib/supabase';
 import { getFallbackFaviconUrl, getFaviconUrl } from '@/app/utils/favicon';
 import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
 import CategoryIcon from '@/app/components/CategoryIcon';
