@@ -12,7 +12,7 @@
     "@douyinfe/semi-icons": "^2.100.0",
     "@douyinfe/semi-ui": "^2.100.0",
     "@supabase/supabase-js": "^2.95.3",
-    "next": "16.1.6",
+    "next": "16.4.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -25,5 +25,11 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "ws": "8.22.0",
+    "picomatch": "2.3.2",
+    "minimatch": "3.1.5",
+    "flatted": "3.4.4"
   }
 }
