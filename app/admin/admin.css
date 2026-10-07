@@ -85,9 +85,11 @@ body.admin-theme { background: var(--admin-background); }
 .admin-sidebar-create { padding: 0 20px 22px; }
 .admin-sidebar-create .semi-button { height: 36px; }
 .admin-sidebar-nav { flex: 1; min-height: 0; overflow-y: auto; padding: 0 12px 24px; }
-.admin-nav-standalone + .admin-nav-group, .admin-nav-group + .admin-nav-group { margin-top: 24px; }
+.admin-nav-standalone + .admin-nav-group, .admin-nav-group + .admin-nav-group { margin-top: 12px; }
 /* 一级分组头：可点击折叠 */
-.admin-nav-group-header { display: flex; align-items: center; justify-content: space-between; width: 100%; margin: 0 0 6px; padding: 6px 12px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; color: var(--admin-text-tertiary); font-size: 10px; letter-spacing: 1px; font-weight: 500; transition: background .15s, color .15s; }
+.admin-nav-group-header { display: flex; align-items: center; justify-content: space-between; width: 100%; margin: 0 0 4px; padding: 8px 12px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; color: var(--admin-text-tertiary); font-size: 12px; letter-spacing: .5px; font-weight: 600; transition: background .15s, color .15s; }
+.admin-nav-group-label { display: inline-flex; align-items: center; gap: 10px; }
+.admin-nav-group-icon { font-size: 15px; }
 .admin-nav-group-header:hover { color: var(--admin-text-secondary); background: #f5f7fa; }
 .admin-nav-group.is-active-group .admin-nav-group-header { color: var(--admin-text-secondary); }
 .admin-nav-group-chevron { font-size: 12px; transition: transform .2s ease; }
