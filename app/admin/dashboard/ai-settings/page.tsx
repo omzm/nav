@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Button, Card, Input, Space, Spin, Toast, Typography } from '@douyinfe/semi-ui';
+import { useCallback, useEffect, useState } from 'react';
+import { Button, Card, Input, Select, Space, Spin, Toast, Typography } from '@douyinfe/semi-ui';
 import { IconSave, IconRefresh } from '@douyinfe/semi-icons';
-import { getAiConfigStatus, saveAiConfig, testAiConnection } from '@/app/actions/aiConfig';
+import { fetchAiModels, getAiConfigStatus, saveAiConfig, testAiConnection } from '@/app/actions/aiConfig';
 
 const { Text, Title } = Typography;
 
@@ -11,11 +11,30 @@ export default function AiSettingsPage() {
   const [apiBase, setApiBase] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('');
+  const [models, setModels] = useState<string[]>([]);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [fetchingModels, setFetchingModels] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  /** 拉取模型列表；已保存的模型不在列表里时也补上，保证能正常显示 */
+  const loadModels = useCallback(
+    async (base: string, key: string, currentModel: string) => {
+      setFetchingModels(true);
+      try {
+        const list = await fetchAiModels({ apiBase: base, apiKey: key });
+        setModels(currentModel && !list.includes(currentModel) ? [currentModel, ...list] : list);
+      } catch (error) {
+        Toast.error(error instanceof Error ? error.message : '获取模型列表失败');
+        setModels(currentModel ? [currentModel] : []);
+      } finally {
+        setFetchingModels(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     getAiConfigStatus()
@@ -23,10 +42,16 @@ export default function AiSettingsPage() {
         setApiBase(status.apiBase);
         setModel(status.model);
         setHasApiKey(status.hasApiKey);
+        // 已配置过地址和 Key：自动拉取模型列表
+        if (status.apiBase && status.hasApiKey) {
+          loadModels(status.apiBase, '', status.model);
+        } else if (status.model) {
+          setModels([status.model]);
+        }
       })
       .catch(() => Toast.error('加载 AI 配置失败'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [loadModels]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -109,14 +134,31 @@ export default function AiSettingsPage() {
         </label>
 
         <label className="admin-form-field" style={{ marginTop: 16 }}>
-          <Text strong>模型名称</Text>
-          <Input
-            value={model}
-            onChange={setModel}
-            placeholder="如 deepseek-chat、gpt-4o-mini"
-            showClear
-            style={{ marginTop: 8 }}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text strong>模型</Text>
+            <Button
+              size="small"
+              theme="light"
+              type="tertiary"
+              icon={<IconRefresh />}
+              loading={fetchingModels}
+              onClick={() => loadModels(apiBase, apiKey, model)}
+            >
+              获取模型列表
+            </Button>
+          </div>
+          <Select
+            value={model || undefined}
+            onChange={(value) => setModel(value as string)}
+            optionList={models.map((m) => ({ value: m, label: m }))}
+            placeholder={fetchingModels ? '正在获取…' : '从列表中选择模型'}
+            filter
+            loading={fetchingModels}
+            style={{ width: '100%', marginTop: 8 }}
           />
+          <Text type="tertiary" size="small" style={{ marginTop: 4 }}>
+            填好 API 地址和 Key 后点「获取模型列表」，或直接从下拉框选择
+          </Text>
         </label>
 
         {testResult && (

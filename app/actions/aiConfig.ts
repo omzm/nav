@@ -46,7 +46,7 @@ export async function saveAiConfig(input: {
 
   if (!apiBase) throw new Error('请填写 API 地址');
   if (!/^https?:\/\//i.test(apiBase)) throw new Error('API 地址须以 http:// 或 https:// 开头');
-  if (!model) throw new Error('请填写模型名称');
+  if (!model) throw new Error('请选择模型');
 
   const now = new Date().toISOString();
   const rows: Array<{ key: string; value: string; updated_at: string }> = [
@@ -75,4 +75,42 @@ export async function testAiConnection(): Promise<{ ok: boolean; message: string
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : '连接失败' };
   }
+}
+
+/**
+ * 获取模型列表：调 OpenAI 兼容接口的 GET /models。
+ * 用表单填写的地址/Key（为空则回退到已保存的），Key 只在服务端瞬时使用，不存储。
+ */
+export async function fetchAiModels(input: { apiBase: string; apiKey: string }): Promise<string[]> {
+  await assertAdmin();
+
+  const stored = await readAiCredentials();
+  const apiBase = input.apiBase.trim().replace(/\/+$/, '') || stored.apiBase;
+  const apiKey = input.apiKey.trim() || stored.apiKey;
+
+  if (!apiBase) throw new Error('请先填写 API 地址');
+  if (!/^https?:\/\//i.test(apiBase)) throw new Error('API 地址须以 http:// 或 https:// 开头');
+  if (!apiKey) throw new Error('请先填写 API Key');
+
+  const response = await fetch(`${apiBase}/models`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`获取模型列表失败（${response.status}）：请检查 API 地址和 Key 是否正确`);
+  }
+
+  const data = (await response.json().catch(() => null)) as {
+    data?: Array<{ id?: string }>;
+  } | null;
+  const ids = (data?.data || [])
+    .map((m) => m?.id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+  if (!ids.length) {
+    throw new Error('接口没有返回可用模型');
+  }
+
+  return [...new Set(ids)].sort();
 }
