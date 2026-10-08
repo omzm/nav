@@ -1,6 +1,6 @@
 {
   "name": "nav-website",
-  "version": "1.7.4",
+  "version": "1.8.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,8 +10,6 @@
     "migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
-    "@douyinfe/semi-icons": "^2.100.0",
-    "@douyinfe/semi-ui": "^2.100.0",
     "@supabase/supabase-js": "^2.95.3",
     "next": "16.4.0",
     "pg": "^8.23.1",

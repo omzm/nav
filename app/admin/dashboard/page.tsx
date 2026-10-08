@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, Empty, Spin } from '@douyinfe/semi-ui';
+import { Button, Empty, Spinner } from '@/app/admin/_components/ui';
 import {
   IconChevronRight,
   IconDownload,
@@ -13,7 +13,7 @@ import {
   IconLock,
   IconPlus,
   IconRefresh,
-} from '@douyinfe/semi-icons';
+} from '@/app/admin/_components/ui/icons';
 import CategoryIcon from '@/app/components/CategoryIcon';
 import LinkIcon from '../_components/LinkIcon';
 import { useAdminData } from './_components/useAdminData';
@@ -56,7 +56,17 @@ export default function AdminDashboard() {
   }, [loadData, router]);
 
   if (loading) {
-    return <div className="admin-content"><Spin tip="正在加载工作台…" style={{ width: '100%', padding: '96px 0' }} /></div>;
+    return (
+      <div className="admin-content">
+        <div
+          style={{ width: '100%', padding: '96px 0' }}
+          className="flex flex-col items-center justify-center gap-3"
+        >
+          <Spinner size="large" />
+          <span className="text-sm text-[#64748b]">正在加载工作台…</span>
+        </div>
+      </div>
+    );
   }
 
   const latestLinks = [...links]
@@ -83,7 +93,7 @@ export default function AdminDashboard() {
           </div>
           <div className="admin-actions-row">
             <Button icon={<IconRefresh aria-hidden="true" />} loading={refreshing} onClick={() => void loadData(true)} title="刷新数据 (R)">刷新数据</Button>
-            <Button theme="solid" type="primary" icon={<IconPlus aria-hidden="true" />} onClick={() => router.push('/admin/dashboard/link/new')} title="添加链接 (N)">添加链接</Button>
+            <Button variant="primary" icon={<IconPlus aria-hidden="true" />} onClick={() => router.push('/admin/dashboard/link/new')} title="添加链接 (N)">添加链接</Button>
           </div>
         </div>
 
@@ -128,9 +138,11 @@ export default function AdminDashboard() {
                 })}
               </div>
             ) : (
-              <Empty title="从第一个分类开始" description="为收藏建立分类，让好用的网站各就其位。">
-                <Button size="small" onClick={() => router.push('/admin/dashboard/category/new')}>添加分类</Button>
-              </Empty>
+              <Empty
+                title="从第一个分类开始"
+                description="为收藏建立分类，让好用的网站各就其位。"
+                action={<Button size="small" onClick={() => router.push('/admin/dashboard/category/new')}>添加分类</Button>}
+              />
             )}
           </section>
 
@@ -149,14 +161,16 @@ export default function AdminDashboard() {
                       <span className="admin-recent-domain">{getHostname(link.url)}</span>
                     </div>
                     <span className="admin-recent-category">{categoryMap.get(link.category_id)?.name || '未分类'}</span>
-                    <Button theme="borderless" type="tertiary" icon={<IconEdit aria-hidden="true" />} aria-label={'编辑 ' + link.title} title="编辑链接" onClick={() => router.push('/admin/dashboard/link/' + link.id)} />
+                    <Button variant="tertiary" size="small" icon={<IconEdit aria-hidden="true" />} aria-label={'编辑 ' + link.title} title="编辑链接" onClick={() => router.push('/admin/dashboard/link/' + link.id)} />
                   </div>
                 ))}
               </div>
             ) : (
-              <Empty title="还没有收录链接" description="添加一个常用网站，开始建立你的收藏夹。">
-                <Button size="small" onClick={() => router.push('/admin/dashboard/link/new')}>添加链接</Button>
-              </Empty>
+              <Empty
+                title="还没有收录链接"
+                description="添加一个常用网站，开始建立你的收藏夹。"
+                action={<Button size="small" onClick={() => router.push('/admin/dashboard/link/new')}>添加链接</Button>}
+              />
             )}
           </section>
         </div>

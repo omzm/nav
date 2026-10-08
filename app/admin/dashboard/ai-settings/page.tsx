@@ -1,11 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Input, Select, Space, Spin, Toast, Typography } from '@douyinfe/semi-ui';
-import { IconSave, IconRefresh } from '@douyinfe/semi-icons';
+import {
+  Button,
+  Card,
+  Field,
+  Input,
+  PasswordInput,
+  Select,
+  Spinner,
+} from '@/app/admin/_components/ui';
+import { toast } from '@/app/admin/_components/ui/toast';
+import { IconRefresh, IconSave } from '@/app/admin/_components/ui/icons';
 import { fetchAiModels, getAiConfigStatus, saveAiConfig, testAiConnection } from '@/app/actions/aiConfig';
-
-const { Text, Title } = Typography;
 
 /** 把难以理解的错误（服务端崩溃时的 Minified React error）转成可操作的提示 */
 function friendlyErrorMessage(error: unknown, fallback: string): string {
@@ -36,7 +43,7 @@ export default function AiSettingsPage() {
         const list = await fetchAiModels({ apiBase: base, apiKey: key });
         setModels(currentModel && !list.includes(currentModel) ? [currentModel, ...list] : list);
       } catch (error) {
-        Toast.error(friendlyErrorMessage(error, '获取模型列表失败'));
+        toast.error(friendlyErrorMessage(error, '获取模型列表失败'));
         setModels(currentModel ? [currentModel] : []);
       } finally {
         setFetchingModels(false);
@@ -58,7 +65,7 @@ export default function AiSettingsPage() {
           setModels([status.model]);
         }
       })
-      .catch(() => Toast.error('加载 AI 配置失败'))
+      .catch(() => toast.error('加载 AI 配置失败'))
       .finally(() => setLoading(false));
   }, [loadModels]);
 
@@ -71,9 +78,9 @@ export default function AiSettingsPage() {
         setHasApiKey(true);
         setApiKey('');
       }
-      Toast.success('AI 配置已保存');
+      toast.success('AI 配置已保存');
     } catch (error) {
-      Toast.error(friendlyErrorMessage(error, '保存失败'));
+      toast.error(friendlyErrorMessage(error, '保存失败'));
     } finally {
       setSaving(false);
     }
@@ -86,14 +93,14 @@ export default function AiSettingsPage() {
       const result = await testAiConnection();
       setTestResult(result);
       if (result.ok) {
-        Toast.success('连接成功');
+        toast.success('连接成功');
       } else {
-        Toast.error('连接失败');
+        toast.error('连接失败');
       }
     } catch (error) {
       const message = friendlyErrorMessage(error, '连接失败');
       setTestResult({ ok: false, message });
-      Toast.error('连接失败');
+      toast.error('连接失败');
     } finally {
       setTesting(false);
     }
@@ -101,101 +108,88 @@ export default function AiSettingsPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-        <Spin size="large" />
+      <div className="flex justify-center py-12">
+        <Spinner size="large" />
       </div>
     );
   }
 
   return (
-    <div className="admin-content">
-      <div style={{ maxWidth: 640 }}>
-        <Title heading={4} style={{ marginBottom: 4 }}>
-          AI 设置
-        </Title>
-        <Text type="tertiary" style={{ display: 'block', marginBottom: 16 }}>
-          配置 OpenAI 兼容接口后，可在添加/编辑链接时一键生成网站描述。Key 只保存在服务端，不会暴露给前端。
-        </Text>
+    <div className="max-w-[640px]">
+      <h2 className="text-lg font-semibold text-[#1e293b] mb-1">AI 设置</h2>
+      <p className="text-sm text-[#64748b] mb-4">
+        配置 OpenAI 兼容接口后，可在添加/编辑链接时一键生成网站描述。Key 只保存在服务端，不会暴露给前端。
+      </p>
 
       <Card>
-        <label className="admin-form-field">
-          <Text strong>API 地址</Text>
-          <Input
-            value={apiBase}
-            onChange={setApiBase}
-            placeholder="https://api.deepseek.com"
-            showClear
-            style={{ marginTop: 8 }}
-          />
-          <Text type="tertiary" size="small" style={{ marginTop: 4 }}>
-            OpenAI 兼容接口的 Base URL，带 /v1 后缀，程序会自动拼接 /chat/completions
-          </Text>
-        </label>
+        <div className="space-y-4">
+          <Field
+            label="API 地址"
+            hint="OpenAI 兼容接口的 Base URL，带 /v1 后缀，程序会自动拼接 /chat/completions"
+          >
+            <Input
+              value={apiBase}
+              onChange={setApiBase}
+              placeholder="https://api.deepseek.com"
+            />
+          </Field>
 
-        <label className="admin-form-field" style={{ marginTop: 16 }}>
-          <Text strong>API Key</Text>
-          <Input
-            mode="password"
-            value={apiKey}
-            onChange={setApiKey}
-            placeholder={hasApiKey ? '已配置（留空则不修改）' : 'sk-...'}
-            style={{ marginTop: 8 }}
-          />
-        </label>
+          <Field label="API Key">
+            <PasswordInput
+              value={apiKey}
+              onChange={setApiKey}
+              placeholder={hasApiKey ? '已配置（留空则不修改）' : 'sk-...'}
+            />
+          </Field>
 
-        <label className="admin-form-field" style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text strong>模型</Text>
-            <Button
-              size="small"
-              theme="light"
-              type="tertiary"
-              icon={<IconRefresh />}
+          <Field
+            label="模型"
+            hint="填好 API 地址和 Key 后点「获取模型列表」，或直接从下拉框选择"
+            action={
+              <Button
+                size="small"
+                variant="tertiary"
+                icon={<IconRefresh />}
+                loading={fetchingModels}
+                onClick={() => loadModels(apiBase, apiKey, model)}
+              >
+                获取模型列表
+              </Button>
+            }
+          >
+            <Select
+              value={model || undefined}
+              onChange={(value) => setModel(value as string)}
+              options={models.map((m) => ({ value: m, label: m }))}
+              placeholder={fetchingModels ? '正在获取…' : '从列表中选择模型'}
+              searchable
               loading={fetchingModels}
-              onClick={() => loadModels(apiBase, apiKey, model)}
+              className="w-full"
+            />
+          </Field>
+
+          {testResult && (
+            <div
+              className={`px-3 py-2 rounded-lg text-[13px] border ${
+                testResult.ok
+                  ? 'bg-[#f0fdf4] text-[#15803d] border-[#d1f2df]'
+                  : 'bg-[#fef2f2] text-[#dc2626] border-[#fecaca]'
+              }`}
             >
-              获取模型列表
+              {testResult.message}
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <Button icon={<IconSave />} variant="primary" loading={saving} onClick={handleSave}>
+              保存
+            </Button>
+            <Button icon={<IconRefresh />} loading={testing} onClick={handleTest}>
+              测试连接
             </Button>
           </div>
-          <Select
-            value={model || undefined}
-            onChange={(value) => setModel(value as string)}
-            optionList={models.map((m) => ({ value: m, label: m }))}
-            placeholder={fetchingModels ? '正在获取…' : '从列表中选择模型'}
-            filter
-            loading={fetchingModels}
-            style={{ width: '100%', marginTop: 8 }}
-          />
-          <Text type="tertiary" size="small" style={{ marginTop: 4 }}>
-            填好 API 地址和 Key 后点「获取模型列表」，或直接从下拉框选择
-          </Text>
-        </label>
-
-        {testResult && (
-          <div
-            style={{
-              marginTop: 16,
-              padding: '8px 12px',
-              borderRadius: 8,
-              fontSize: 13,
-              background: testResult.ok ? 'var(--semi-color-success-light-default)' : 'var(--semi-color-danger-light-default)',
-              color: testResult.ok ? 'var(--semi-color-success)' : 'var(--semi-color-danger)',
-            }}
-          >
-            {testResult.message}
-          </div>
-        )}
-
-        <Space style={{ marginTop: 20 }}>
-          <Button icon={<IconSave />} type="primary" loading={saving} onClick={handleSave}>
-            保存
-          </Button>
-          <Button icon={<IconRefresh />} loading={testing} onClick={handleTest}>
-            测试连接
-          </Button>
-        </Space>
-        </Card>
-      </div>
+        </div>
+      </Card>
     </div>
   );
 }
