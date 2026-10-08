@@ -195,7 +195,7 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
   SELECT jsonb_build_object(
     'categories',
     COALESCE((
@@ -249,7 +249,7 @@ AS $
     ),
     'generatedAt', now()
   );
-$;
+$$;
 
 -- 私密数据 RPC：校验口令后下发私密分类/链接
 CREATE OR REPLACE FUNCTION get_nav_private_data(p_phrase text)
@@ -258,7 +258,7 @@ LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_expected text := COALESCE(NULLIF(current_setting('app.settings.unlock_phrase', true), ''), '开门');
 BEGIN
@@ -307,14 +307,14 @@ BEGIN
     ), '[]'::jsonb)
   );
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION reorder_links(p_ordered_ids uuid[])
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_caller_email text := auth.jwt() ->> 'email';
   v_admin_email text;
@@ -336,13 +336,13 @@ BEGIN
   ) AS ordered
   WHERE l.id = ordered.id;
 END;
-$;
+$$;
 CREATE OR REPLACE FUNCTION reorder_categories(p_ordered_ids uuid[])
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_caller_email text := auth.jwt() ->> 'email';
   v_admin_email text;
@@ -364,7 +364,7 @@ BEGIN
   ) AS ordered
   WHERE c.id = ordered.id;
 END;
-$;
+$$;
 
 REVOKE ALL ON FUNCTION get_nav_private_data(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION reorder_links(uuid[]) FROM PUBLIC;

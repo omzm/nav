@@ -78,7 +78,7 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_caller_email text := auth.jwt() ->> 'email';
   v_admin_email text;
@@ -100,14 +100,14 @@ BEGIN
   ) AS ordered
   WHERE l.id = ordered.id;
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION reorder_categories(p_ordered_ids uuid[])
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_caller_email text := auth.jwt() ->> 'email';
   v_admin_email text;
@@ -129,4 +129,4 @@ BEGIN
   ) AS ordered
   WHERE c.id = ordered.id;
 END;
-$;
+$$;
