@@ -17,7 +17,6 @@ import {
   Typography,
 } from '@douyinfe/semi-ui';
 import {
-  IconArrowLeft,
   IconFolder,
   IconGlobe,
   IconImage,
@@ -447,11 +446,6 @@ export default function LinkForm() {
             <p className="admin-page-subtitle">
               填写网站信息，选择一个合适的分类。
             </p>
-          </div>
-          <div className="admin-actions-row">
-            <Button icon={<IconArrowLeft aria-hidden="true" />} onClick={() => router.back()}>
-              返回
-            </Button>
           </div>
         </div>
 
