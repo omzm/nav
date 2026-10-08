@@ -7,6 +7,15 @@ import { fetchAiModels, getAiConfigStatus, saveAiConfig, testAiConnection } from
 
 const { Text, Title } = Typography;
 
+/** 把难以理解的错误（服务端崩溃时的 Minified React error）转成可操作的提示 */
+function friendlyErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : fallback;
+  if (message.includes('Minified React error')) {
+    return '请求异常中断（可能是中转响应异常或网络超时），请检查 API 地址后重试';
+  }
+  return message;
+}
+
 export default function AiSettingsPage() {
   const [apiBase, setApiBase] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -27,7 +36,7 @@ export default function AiSettingsPage() {
         const list = await fetchAiModels({ apiBase: base, apiKey: key });
         setModels(currentModel && !list.includes(currentModel) ? [currentModel, ...list] : list);
       } catch (error) {
-        Toast.error(error instanceof Error ? error.message : '获取模型列表失败');
+        Toast.error(friendlyErrorMessage(error, '获取模型列表失败'));
         setModels(currentModel ? [currentModel] : []);
       } finally {
         setFetchingModels(false);
@@ -64,7 +73,7 @@ export default function AiSettingsPage() {
       }
       Toast.success('AI 配置已保存');
     } catch (error) {
-      Toast.error(error instanceof Error ? error.message : '保存失败');
+      Toast.error(friendlyErrorMessage(error, '保存失败'));
     } finally {
       setSaving(false);
     }
@@ -82,7 +91,7 @@ export default function AiSettingsPage() {
         Toast.error('连接失败');
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : '连接失败';
+      const message = friendlyErrorMessage(error, '连接失败');
       setTestResult({ ok: false, message });
       Toast.error('连接失败');
     } finally {

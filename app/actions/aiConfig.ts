@@ -92,18 +92,35 @@ export async function fetchAiModels(input: { apiBase: string; apiKey: string }):
   if (!/^https?:\/\//i.test(apiBase)) throw new Error('API 地址须以 http:// 或 https:// 开头');
   if (!apiKey) throw new Error('请先填写 API Key');
 
-  const response = await fetch(`${apiBase}/models`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    signal: AbortSignal.timeout(15000),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiBase}/models`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    throw new Error('无法连接到 API 地址（网络不通或超时），请检查地址是否正确');
+  }
 
   if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('API Key 无效或无权限（401/403），请检查 Key 是否正确');
+    }
     throw new Error(`获取模型列表失败（${response.status}）：请检查 API 地址和 Key 是否正确`);
   }
 
-  const data = (await response.json().catch(() => null)) as {
-    data?: Array<{ id?: string }>;
-  } | null;
+  const text = await response.text();
+  if (text.length > 1_000_000) {
+    throw new Error('接口返回数据过大，疑似中转异常');
+  }
+  const data = ((): { data?: Array<{ id?: string }> } | null => {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
+  })();
   const ids = (data?.data || [])
     .map((m) => m?.id)
     .filter((id): id is string => typeof id === 'string' && id.length > 0);
