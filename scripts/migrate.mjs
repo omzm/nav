@@ -131,19 +131,6 @@ async function main() {
         }
       }
     }
-
-    // 3. 老部署兼容：NEXT_PUBLIC_ADMIN_EMAIL 有值、但 app_config 里还没有时，
-    // 自动迁入数据库（幂等）。新部署不设该变量则跳过，走 /admin/setup 向导。
-    // 确认数据库已有邮箱后，可删除该环境变量及本段兼容代码。
-    const legacyEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || '').trim();
-    if (legacyEmail) {
-      await client.query(
-        `insert into app_config (key, value) values ('admin_email', $1)
-         on conflict (key) do nothing`,
-        [legacyEmail]
-      );
-      console.log('[migrate] 管理员邮箱已同步到数据库');
-    }
     } finally {
       // 释放 advisory lock（会话断开也会自动释放，这里显式处理）
       try {

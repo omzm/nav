@@ -8,8 +8,8 @@ export const ADMIN_EMAIL_KEY = 'admin_email';
  * 管理员邮箱：app_config 是唯一真相来源。
  *
  * RLS 策略与排序 RPC 都从 app_config.admin_email 动态读取（经 is_admin()），
- * 服务端也只认数据库里的值。环境变量 NEXT_PUBLIC_ADMIN_EMAIL 不再参与运行时判断，
- * 只在构建时由 scripts/migrate.mjs 负责一次性迁入数据库（老部署兼容）。
+ * 服务端只认数据库里的值。老环境变量 NEXT_PUBLIC_ADMIN_EMAIL 已彻底移除
+ * （Vercel 侧已删除，migrate 里的兼容迁移逻辑也已删除）。
  */
 
 /** 从数据库读管理员邮箱；未配置或读不到时返回空字符串。
