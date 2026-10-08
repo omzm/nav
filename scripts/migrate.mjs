@@ -1,29 +1,16 @@
-// 部署时自动执行数据库迁移：在 `next build` 之前跑完数据库结构变更。
+// 部署时自动执行数据库变更：在 `next build` 之前跑完。
 //
 // 两种情况全自动：
-// 1. 空数据库（第一次部署）：先执行 supabase/schema.sql 建基线表，
-//    再按文件名顺序执行 supabase/migrations 下全部迁移（跳过 *_rollback.sql）。
+// 1. 空数据库（第一次部署）：先执行 supabase/schema.sql 建全套表结构
+//    （schema.sql 已包含全部历史迁移的最终形态），__ADMIN_EMAIL__ 会
+//    自动替换为 NEXT_PUBLIC_ADMIN_EMAIL 环境变量的值。
 //    全程零手工 SQL，填好环境变量部署即可。
-// 2. 已有数据库（增量更新）：只执行 schema_migrations 表里没记过的迁移文件，
-//    每个迁移跑完记一条，保证只跑一次。
+// 2. 已有数据库（增量更新）：按文件名顺序执行 supabase/migrations 下
+//    未应用过的 SQL（跳过 *_rollback.sql），已应用记录记在
+//    schema_migrations 表里，保证只跑一次。
 //
-// 已应用记录记在 schema_migrations 表里。
 // 没有配 DATABASE_URL 时直接跳过（比如本地开发），不报错。
 // 迁移失败则退出码为 1，中断构建，避免代码上线了表结构没跟上。
-//
-// 注意：已存在的老数据库在首次启用前需手工标记一次（Supabase SQL Editor）：
-//   create table if not exists schema_migrations
-//     (name text primary key, applied_at timestamptz default now());
-//   insert into schema_migrations (name) values
-//     ('20261003_private_data_isolation'),
-//     ('20261004_audit_fixes'),
-//     ('20261004_category_order'),
-//     ('20261004_hot_links_fix'),
-//     ('20261004_reorder_rpc'),
-//     ('20261004_reorder_rpc_auth_fix'),
-//     ('20261004_rls_private_admin_only')
-//   on conflict do nothing;
-// 新建的空数据库不需要这一步。
 
 import { readdir, readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
@@ -62,10 +49,17 @@ async function main() {
       "select 1 from information_schema.tables where table_schema = 'public' and table_name = 'links'"
     );
     if (tables.length === 0) {
+      // 空数据库：schema.sql 已包含全部历史迁移的最终形态，一次建全。
+      // 管理员邮箱从环境变量注入策略，部署者填什么就是什么。
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+      if (!adminEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adminEmail)) {
+        throw new Error('首次建表需要有效的 NEXT_PUBLIC_ADMIN_EMAIL 环境变量');
+      }
       console.log('[migrate] 检测到空数据库，先执行 supabase/schema.sql 建表');
       // schema.sql 用到 pg_cron 做定时清理，新项目默认没启用扩展，先装上
       await client.query('create extension if not exists pg_cron');
-      const schemaSql = await readFile(join(root, 'supabase', 'schema.sql'), 'utf8');
+      const schemaSql = (await readFile(join(root, 'supabase', 'schema.sql'), 'utf8'))
+        .split('__ADMIN_EMAIL__').join(adminEmail);
       await client.query('begin');
       try {
         await client.query(schemaSql);
