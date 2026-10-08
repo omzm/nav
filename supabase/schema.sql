@@ -1,3 +1,10 @@
+-- ============================================================
+-- nav 数据库基线（含全部历史迁移的最终形态）
+-- 部署时由 scripts/migrate.mjs 自动执行，全程零手工 SQL。
+-- 注意：__ADMIN_EMAIL__ 会在部署时自动替换为 NEXT_PUBLIC_ADMIN_EMAIL
+-- 环境变量的值；手工执行时请先自行替换。
+-- ============================================================
+
 -- 创建分类表
 CREATE TABLE categories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -18,6 +25,7 @@ CREATE TABLE links (
   icon TEXT,
   "order" INTEGER NOT NULL DEFAULT 0,
   is_private BOOLEAN DEFAULT FALSE,
+  source TEXT NOT NULL DEFAULT 'admin',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
@@ -33,45 +41,45 @@ ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE links ENABLE ROW LEVEL SECURITY;
 
 -- 创建策略：公开分类对所有人可见，私密分类只对认证用户可见
-CREATE POLICY "Allow public read access on public categories"
+CREATE POLICY "Allow public read on public categories"
   ON categories FOR SELECT
-  USING (is_private = FALSE OR auth.uid() IS NOT NULL);
+  USING (is_private = FALSE OR (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__'));
 
 -- 创建策略：公开链接对所有人可见，私密链接只对认证用户可见
-CREATE POLICY "Allow public read access on public links"
+CREATE POLICY "Allow public read on public links"
   ON links FOR SELECT
-  USING (is_private = FALSE OR auth.uid() IS NOT NULL);
+  USING (is_private = FALSE OR (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__'));
 
--- 创建策略：只有管理员可以修改（请将 'your-admin@example.com' 替换为你的管理员邮箱）
+-- 创建策略：只有管理员可以修改（请将 '__ADMIN_EMAIL__' 替换为你的管理员邮箱）
 CREATE POLICY "Allow admin to insert categories"
   ON categories FOR INSERT
   TO authenticated
-  WITH CHECK (auth.jwt() ->> 'email' = 'your-admin@example.com');
+  WITH CHECK (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
 
 CREATE POLICY "Allow admin to update categories"
   ON categories FOR UPDATE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
+  USING (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
 
 CREATE POLICY "Allow admin to delete categories"
   ON categories FOR DELETE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
+  USING (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
 
 CREATE POLICY "Allow admin to insert links"
   ON links FOR INSERT
   TO authenticated
-  WITH CHECK (auth.jwt() ->> 'email' = 'your-admin@example.com');
+  WITH CHECK (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
 
 CREATE POLICY "Allow admin to update links"
   ON links FOR UPDATE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
+  USING (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
 
 CREATE POLICY "Allow admin to delete links"
   ON links FOR DELETE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = 'your-admin@example.com');
+  USING (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
 
 -- 创建点击记录表
 CREATE TABLE link_clicks (
@@ -91,10 +99,11 @@ CREATE POLICY "Allow anyone to insert link_clicks"
   ON link_clicks FOR INSERT
   WITH CHECK (true);
 
--- 所有人可读取（用于聚合热门排名）
-CREATE POLICY "Allow anyone to read link_clicks"
+-- 点击记录仅管理员可读（今日热门走 SECURITY DEFINER 的 get_today_hot_links 聚合）
+CREATE POLICY "Allow admin to read link_clicks"
   ON link_clicks FOR SELECT
-  USING (true);
+  TO authenticated
+  USING (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
 
 -- 数据库侧聚合今日热门，首页只读取聚合后的前 N 条结果
 CREATE TABLE site_stats (
@@ -164,14 +173,14 @@ AS $$
   LIMIT GREATEST(limit_count, 0);
 $$;
 
--- 首页快照 RPC：返回公开和私密分类/链接，让客户端“开门”模式有数据可显示。
+-- 首页快照 RPC：只返回公开分类/链接（私密内容走 get_nav_private_data）
 CREATE OR REPLACE FUNCTION get_nav_snapshot_data(limit_count integer DEFAULT 5)
 RETURNS jsonb
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $
   SELECT jsonb_build_object(
     'categories',
     COALESCE((
@@ -180,7 +189,8 @@ AS $$
           'id', c.id,
           'name', c.name,
           'icon', c.icon,
-          'isPrivate', COALESCE(c.is_private, false),
+          'order', c."order",
+          'isPrivate', false,
           'links', COALESCE((
             SELECT jsonb_agg(
               jsonb_build_object(
@@ -189,17 +199,19 @@ AS $$
                 'url', l.url,
                 'description', l.description,
                 'icon', l.icon,
-                'isPrivate', COALESCE(l.is_private, false)
+                'isPrivate', false
               )
               ORDER BY l."order" ASC
             )
             FROM links l
             WHERE l.category_id = c.id
+              AND COALESCE(l.is_private, false) = false
           ), '[]'::jsonb)
         )
         ORDER BY c."order" ASC
       )
       FROM categories c
+      WHERE COALESCE(c.is_private, false) = false
     ), '[]'::jsonb),
     'hotLinks',
     COALESCE((
@@ -216,17 +228,187 @@ AS $$
     ), '[]'::jsonb),
     'stats',
     jsonb_build_object(
-      'categoryCount', (SELECT COUNT(*) FROM categories),
-      'linkCount', (SELECT COUNT(*) FROM links),
+      'categoryCount', (SELECT COUNT(*) FROM categories WHERE COALESCE(is_private, false) = false),
+      'linkCount', (SELECT COUNT(*) FROM links WHERE COALESCE(is_private, false) = false),
       'totalViewCount', COALESCE((SELECT value FROM site_stats WHERE key = 'total_views'), 0)
     ),
     'generatedAt', now()
   );
-$$;
+$;
 
+-- 私密数据 RPC：校验口令后下发私密分类/链接
+CREATE OR REPLACE FUNCTION get_nav_private_data(p_phrase text)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $
+DECLARE
+  v_expected text := COALESCE(NULLIF(current_setting('app.settings.unlock_phrase', true), ''), '开门');
+BEGIN
+  IF p_phrase IS NULL OR p_phrase <> v_expected THEN
+    RETURN jsonb_build_object('unlocked', false, 'categories', '[]'::jsonb);
+  END IF;
+
+  RETURN jsonb_build_object(
+    'unlocked', true,
+    'categories', COALESCE((
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'id', c.id,
+          'name', c.name,
+          'icon', c.icon,
+          'order', c."order",
+          'isPrivate', true,
+          'links', COALESCE((
+            SELECT jsonb_agg(
+              jsonb_build_object(
+                'id', l.id,
+                'title', l.title,
+                'url', l.url,
+                'description', l.description,
+                'icon', l.icon,
+                'isPrivate', COALESCE(l.is_private, false)
+              )
+              ORDER BY l."order" ASC
+            )
+            FROM links l
+            WHERE l.category_id = c.id
+              AND (
+                COALESCE(c.is_private, false) = true
+                OR COALESCE(l.is_private, false) = true
+              )
+          ), '[]'::jsonb)
+        )
+        ORDER BY c."order" ASC
+      )
+      FROM categories c
+      WHERE COALESCE(c.is_private, false) = true
+         OR EXISTS (
+           SELECT 1 FROM links l2
+           WHERE l2.category_id = c.id AND COALESCE(l2.is_private, false) = true
+         )
+    ), '[]'::jsonb)
+  );
+END;
+$;
+
+CREATE OR REPLACE FUNCTION reorder_links(p_ordered_ids uuid[])
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $
+DECLARE
+  v_caller_email text := auth.jwt() ->> 'email';
+  v_admin_email text;
+  v_policy_expr text;
+BEGIN
+  -- 管理员鉴权：从 RLS 写策略定义中提取管理员邮箱（与表级写权限同源）
+  -- UPDATE/DELETE 策略的表达式在 polqual，INSERT 策略的在 polwithcheck
+  SELECT COALESCE(
+           pg_get_expr(p.polwithcheck, p.polrelid),
+           pg_get_expr(p.polqual, p.polrelid)
+         )
+    INTO v_policy_expr
+  FROM pg_policy p
+  JOIN pg_class c ON c.oid = p.polrelid
+  WHERE c.relname = 'links'
+    AND p.polname = 'Allow admin to update links';
+
+  SELECT regexp_replace(
+           v_policy_expr,
+           '^.*''([^'']+@[^'']+)''.*
+
+-- 每天凌晨 0:05 (UTC) 自动清理前一天的点击记录
+SELECT cron.schedule(
+  'clean-old-link-clicks',
+  '5 0 * * *',
+  $$DELETE FROM link_clicks WHERE clicked_at < CURRENT_DATE$$
+);
+,
+           '\1'
+         )
+    INTO v_admin_email;
+
+  IF v_caller_email IS NULL OR v_admin_email IS NULL
+     OR lower(v_caller_email) IS DISTINCT FROM lower(v_admin_email) THEN
+    RAISE EXCEPTION '未授权：仅管理员可调整链接排序';
+  END IF;
+
+  -- 按数组顺序批量写入 order（unnest with ordinality 取出下标）
+  UPDATE links AS l
+  SET "order" = ordered.rn::integer
+  FROM (
+    SELECT u.id, u.ord AS rn
+    FROM unnest(p_ordered_ids) WITH ORDINALITY AS u(id, ord)
+  ) AS ordered
+  WHERE l.id = ordered.id;
+END;
+$;
+CREATE OR REPLACE FUNCTION reorder_categories(p_ordered_ids uuid[])
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $
+DECLARE
+  v_caller_email text := auth.jwt() ->> 'email';
+  v_admin_email text;
+  v_policy_expr text;
+BEGIN
+  -- 管理员鉴权：从 RLS 写策略定义中提取管理员邮箱（与表级写权限同源）
+  SELECT COALESCE(
+           pg_get_expr(p.polwithcheck, p.polrelid),
+           pg_get_expr(p.polqual, p.polrelid)
+         )
+    INTO v_policy_expr
+  FROM pg_policy p
+  JOIN pg_class c ON c.oid = p.polrelid
+  WHERE c.relname = 'categories'
+    AND p.polname = 'Allow admin to update categories';
+
+  SELECT regexp_replace(
+           v_policy_expr,
+           '^.*''([^'']+@[^'']+)''.*
+
+-- 每天凌晨 0:05 (UTC) 自动清理前一天的点击记录
+SELECT cron.schedule(
+  'clean-old-link-clicks',
+  '5 0 * * *',
+  $$DELETE FROM link_clicks WHERE clicked_at < CURRENT_DATE$$
+);
+,
+           '\1'
+         )
+    INTO v_admin_email;
+
+  IF v_caller_email IS NULL OR v_admin_email IS NULL
+     OR lower(v_caller_email) IS DISTINCT FROM lower(v_admin_email) THEN
+    RAISE EXCEPTION '未授权：仅管理员可调整分类排序';
+  END IF;
+
+  -- 按数组顺序批量写入 order（unnest with ordinality 取出下标）
+  UPDATE categories AS c
+  SET "order" = ordered.rn::integer
+  FROM (
+    SELECT u.id, u.ord AS rn
+    FROM unnest(p_ordered_ids) WITH ORDINALITY AS u(id, ord)
+  ) AS ordered
+  WHERE c.id = ordered.id;
+END;
+$;
+
+REVOKE ALL ON FUNCTION get_nav_private_data(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION reorder_links(uuid[]) FROM PUBLIC;
+REVOKE ALL ON FUNCTION reorder_categories(uuid[]) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION get_today_hot_links(integer) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION increment_site_view() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_nav_snapshot_data(integer) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION get_nav_private_data(text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION reorder_links(uuid[]) TO authenticated;
+GRANT EXECUTE ON FUNCTION reorder_categories(uuid[]) TO authenticated;
 
 -- 每天凌晨 0:05 (UTC) 自动清理前一天的点击记录
 SELECT cron.schedule(
