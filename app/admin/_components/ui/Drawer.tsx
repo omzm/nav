@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export interface DrawerProps {
@@ -13,6 +13,12 @@ export interface DrawerProps {
 
 /** 抽屉（替代 Semi SideSheet，用于移动端导航） */
 export default function Drawer({ open, onClose, children, width = 280, side = 'left' }: DrawerProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -20,9 +26,9 @@ export default function Drawer({ open, onClose, children, width = 280, side = 'l
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [open ]);
+  }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[90]" role="presentation">

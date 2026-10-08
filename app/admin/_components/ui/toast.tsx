@@ -75,6 +75,7 @@ const styles: Record<ToastType, { bar: string; icon: ReactNode }> = {
 
 export function ToastProvider({ children }: { children?: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
+  const [mounted, setMounted] = useState(false);
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
 
   const push = useCallback((item: Omit<ToastItem, 'id'>) => {
@@ -85,6 +86,10 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
       timers.current.delete(full.id);
     }, 3200);
     timers.current.set(full.id, timer);
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -111,7 +116,7 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
   return (
     <>
       {children}
-      {createPortal(
+      {mounted && createPortal(
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex flex-col items-center gap-2 pointer-events-none w-max max-w-[calc(100vw-32px)]">
           {items.map((item) => (
             <div
