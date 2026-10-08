@@ -63,6 +63,8 @@ async function main() {
     );
     if (tables.length === 0) {
       console.log('[migrate] 检测到空数据库，先执行 supabase/schema.sql 建表');
+      // schema.sql 用到 pg_cron 做定时清理，新项目默认没启用扩展，先装上
+      await client.query('create extension if not exists pg_cron');
       const schemaSql = await readFile(join(root, 'supabase', 'schema.sql'), 'utf8');
       await client.query('begin');
       try {
