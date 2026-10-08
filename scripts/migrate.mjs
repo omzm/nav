@@ -71,9 +71,15 @@ async function main() {
       }
     }
 
-    const files = (await readdir(migrationsDir))
-      .filter((f) => f.endsWith('.sql') && !f.endsWith('_rollback.sql'))
-      .sort();
+    let files = [];
+    try {
+      files = (await readdir(migrationsDir))
+        .filter((f) => f.endsWith('.sql') && !f.endsWith('_rollback.sql'))
+        .sort();
+    } catch (err) {
+      // migrations 目录不存在（比如历史迁移已并入 schema.sql）→ 视为无待应用迁移
+      if (err.code !== 'ENOENT') throw err;
+    }
     const pending = files.filter((f) => !applied.has(f.replace(/\.sql$/, '')));
 
     if (pending.length === 0) {
