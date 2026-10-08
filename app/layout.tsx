@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { ToastContainer } from "./components/Toast";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 export const metadata: Metadata = {
@@ -44,7 +43,6 @@ export default function RootLayout({
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
-        <ToastContainer />
       </body>
     </html>
   );

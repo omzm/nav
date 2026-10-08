@@ -45,9 +45,13 @@ async function main() {
     await client.query('create extension if not exists pg_cron');
     const schemaSql = await readFile(join(root, 'supabase', 'schema.sql'), 'utf8');
 
-    // 安全检查：结构声明里不允许删表/清空表
-    if (/(^|\n)\s*(drop\s+table|truncate(\s+table)?)\s/i.test(schemaSql)) {
-      throw new Error('schema.sql 中禁止出现 DROP TABLE / TRUNCATE，请改用 migration 文件处理');
+    // 安全检查：结构声明里不允许删表/清空表/无条件删数据
+    // （cron 任务体里的 DELETE 带 WHERE，不会被误杀）
+    if (
+      /(^|\n)\s*(drop\s+table|truncate(\s+table)?)\s/i.test(schemaSql) ||
+      /(^|\n)\s*delete\s+from\s+\w+\s*;/i.test(schemaSql)
+    ) {
+      throw new Error('schema.sql 中禁止出现 DROP TABLE / TRUNCATE / 无条件 DELETE，请改用 migration 文件处理');
     }
 
     console.log('[migrate] 同步表结构：supabase/schema.sql');

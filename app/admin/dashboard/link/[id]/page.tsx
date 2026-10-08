@@ -53,11 +53,20 @@ function normalizeUrlForCompare(raw: string): string {
   }
 }
 
-function loadImage(src: string) {
+function loadImage(src: string, timeoutMs = 8000) {
   return new Promise<boolean>((resolve) => {
+    let done = false;
+    const finish = (ok: boolean) => {
+      if (!done) {
+        done = true;
+        resolve(ok);
+      }
+    };
     const image = new Image();
-    image.onload = () => resolve(true);
-    image.onerror = () => resolve(false);
+    image.onload = () => finish(true);
+    image.onerror = () => finish(false);
+    // 服务器只建连不响应时兜底，避免 loading 永久转圈
+    setTimeout(() => finish(false), timeoutMs);
     image.src = src;
   });
 }
@@ -298,7 +307,7 @@ export default function LinkForm() {
     return null;
   };
 
-  const saveLink = async (continueAdding: boolean) => {
+  const saveLink = async (continueAdding: boolean, skipDuplicateCheck = false) => {
     if (savingRef.current) return;
     savingRef.current = true;
 
@@ -309,6 +318,19 @@ export default function LinkForm() {
     }
 
     try {
+      // 新建与编辑都做 URL 去重检查（编辑时排除自身）；去重检查与写入共用一次 loading，不闪烁
+      if (!skipDuplicateCheck) {
+        const existing = await checkDuplicateUrl(url.trim());
+        if (existing) {
+          setDuplicateDialog({
+            open: true,
+            existingLink: existing,
+            continueAdding,
+          });
+          return;
+        }
+      }
+
       const linkData = {
         category_id: categoryId,
         title: title.trim(),
@@ -355,28 +377,6 @@ export default function LinkForm() {
 
   const validateAndSave = async (continueAdding = false) => {
     if (!validateForm()) return;
-
-    // 新建与编辑都做 URL 去重检查（编辑时排除自身）
-    if (continueAdding) {
-      setSaveAndContinueLoading(true);
-    } else {
-      setSaving(true);
-    }
-
-    const existing = await checkDuplicateUrl(url.trim());
-
-    setSaving(false);
-    setSaveAndContinueLoading(false);
-
-    if (existing) {
-      setDuplicateDialog({
-        open: true,
-        existingLink: existing,
-        continueAdding,
-      });
-      return;
-    }
-
     await saveLink(continueAdding);
   };
 
@@ -427,7 +427,7 @@ export default function LinkForm() {
         onOk={() => {
           const continueAdding = duplicateDialog.continueAdding;
           setDuplicateDialog({ open: false, existingLink: null, continueAdding: false });
-          void saveLink(continueAdding);
+          void saveLink(continueAdding, true);
         }}
         onCancel={() => setDuplicateDialog({ open: false, existingLink: null, continueAdding: false })}
       >

@@ -136,8 +136,11 @@ export function useAdminData() {
       console.error('加载后台数据失败:', error);
       Toast.error('加载数据失败，请稍后重试');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      // 过期请求不碰 loading：新请求还在飞，提前关菊花会闪烁
+      if (!isStale()) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
@@ -181,7 +184,8 @@ export function useAdminData() {
     anchor.href = url;
     anchor.download = `nav-bookmarks-${new Date().toISOString().slice(0, 10)}.html`;
     anchor.click();
-    URL.revokeObjectURL(url);
+    // Safari 下载可能还没开始就被吊销，延迟释放
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     Toast.success('书签 HTML 已导出，可直接导入浏览器');
   }, [categories, links]);
 
@@ -223,7 +227,8 @@ export function useAdminData() {
     anchor.href = url;
     anchor.download = `nav-backup-${new Date().toISOString().slice(0, 10)}.json`;
     anchor.click();
-    URL.revokeObjectURL(url);
+    // Safari 下载可能还没开始就被吊销，延迟释放
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     Toast.success('备份已导出');
   }, [categories, links]);
 

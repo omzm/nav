@@ -300,7 +300,7 @@ export default function CategoriesPage() {
           {isMobile && (
           <div className="admin-mobile-list">
             {filteredCategories.length > 0 ? (
-              filteredCategories.map((category) => {
+              filteredCategories.map((category, sortIndex) => {
                 const count = linkCountByCategory.get(category.id) || { total: 0, privateCount: 0 };
 
                 return (
@@ -357,6 +357,7 @@ export default function CategoriesPage() {
                         <Button
                           size="small"
                           icon={<IconChevronUp aria-hidden="true" />}
+                          disabled={sortIndex <= 0}
                           onClick={() => void moveCategory(category.id, -1)}
                         >
                           上移
@@ -364,6 +365,7 @@ export default function CategoriesPage() {
                         <Button
                           size="small"
                           icon={<IconChevronDown aria-hidden="true" />}
+                          disabled={sortIndex >= filteredCategories.length - 1}
                           onClick={() => void moveCategory(category.id, 1)}
                         >
                           下移

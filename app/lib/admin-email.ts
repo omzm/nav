@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { createClient } from '@supabase/supabase-js';
+import { createServerSupabaseClient } from './supabase-server';
 
 export const ADMIN_EMAIL_KEY = 'admin_email';
 
@@ -12,24 +12,11 @@ export const ADMIN_EMAIL_KEY = 'admin_email';
  * 其值会在构建时由 scripts/migrate.mjs 自动迁入数据库。
  */
 
-/** anon 客户端读 app_config（该表对所有人开放读） */
-function createAnonClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-  if (!url || !key) {
-    throw new Error('Supabase 环境变量未配置');
-  }
-
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
-/** 从数据库读管理员邮箱；表不存在或未配置时返回空字符串 */
+/** 从数据库读管理员邮箱；未配置或表不存在时返回空字符串 */
 export async function getDbAdminEmail(): Promise<string> {
   try {
-    const { data, error } = await createAnonClient()
+    // 复用 supabase-server 的 anon 客户端（无会话持久化）；app_config 对所有人开放读
+    const { data, error } = await createServerSupabaseClient()
       .from('app_config')
       .select('value')
       .eq('key', ADMIN_EMAIL_KEY)
