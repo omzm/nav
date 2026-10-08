@@ -19,6 +19,21 @@ function isValidEmail(email: string): boolean {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 }
 
+/**
+ * 初始化前置环境校验：在任何写入之前执行。
+ * 必需变量缺一不可，否则写到一半才抛错会留下半初始化状态
+ * （占位行已写 / Auth 用户已建，但会话签发失败）。
+ */
+function checkSetupEnv(): string | null {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return '服务端数据库配置缺失，请检查环境变量后重新部署';
+  }
+  if (!process.env.ADMIN_SESSION_SECRET) {
+    return '服务端未配置 ADMIN_SESSION_SECRET，请配置后重新部署';
+  }
+  return null;
+}
+
 async function issueAdminSession(email: string): Promise<void> {
   const sessionToken = await signAdminToken(email);
   const store = await cookies();
@@ -50,6 +65,12 @@ export async function setupAdminAccount(
   token?: string
 ): Promise<SetupResult> {
   try {
+    // 环境先行：任何写入之前先确认必需变量都在
+    const envError = checkSetupEnv();
+    if (envError) {
+      return { ok: false, error: envError };
+    }
+
     email = (email || '').trim().toLowerCase();
 
     if (!isValidEmail(email)) {
@@ -88,7 +109,15 @@ export async function setupAdminAccount(
       if (createError || !created.user) {
         // 释放占位，允许重试
         await svc.from('app_config').delete().eq('key', ADMIN_EMAIL_KEY);
-        return { ok: false, error: createError?.message || '创建管理员账号失败' };
+        const msg = (createError?.message || '').toLowerCase();
+
+        if (/already exists|already registered/i.test(msg)) {
+          return { ok: false, error: '该邮箱已在认证系统中存在，请先在 Supabase 控制台删除该用户后重试' };
+        }
+
+        // 内部错误只记服务端日志，不向客户端泄露细节
+        console.error('setupAdminAccount createUser failed:', createError?.message);
+        return { ok: false, error: '初始化失败，请稍后重试' };
       }
 
       await issueAdminSession(email);
@@ -96,7 +125,8 @@ export async function setupAdminAccount(
     }
 
     if (claimError.code !== '23505') {
-      return { ok: false, error: '初始化失败：' + claimError.message };
+      console.error('setupAdminAccount claim failed:', claimError.message);
+      return { ok: false, error: '初始化失败，请稍后重试' };
     }
 
     // 已配置：只允许"恢复"——库里有邮箱但 Auth 用户缺失时，用已配置的邮箱补建用户。
@@ -124,14 +154,15 @@ export async function setupAdminAccount(
       if (/already exists|already registered/i.test(msg)) {
         return { ok: false, error: '管理员已配置，请直接登录' };
       }
-      return { ok: false, error: recoverError?.message || '创建管理员账号失败' };
+      console.error('setupAdminAccount recover failed:', recoverError?.message);
+      return { ok: false, error: '初始化失败，请稍后重试' };
     }
 
     await issueAdminSession(configuredEmail);
     return { ok: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : '初始化失败';
-    console.error('setupAdminAccount failed:', message);
-    return { ok: false, error: message };
+    // 兜底：内部错误只记日志，客户端一律通用提示
+    console.error('setupAdminAccount failed:', error instanceof Error ? error.message : error);
+    return { ok: false, error: '初始化失败，请稍后重试' };
   }
 }
