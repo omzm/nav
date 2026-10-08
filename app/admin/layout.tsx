@@ -15,6 +15,7 @@ import {
   IconHistogram,
   IconMenu,
   IconPlus,
+  IconSetting,
 } from '@douyinfe/semi-icons';
 import { supabase } from '@/app/lib/supabase';
 // 本地测试账号模块不静态导入：只在开发环境动态加载，
@@ -54,6 +55,11 @@ const navGroups = [
       { label: '分类管理', path: '/admin/dashboard/categories' },
       { label: '链接管理', path: '/admin/dashboard/links' },
     ],
+  },
+  {
+    title: '系统设置',
+    icon: IconSetting,
+    items: [{ label: 'AI 设置', path: '/admin/dashboard/ai-settings' }],
   },
 ];
 const allNavItems = [navStandalone, ...navGroups.flatMap((group) => group.items)];

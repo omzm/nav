@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@douyinfe/semi-ui';
 import {
+  IconBulb,
   IconFolder,
   IconGlobe,
   IconImage,
@@ -27,6 +28,7 @@ import {
 import { supabase, Category } from '@/app/lib/supabase';
 import { getFallbackFaviconUrl, getFaviconUrl } from '@/app/utils/favicon';
 import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
+import { generateSiteDescription } from '@/app/actions/aiDescribe';
 import CategoryIcon from '@/app/components/CategoryIcon';
 import { isEmojiIcon } from '@/app/admin/_components/LinkIcon';
 
@@ -90,6 +92,29 @@ export default function LinkForm() {
     existingLink: { id: string; url: string; title: string } | null;
     continueAdding: boolean;
   }>({ open: false, existingLink: null, continueAdding: false });
+  const [aiGenerating, setAiGenerating] = useState(false);
+
+  /** AI 生成网站描述：需要先填网站名称和 URL，生成后填入描述框 */
+  const handleAiGenerateDescription = useCallback(async () => {
+    if (!title.trim()) {
+      Toast.warning('请先填写网站名称');
+      return;
+    }
+    if (!url.trim()) {
+      Toast.warning('请先填写网站 URL');
+      return;
+    }
+    setAiGenerating(true);
+    try {
+      const text = await generateSiteDescription({ title: title.trim(), url: url.trim() });
+      setDescription(text);
+      Toast.success('描述已生成，可再手动调整');
+    } catch (error) {
+      Toast.error(error instanceof Error ? error.message : '生成失败');
+    } finally {
+      setAiGenerating(false);
+    }
+  }, [title, url]);
 
   const router = useRouter();
   const params = useParams();
@@ -500,7 +525,19 @@ export default function LinkForm() {
             </label>
 
             <label className="admin-form-field">
-              <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>网站描述</Text>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>网站描述</Text>
+                <Button
+                  size="small"
+                  theme="light"
+                  type="tertiary"
+                  icon={<IconBulb />}
+                  loading={aiGenerating}
+                  onClick={handleAiGenerateDescription}
+                >
+                  AI 生成
+                </Button>
+              </div>
               <TextArea
                 value={description}
                 onChange={setDescription}
