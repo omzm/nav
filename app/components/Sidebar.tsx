@@ -14,41 +14,15 @@ interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   hotLinks?: HotLink[];
-  totalViewCount?: number;
   submitEnabled?: boolean;
   version: string;
 }
 
-// 建站日期：如需调整"已稳定运行"的起始时间，改这里即可
-const START_DATE = new Date('2026-02-16T00:00:00');
 const ALL_CATEGORIES_ICON = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M3 10.75L12 3l9 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M5.5 9.75V20h13V9.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M9.5 20v-6h5v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
-
-const RunTimer = memo(function RunTimer() {
-  // 每秒更新一次，显示 天/时/分/秒
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const diff = Math.max(0, now - START_DATE.getTime());
-  const days = Math.floor(diff / 86400000);
-  const hours = Math.floor(diff / 3600000) % 24;
-  const minutes = Math.floor(diff / 60000) % 60;
-  const seconds = Math.floor(diff / 1000) % 60;
-
-  return (
-    <div className="flex items-center justify-center gap-1 tabular-nums">
-      <span>⏱️</span>
-      <span>已稳定运行 {days} 天 {hours} 时 {minutes} 分 {seconds} 秒</span>
-    </div>
-  );
-});
 
 interface CategoryListProps {
   categories: NavCategory[];
@@ -157,7 +131,6 @@ export default function Sidebar({
   isOpen,
   onToggle,
   hotLinks,
-  totalViewCount = 0,
   submitEnabled = false,
   version,
 }: SidebarProps) {
@@ -187,10 +160,6 @@ export default function Sidebar({
         isPrivate: Boolean(category.isPrivate),
       })),
     [categories]
-  );
-  const totalViewText = useMemo(
-    () => `累计浏览 ${totalViewCount.toLocaleString('zh-CN')} 次`,
-    [totalViewCount]
   );
 
   return (
@@ -239,12 +208,6 @@ export default function Sidebar({
             enabled={submitEnabled}
             defaultCategoryId={selectedCategory}
           />
-          <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            {totalViewText}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            <RunTimer />
-          </div>
           <div className="text-xs text-gray-400 dark:text-gray-500 text-center">
             v{version} · © 2026
           </div>

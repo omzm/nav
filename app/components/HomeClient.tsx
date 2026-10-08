@@ -322,7 +322,6 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen((value) => !value)}
         hotLinks={snapshot.hotLinks}
-        totalViewCount={snapshot.stats.totalViewCount}
         submitEnabled={submitEnabled}
         version={version}
       />

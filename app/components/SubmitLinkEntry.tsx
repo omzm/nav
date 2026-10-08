@@ -173,7 +173,7 @@ export default function SubmitLinkEntry({ categories, enabled, defaultCategoryId
     <>
       <button
         onClick={() => setOpen(true)}
-        className="group relative w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-xl text-blue-700 dark:text-blue-200 border border-white/60 dark:border-white/20 bg-gradient-to-b from-white/80 via-blue-50/60 to-blue-100/50 dark:from-white/15 dark:via-blue-400/10 dark:to-blue-500/10 backdrop-blur-xl shadow-[0_2px_12px_rgba(59,130,246,0.18),inset_0_1px_0_rgba(255,255,255,0.9)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-300 hover:from-white/90 hover:to-blue-100/70 dark:hover:from-white/20 dark:hover:to-blue-400/15 hover:shadow-[0_4px_20px_rgba(59,130,246,0.28),inset_0_1px_0_rgba(255,255,255,1)] active:scale-[0.98]"
+        className="group relative w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-xl text-gray-700 dark:text-gray-200 border border-white/60 dark:border-white/20 bg-gradient-to-b from-white/80 to-gray-200/40 dark:from-white/15 dark:to-white/5 backdrop-blur-xl shadow-[0_2px_12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-300 hover:from-white/95 hover:to-gray-200/60 dark:hover:from-white/20 dark:hover:to-white/10 hover:shadow-[0_4px_20px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(255,255,255,1)] active:scale-[0.98]"
       >
         <svg className="w-4 h-4 transition-transform duration-300 group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
