@@ -18,9 +18,10 @@ import type { NavCategory, NavSnapshot } from '../types';
 interface HomeClientProps {
   snapshot: NavSnapshot;
   submitEnabled: boolean;
+  version: string;
 }
 
-export default function HomeClient({ snapshot, submitEnabled }: HomeClientProps) {
+export default function HomeClient({ snapshot, submitEnabled, version }: HomeClientProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   // 每日一言：客户端挂载后异步拉取，不阻塞首屏；加载前用占位符撑住高度避免布局抖动
@@ -321,8 +322,8 @@ export default function HomeClient({ snapshot, submitEnabled }: HomeClientProps)
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen((value) => !value)}
         hotLinks={snapshot.hotLinks}
-        totalViewCount={snapshot.stats.totalViewCount}
         submitEnabled={submitEnabled}
+        version={version}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -354,7 +355,7 @@ export default function HomeClient({ snapshot, submitEnabled }: HomeClientProps)
             style={{ backgroundImage: "url('/api/bing-wallpaper')" }}
           />
 
-          <div className="relative px-4 py-3">
+          <div className="relative px-4 py-8 sm:py-10">
             <div className="flex items-center justify-end mb-2 lg:hidden">
               <button
                 onClick={() => setIsSidebarOpen((value) => !value)}

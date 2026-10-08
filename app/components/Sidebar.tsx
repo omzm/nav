@@ -14,11 +14,11 @@ interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   hotLinks?: HotLink[];
-  totalViewCount?: number;
   submitEnabled?: boolean;
+  version: string;
 }
 
-// 建站日期：如需调整"已运行 N 天"的起始时间，改这里即可
+// 建站日期：如需调整"已稳定运行"的起始时间，改这里即可
 const START_DATE = new Date('2026-02-16T00:00:00');
 const ALL_CATEGORIES_ICON = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M3 10.75L12 3l9 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -26,19 +26,24 @@ const ALL_CATEGORIES_ICON = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://
   <path d="M9.5 20v-6h5v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
-function getRunDays() {
-  const diff = Date.now() - START_DATE.getTime();
-  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
-}
-
 const RunTimer = memo(function RunTimer() {
-  // 天数一天才变一次，挂载时计算一次即可，不需要常驻定时器
-  const [days] = useState(getRunDays);
+  // 每秒更新一次，显示 天/时/分/秒
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const diff = Math.max(0, now - START_DATE.getTime());
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor(diff / 3600000) % 24;
+  const minutes = Math.floor(diff / 60000) % 60;
+  const seconds = Math.floor(diff / 1000) % 60;
 
   return (
-    <div className="flex items-center justify-center gap-1">
-      <span>⏱️</span>
-      <span>已运行 {days} 天</span>
+    <div className="flex items-center justify-center gap-1 tabular-nums">
+      <span>已稳定运行 {days} 天 {hours} 时 {minutes} 分 {seconds} 秒</span>
     </div>
   );
 });
@@ -150,8 +155,8 @@ export default function Sidebar({
   isOpen,
   onToggle,
   hotLinks,
-  totalViewCount = 0,
   submitEnabled = false,
+  version,
 }: SidebarProps) {
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
@@ -170,7 +175,6 @@ export default function Sidebar({
     [onSelectCategory, onToggle]
   );
 
-  const categoryCountText = useMemo(() => `共 ${categories.length} 个分类`, [categories.length]);
   // 提交收录弹窗用的分类下拉数据（只取需要的字段）
   const submitCategories = useMemo<SubmitCategory[]>(
     () =>
@@ -180,10 +184,6 @@ export default function Sidebar({
         isPrivate: Boolean(category.isPrivate),
       })),
     [categories]
-  );
-  const totalViewText = useMemo(
-    () => `累计浏览 ${totalViewCount.toLocaleString('zh-CN')} 次`,
-    [totalViewCount]
   );
 
   return (
@@ -196,7 +196,7 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-30 transition-[transform,visibility] duration-300 ${
+        className={`fixed top-0 left-0 h-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-30 transition-[translate,visibility] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           isOpen ? 'translate-x-0' : '-translate-x-full invisible'
         } lg:translate-x-0 lg:visible lg:static lg:z-0 w-56 sm:w-64 flex flex-col shadow-2xl lg:shadow-none border-r border-gray-200 dark:border-gray-700/50`}
       >
@@ -233,13 +233,10 @@ export default function Sidebar({
             defaultCategoryId={selectedCategory}
           />
           <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            {categoryCountText}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            {totalViewText}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
             <RunTimer />
+          </div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 text-center">
+            v{version} · © 2026
           </div>
         </div>
       </aside>

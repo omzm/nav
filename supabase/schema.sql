@@ -194,7 +194,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION get_today_hot_links(limit_count integer DEFAULT 5)
+CREATE OR REPLACE FUNCTION get_today_hot_links(limit_count integer DEFAULT 3)
 RETURNS TABLE (
   title TEXT,
   url TEXT,
@@ -225,7 +225,7 @@ AS $$
 $$;
 
 -- 首页快照 RPC：只返回公开分类/链接（私密内容走 get_nav_private_data）
-CREATE OR REPLACE FUNCTION get_nav_snapshot_data(limit_count integer DEFAULT 5)
+CREATE OR REPLACE FUNCTION get_nav_snapshot_data(limit_count integer DEFAULT 3)
 RETURNS jsonb
 LANGUAGE sql
 STABLE

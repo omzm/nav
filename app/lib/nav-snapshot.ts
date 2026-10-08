@@ -84,7 +84,7 @@ async function loadNavSnapshotFromTables(
         .from('links')
         .select('id,category_id,title,url,description,icon,is_private')
         .order('order', { ascending: true }),
-      supabase.rpc('get_today_hot_links', { limit_count: 5 }),
+      supabase.rpc('get_today_hot_links', { limit_count: 3 }),
       getTotalViewCount(supabase),
     ]);
 
@@ -159,7 +159,7 @@ async function loadNavSnapshot(): Promise<NavSnapshot> {
   const supabase = createServerSupabaseClient();
 
   try {
-    const { data, error } = await supabase.rpc('get_nav_snapshot_data', { limit_count: 5 });
+    const { data, error } = await supabase.rpc('get_nav_snapshot_data', { limit_count: 3 });
 
     if (error) throw error;
 

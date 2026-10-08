@@ -27,10 +27,10 @@ export async function GET() {
     }
 
     const imageUrl = imagePath.startsWith('http') ? imagePath : `https://www.bing.com${imagePath}`;
-    // 头图只用作页面顶部横幅背景（约 300px 高，上方压着标题与搜索框）：1024x768 足够清晰，
-    // 1366x768 体积翻一倍、1920x1080 再翻一倍，视觉上无差别。实测某日壁纸：335KB -> 172KB -> 73KB。
+    // 头图用作页面顶部横幅背景（加高后约 400px+，上方压着标题与搜索框）：1366x768 是清晰度与体积的折中，
+    // 1920x1080 约 335KB、1366x768 约 172KB、1024x768 约 73KB（实测某日壁纸）。
     // 必应缩略图 URL 支持直接替换分辨率后缀；若无该后缀则原样跳转。
-    const sizedImageUrl = imageUrl.replace('_1920x1080', '_1024x768');
+    const sizedImageUrl = imageUrl.replace('_1920x1080', '_1366x768');
     const redirect = NextResponse.redirect(sizedImageUrl, 307);
     redirect.headers.set('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800');
     return redirect;
