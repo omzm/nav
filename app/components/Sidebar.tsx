@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { HotLink, NavCategory } from '../types';
 import CategoryIcon from './CategoryIcon';
@@ -43,7 +43,6 @@ const RunTimer = memo(function RunTimer() {
 
   return (
     <div className="flex items-center justify-center gap-1 tabular-nums">
-      <span>⏱️</span>
       <span>已稳定运行 {days} 天 {hours} 时 {minutes} 分 {seconds} 秒</span>
     </div>
   );
@@ -53,25 +52,18 @@ interface CategoryListProps {
   categories: NavCategory[];
   selectedCategory: string | null;
   onCategoryClick: (categoryId: string | null) => void;
-  // 侧边栏每次打开时递增；>0 时分类项播放 stagger 入场动画
-  enterKey: number;
 }
 
 const CategoryList = memo(function CategoryList({
   categories,
   selectedCategory,
   onCategoryClick,
-  enterKey,
 }: CategoryListProps) {
-  const animate = enterKey > 0;
   return (
-    <nav key={enterKey} className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-1">
+    <nav className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-1">
       <button
         onClick={() => onCategoryClick(null)}
-        style={animate ? { animationDelay: '0ms' } : undefined}
         className={`w-full text-left px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all duration-300 group ${
-          animate ? 'sidebar-item-enter' : ''
-        } ${
           selectedCategory === null
             ? 'bg-gray-100 dark:bg-gray-800/50'
             : 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
@@ -89,14 +81,11 @@ const CategoryList = memo(function CategoryList({
         </span>
       </button>
 
-      {categories.map((category, index) => (
+      {categories.map((category) => (
         <button
           key={category.id}
           onClick={() => onCategoryClick(category.id)}
-          style={animate ? { animationDelay: `${Math.min(index + 1, 10) * 30}ms` } : undefined}
           className={`w-full text-left px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg transition-all duration-300 group ${
-            animate ? 'sidebar-item-enter' : ''
-          } ${
             selectedCategory === category.id
               ? 'bg-gray-100 dark:bg-gray-800/50'
               : 'hover:bg-gray-100 dark:hover:bg-gray-800/50'
@@ -176,16 +165,6 @@ export default function Sidebar({
     };
   }, [isOpen]);
 
-  // 侧边栏每次打开时递增，驱动分类项的 stagger 入场动画
-  const [openCount, setOpenCount] = useState(0);
-  const wasOpenRef = useRef(isOpen);
-  useEffect(() => {
-    if (isOpen && !wasOpenRef.current) {
-      setOpenCount((c) => c + 1);
-    }
-    wasOpenRef.current = isOpen;
-  }, [isOpen]);
-
   const handleCategoryClick = useCallback(
     (categoryId: string | null) => {
       onSelectCategory(categoryId);
@@ -243,7 +222,6 @@ export default function Sidebar({
           categories={categories}
           selectedCategory={selectedCategory}
           onCategoryClick={handleCategoryClick}
-          enterKey={openCount}
         />
 
         <HotLinksPanel hotLinks={hotLinks} />
