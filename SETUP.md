@@ -24,7 +24,7 @@ DATABASE_URL=上面的 pooler 连接串
 
 - **Vercel**：导入 GitHub 仓库，填好上面 5 个环境变量，点 Deploy。
 - 数据库表结构、RLS 策略、RPC 函数会在构建时自动创建好，不用手动执行 SQL。
-- 以后改表结构：往 `supabase/migrations/` 里加新的 SQL 文件（按日期命名），部署时自动按顺序执行。
+- 以后改表结构：直接改 `supabase/schema.sql`（保持幂等写法），部署时自动同步。
 
 ## 4. 初始化管理员
 
