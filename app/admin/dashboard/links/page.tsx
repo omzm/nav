@@ -14,6 +14,7 @@ import {
   Select,
   Spinner,
 } from '@/app/admin/_components/ui';
+import NavButton from '@/app/admin/_components/NavButton';
 import { toast } from '@/app/admin/_components/ui/toast';
 import {
   IconChevronDown,
@@ -475,13 +476,13 @@ function LinksPageInner() {
             <Button icon={<IconRefresh />} loading={refreshing} onClick={() => void loadData(true)}>
               刷新
             </Button>
-            <Button
+            <NavButton
               variant="primary"
               icon={<IconPlus />}
-              onClick={() => router.push('/admin/dashboard/link/new')}
+              href="/admin/dashboard/link/new"
             >
               添加链接
-            </Button>
+            </NavButton>
           </div>
         </div>
 

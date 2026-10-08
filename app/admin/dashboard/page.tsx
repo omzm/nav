@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button, Empty, Spinner } from '@/app/admin/_components/ui';
+import NavButton from '@/app/admin/_components/NavButton';
 import {
   IconChevronRight,
   IconDownload,
@@ -93,7 +94,7 @@ export default function AdminDashboard() {
           </div>
           <div className="admin-actions-row">
             <Button icon={<IconRefresh aria-hidden="true" />} loading={refreshing} onClick={() => void loadData(true)} title="刷新数据 (R)">刷新数据</Button>
-            <Button variant="primary" icon={<IconPlus aria-hidden="true" />} onClick={() => router.push('/admin/dashboard/link/new')} title="添加链接 (N)">添加链接</Button>
+            <NavButton variant="primary" icon={<IconPlus aria-hidden="true" />} href="/admin/dashboard/link/new" title="添加链接 (N)">添加链接</NavButton>
           </div>
         </div>
 
@@ -141,7 +142,7 @@ export default function AdminDashboard() {
               <Empty
                 title="从第一个分类开始"
                 description="为收藏建立分类，让好用的网站各就其位。"
-                action={<Button size="small" onClick={() => router.push('/admin/dashboard/category/new')}>添加分类</Button>}
+                action={<NavButton size="small" href="/admin/dashboard/category/new">添加分类</NavButton>}
               />
             )}
           </section>
@@ -169,7 +170,7 @@ export default function AdminDashboard() {
               <Empty
                 title="还没有收录链接"
                 description="添加一个常用网站，开始建立你的收藏夹。"
-                action={<Button size="small" onClick={() => router.push('/admin/dashboard/link/new')}>添加链接</Button>}
+                action={<NavButton size="small" href="/admin/dashboard/link/new">添加链接</NavButton>}
               />
             )}
           </section>

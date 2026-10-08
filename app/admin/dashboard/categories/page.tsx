@@ -12,6 +12,7 @@ import {
   Modal,
   Spinner,
 } from '@/app/admin/_components/ui';
+import NavButton from '@/app/admin/_components/NavButton';
 import { toast } from '@/app/admin/_components/ui/toast';
 import {
   IconChevronDown,
@@ -212,13 +213,13 @@ export default function CategoriesPage() {
             <Button icon={<IconRefresh aria-hidden="true" />} loading={refreshing} onClick={() => void loadData(true)}>
               刷新
             </Button>
-            <Button
+            <NavButton
               variant="primary"
               icon={<IconPlus aria-hidden="true" />}
-              onClick={() => router.push('/admin/dashboard/category/new')}
+              href="/admin/dashboard/category/new"
             >
               添加分类
-            </Button>
+            </NavButton>
           </div>
         </div>
 

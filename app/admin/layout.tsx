@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { Button, Drawer, Modal, Spinner } from './_components/ui';
+import NavButton from './_components/NavButton';
 import { ToastProvider, toast } from './_components/ui/toast';
 import {
   IconChevronDown,
@@ -203,6 +204,14 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // 预取新建表单路由：后台"添加链接/添加分类"按钮之前是裸 router.push，
+  // 首次点击要现下载表单页面的 JS chunk，手机上卡顿明显，用户以为没点到而重复点击。
+  // 这里提前预取，点的时候 chunk 已在缓存里；再配合 NavButton 的 pending 菊花，体感上就是"秒开"。
+  useEffect(() => {
+    router.prefetch('/admin/dashboard/link/new');
+    router.prefetch('/admin/dashboard/category/new');
+  }, [router]);
+
   // 当前页面所在的分组自动展开（覆盖手动折叠，保证"你在哪"永远可见）
   useEffect(() => {
     const activeGroup = navGroups.find((group) =>
@@ -262,12 +271,9 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
       </Link>
 
       <div className="admin-sidebar-create">
-        <Button variant="primary" className="w-full" icon={<IconPlus aria-hidden="true" />} onClick={() => {
-          setNavOpen(false);
-          router.push('/admin/dashboard/link/new');
-        }}>
+        <NavButton variant="primary" className="w-full" icon={<IconPlus aria-hidden="true" />} href="/admin/dashboard/link/new" onClick={() => setNavOpen(false)}>
           添加链接
-        </Button>
+        </NavButton>
       </div>
 
       <nav className="admin-sidebar-nav" aria-label="后台主导航">
