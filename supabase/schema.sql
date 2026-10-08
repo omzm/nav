@@ -1,8 +1,8 @@
 -- ============================================================
 -- nav 数据库基线（含全部历史迁移的最终形态）
 -- 部署时由 scripts/migrate.mjs 自动执行，全程零手工 SQL。
--- 注意：__ADMIN_EMAIL__ 会在部署时自动替换为 NEXT_PUBLIC_ADMIN_EMAIL
--- 环境变量的值；手工执行时请先自行替换。
+-- 注意：管理员邮箱不再写死，存在 app_config 表中（key='admin_email'），
+-- 首次部署由 /admin/setup 向导写入；RLS 策略与 RPC 均动态读取。
 -- ============================================================
 
 -- 创建分类表
@@ -43,43 +43,58 @@ ALTER TABLE links ENABLE ROW LEVEL SECURITY;
 -- 创建策略：公开分类对所有人可见，私密分类只对认证用户可见
 CREATE POLICY "Allow public read on public categories"
   ON categories FOR SELECT
-  USING (is_private = FALSE OR (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__'));
+  USING (is_private = FALSE OR (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email')));
 
 -- 创建策略：公开链接对所有人可见，私密链接只对认证用户可见
 CREATE POLICY "Allow public read on public links"
   ON links FOR SELECT
-  USING (is_private = FALSE OR (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__'));
+  USING (is_private = FALSE OR (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email')));
 
--- 创建策略：只有管理员可以修改（请将 '__ADMIN_EMAIL__' 替换为你的管理员邮箱）
+-- 创建策略：只有管理员可以修改（管理员邮箱从 app_config 表动态读取）
 CREATE POLICY "Allow admin to insert categories"
   ON categories FOR INSERT
   TO authenticated
-  WITH CHECK (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
+  WITH CHECK (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
 
 CREATE POLICY "Allow admin to update categories"
   ON categories FOR UPDATE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
+  USING (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
 
 CREATE POLICY "Allow admin to delete categories"
   ON categories FOR DELETE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
+  USING (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
 
 CREATE POLICY "Allow admin to insert links"
   ON links FOR INSERT
   TO authenticated
-  WITH CHECK (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
+  WITH CHECK (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
 
 CREATE POLICY "Allow admin to update links"
   ON links FOR UPDATE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
+  USING (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
 
 CREATE POLICY "Allow admin to delete links"
   ON links FOR DELETE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
+  USING (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
+
+-- 应用配置表：存管理员邮箱等站点级配置，首次部署由 /admin/setup 向导写入
+CREATE TABLE app_config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT '',
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
+
+-- 管理员邮箱本就是公开信息（此前是 NEXT_PUBLIC_ 环境变量），所有人可读；
+-- 写操作只允许 service_role（setup 向导经服务端 key 操作），不给普通用户写策略
+CREATE POLICY "Allow anyone to read app_config"
+  ON app_config FOR SELECT
+  USING (true);
 
 -- 创建点击记录表
 CREATE TABLE link_clicks (
@@ -103,7 +118,7 @@ CREATE POLICY "Allow anyone to insert link_clicks"
 CREATE POLICY "Allow admin to read link_clicks"
   ON link_clicks FOR SELECT
   TO authenticated
-  USING (auth.jwt() ->> 'email' = '__ADMIN_EMAIL__');
+  USING (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
 
 -- 数据库侧聚合今日热门，首页只读取聚合后的前 N 条结果
 CREATE TABLE site_stats (
@@ -303,34 +318,9 @@ AS $
 DECLARE
   v_caller_email text := auth.jwt() ->> 'email';
   v_admin_email text;
-  v_policy_expr text;
 BEGIN
-  -- 管理员鉴权：从 RLS 写策略定义中提取管理员邮箱（与表级写权限同源）
-  -- UPDATE/DELETE 策略的表达式在 polqual，INSERT 策略的在 polwithcheck
-  SELECT COALESCE(
-           pg_get_expr(p.polwithcheck, p.polrelid),
-           pg_get_expr(p.polqual, p.polrelid)
-         )
-    INTO v_policy_expr
-  FROM pg_policy p
-  JOIN pg_class c ON c.oid = p.polrelid
-  WHERE c.relname = 'links'
-    AND p.polname = 'Allow admin to update links';
-
-  SELECT regexp_replace(
-           v_policy_expr,
-           '^.*''([^'']+@[^'']+)''.*
-
--- 每天凌晨 0:05 (UTC) 自动清理前一天的点击记录
-SELECT cron.schedule(
-  'clean-old-link-clicks',
-  '5 0 * * *',
-  $$DELETE FROM link_clicks WHERE clicked_at < CURRENT_DATE$$
-);
-,
-           '\1'
-         )
-    INTO v_admin_email;
+  -- 管理员邮箱存在 app_config 表中（首次部署由 /admin/setup 向导写入）
+  SELECT value INTO v_admin_email FROM app_config WHERE key = 'admin_email';
 
   IF v_caller_email IS NULL OR v_admin_email IS NULL
      OR lower(v_caller_email) IS DISTINCT FROM lower(v_admin_email) THEN
@@ -356,33 +346,9 @@ AS $
 DECLARE
   v_caller_email text := auth.jwt() ->> 'email';
   v_admin_email text;
-  v_policy_expr text;
 BEGIN
-  -- 管理员鉴权：从 RLS 写策略定义中提取管理员邮箱（与表级写权限同源）
-  SELECT COALESCE(
-           pg_get_expr(p.polwithcheck, p.polrelid),
-           pg_get_expr(p.polqual, p.polrelid)
-         )
-    INTO v_policy_expr
-  FROM pg_policy p
-  JOIN pg_class c ON c.oid = p.polrelid
-  WHERE c.relname = 'categories'
-    AND p.polname = 'Allow admin to update categories';
-
-  SELECT regexp_replace(
-           v_policy_expr,
-           '^.*''([^'']+@[^'']+)''.*
-
--- 每天凌晨 0:05 (UTC) 自动清理前一天的点击记录
-SELECT cron.schedule(
-  'clean-old-link-clicks',
-  '5 0 * * *',
-  $$DELETE FROM link_clicks WHERE clicked_at < CURRENT_DATE$$
-);
-,
-           '\1'
-         )
-    INTO v_admin_email;
+  -- 管理员邮箱存在 app_config 表中（首次部署由 /admin/setup 向导写入）
+  SELECT value INTO v_admin_email FROM app_config WHERE key = 'admin_email';
 
   IF v_caller_email IS NULL OR v_admin_email IS NULL
      OR lower(v_caller_email) IS DISTINCT FROM lower(v_admin_email) THEN

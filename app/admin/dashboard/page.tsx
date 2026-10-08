@@ -13,7 +13,6 @@ import {
   IconLock,
   IconPlus,
   IconRefresh,
-  IconServer,
 } from '@douyinfe/semi-icons';
 import CategoryIcon from '@/app/components/CategoryIcon';
 import LinkIcon from '../_components/LinkIcon';
@@ -171,9 +170,6 @@ export default function AdminDashboard() {
           </button>
           <button className="admin-quick-action" onClick={exportBookmarks}>
             <IconExternalOpen aria-hidden="true" /><span><strong>导出书签</strong><small>生成浏览器可导入的 HTML</small></span><IconChevronRight aria-hidden="true" />
-          </button>
-          <button className="admin-quick-action" onClick={() => router.push('/admin/init')}>
-            <IconServer aria-hidden="true" /><span><strong>数据库检查</strong><small>查看数据与连接状态</small></span><IconChevronRight aria-hidden="true" />
           </button>
         </div>
       </div>

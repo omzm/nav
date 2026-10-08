@@ -15,11 +15,10 @@ import {
   IconHistogram,
   IconMenu,
   IconPlus,
-  IconSetting,
 } from '@douyinfe/semi-icons';
-import { ADMIN_EMAIL, supabase } from '@/app/lib/supabase';
+import { supabase } from '@/app/lib/supabase';
 import { getLocalAdminUser, signOutLocalAdmin } from '@/app/lib/local-admin';
-import { clearAdminSession, hasAdminSession } from '@/app/actions/adminSession';
+import { clearAdminSession, getAdminEmail, hasAdminSession } from '@/app/actions/adminSession';
 import { clearAdminCache, loadAdminCache } from '@/app/utils/adminCache';
 import { prefetchAdminData } from './_components/adminPrefetch';
 import { UserContext } from './dashboard/context';
@@ -41,15 +40,6 @@ const navGroups = [
       { label: '链接管理', path: '/admin/dashboard/links' },
     ],
   },
-  {
-    title: '系统工具',
-    icon: IconSetting,
-    items: [
-      { label: '认证诊断', path: '/admin/diagnostic' },
-      { label: '数据库检查', path: '/admin/init' },
-      { label: '环境配置', path: '/admin/env-check' },
-    ],
-  },
 ];
 const allNavItems = [navStandalone, ...navGroups.flatMap((group) => group.items)];
 
@@ -68,7 +58,7 @@ function isActivePath(pathname: string, path: string) {
 function getPageLabel(pathname: string) {
   if (pathname.startsWith('/admin/dashboard/category/')) return pathname.endsWith('/new') ? '添加分类' : '编辑分类';
   if (pathname.startsWith('/admin/dashboard/link/')) return pathname.endsWith('/new') ? '添加链接' : '编辑链接';
-  if (pathname === '/admin/test') return '连接测试';
+  if (pathname === '/admin/setup') return '初始化管理员';
   return allNavItems.find((item) => item.path === pathname)?.label || '工作台';
 }
 
@@ -94,12 +84,12 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
     const checkUser = async () => {
       try {
-        // fail closed：管理员邮箱未配置时拒绝一切后台访问（安全修复 S2）
-        if (!ADMIN_EMAIL) {
-          console.error('NEXT_PUBLIC_ADMIN_EMAIL 未配置，拒绝后台访问');
-          await supabase.auth.signOut();
-          signOutLocalAdmin();
-          if (active) router.replace('/admin?error=config');
+        // 管理员邮箱存在数据库（app_config 表）；未配置时去 setup 向导，
+        // fail closed，不放行
+        const adminEmail = await getAdminEmail();
+
+        if (!adminEmail) {
+          if (active) router.replace('/admin/setup');
           return;
         }
 
@@ -148,7 +138,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           if (active) router.replace('/admin');
           return;
         }
-        if ((currentUser.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+        if ((currentUser.email || '').toLowerCase() !== adminEmail.toLowerCase()) {
           await supabase.auth.signOut();
           await clearAdminSession();
           if (active) router.replace('/admin');
@@ -399,6 +389,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => document.body.classList.remove('admin-theme');
   }, []);
 
-  if (pathname === '/admin') return <div className="admin-theme">{children}</div>;
+  if (pathname === '/admin' || pathname === '/admin/setup') {
+    return <div className="admin-theme">{children}</div>;
+  }
   return <AuthenticatedLayout>{children}</AuthenticatedLayout>;
 }

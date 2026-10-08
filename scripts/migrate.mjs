@@ -2,8 +2,7 @@
 //
 // 两种情况全自动：
 // 1. 空数据库（第一次部署）：先执行 supabase/schema.sql 建全套表结构
-//    （schema.sql 已包含全部历史迁移的最终形态），__ADMIN_EMAIL__ 会
-//    自动替换为 NEXT_PUBLIC_ADMIN_EMAIL 环境变量的值。
+//    （schema.sql 已包含全部历史迁移的最终形态）。
 //    全程零手工 SQL，填好环境变量部署即可。
 // 2. 已有数据库（增量更新）：按文件名顺序执行 supabase/migrations 下
 //    未应用过的 SQL（跳过 *_rollback.sql），已应用记录记在
@@ -50,16 +49,12 @@ async function main() {
     );
     if (tables.length === 0) {
       // 空数据库：schema.sql 已包含全部历史迁移的最终形态，一次建全。
-      // 管理员邮箱从环境变量注入策略，部署者填什么就是什么。
-      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
-      if (!adminEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adminEmail)) {
-        throw new Error('首次建表需要有效的 NEXT_PUBLIC_ADMIN_EMAIL 环境变量');
-      }
+      // 管理员邮箱存在 app_config 表中，首次部署由 /admin/setup 向导写入，
+      // RLS 策略与 RPC 均动态读取，部署脚本无需再注入邮箱。
       console.log('[migrate] 检测到空数据库，先执行 supabase/schema.sql 建表');
       // schema.sql 用到 pg_cron 做定时清理，新项目默认没启用扩展，先装上
       await client.query('create extension if not exists pg_cron');
-      const schemaSql = (await readFile(join(root, 'supabase', 'schema.sql'), 'utf8'))
-        .split('__ADMIN_EMAIL__').join(adminEmail);
+      const schemaSql = await readFile(join(root, 'supabase', 'schema.sql'), 'utf8');
       await client.query('begin');
       try {
         await client.query(schemaSql);
@@ -84,23 +79,34 @@ async function main() {
 
     if (pending.length === 0) {
       console.log('[migrate] 没有待应用的迁移');
-      return;
+    } else {
+      for (const file of pending) {
+        const name = file.replace(/\.sql$/, '');
+        const sql = await readFile(join(migrationsDir, file), 'utf8');
+        console.log(`[migrate] 应用迁移：${file}`);
+        await client.query('begin');
+        try {
+          await client.query(sql);
+          await client.query('insert into schema_migrations (name) values ($1)', [name]);
+          await client.query('commit');
+          console.log(`[migrate] 完成：${file}`);
+        } catch (err) {
+          await client.query('rollback');
+          throw err;
+        }
+      }
     }
 
-    for (const file of pending) {
-      const name = file.replace(/\.sql$/, '');
-      const sql = await readFile(join(migrationsDir, file), 'utf8');
-      console.log(`[migrate] 应用迁移：${file}`);
-      await client.query('begin');
-      try {
-        await client.query(sql);
-        await client.query('insert into schema_migrations (name) values ($1)', [name]);
-        await client.query('commit');
-        console.log(`[migrate] 完成：${file}`);
-      } catch (err) {
-        await client.query('rollback');
-        throw err;
-      }
+    // 老部署兼容：NEXT_PUBLIC_ADMIN_EMAIL 有值、但 app_config 里还没有时，
+    // 自动迁入数据库（幂等）。新部署不设该变量则跳过，走 /admin/setup 向导。
+    const legacyEmail = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || '').trim();
+    if (legacyEmail) {
+      await client.query(
+        `insert into app_config (key, value) values ('admin_email', $1)
+         on conflict (key) do nothing`,
+        [legacyEmail]
+      );
+      console.log('[migrate] 管理员邮箱已同步到数据库');
     }
   } finally {
     await client.end();
