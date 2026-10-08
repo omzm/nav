@@ -159,7 +159,7 @@ async function loadNavSnapshot(): Promise<NavSnapshot> {
   const supabase = createServerSupabaseClient();
 
   try {
-    const { data, error } = await supabase.rpc('get_nav_snapshot_data', { limit_count: 5 });
+    const { data, error } = await supabase.rpc('get_nav_snapshot_data', { limit_count: 3 });
 
     if (error) throw error;
 
