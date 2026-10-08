@@ -108,13 +108,14 @@ export default function AiSettingsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 640 }}>
-      <Title heading={4} style={{ marginBottom: 4 }}>
-        AI 设置
-      </Title>
-      <Text type="tertiary" style={{ display: 'block', marginBottom: 16 }}>
-        配置 OpenAI 兼容接口后，可在添加/编辑链接时一键生成网站描述。Key 只保存在服务端，不会暴露给前端。
-      </Text>
+    <div className="admin-content">
+      <div style={{ maxWidth: 640 }}>
+        <Title heading={4} style={{ marginBottom: 4 }}>
+          AI 设置
+        </Title>
+        <Text type="tertiary" style={{ display: 'block', marginBottom: 16 }}>
+          配置 OpenAI 兼容接口后，可在添加/编辑链接时一键生成网站描述。Key 只保存在服务端，不会暴露给前端。
+        </Text>
 
       <Card>
         <label className="admin-form-field">
@@ -193,7 +194,8 @@ export default function AiSettingsPage() {
             测试连接
           </Button>
         </Space>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
