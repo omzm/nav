@@ -1,12 +1,16 @@
 // 部署时自动同步数据库结构：在 `next build` 之前跑完。
 //
 // 声明式：supabase/schema.sql 是幂等的结构声明（IF NOT EXISTS / OR REPLACE），
-// 每次部署都完整执行一遍，新库老库自动对齐到最终状态，全程零手工 SQL。
+// 每次生产部署都完整执行一遍，新库老库自动对齐到最终状态，全程零手工 SQL。
 // 只有数据搬运类变更（回填、数据迁移）才需要写 supabase/migrations 下的
 // 单独文件，按文件名顺序执行一次（记录在 schema_migrations 表）。
 //
-// 安全：schema.sql 里禁止出现 DROP TABLE / TRUNCATE，构建时自动检查，
-// 发现直接中断，避免误删数据。
+// 注意：Preview 构建不跑（只在 production 跑），避免 PR 预览改动生产库。
+// 数据库连不上（比如 Supabase 闲置暂停）时只告警、不中断构建。
+//
+// 安全：schema.sql 里禁止出现删表/删数据的语句，构建时做冒烟检查
+// （正则只能防误写，不能防恶意提交，真正的防线是 PR review），
+// 命中直接中断构建。
 //
 // 没有配 DATABASE_URL 时直接跳过（比如本地开发），不报错。
 // 失败则退出码为 1，中断构建，避免代码上线了表结构没跟上。
@@ -30,9 +34,28 @@ async function main() {
     connectionString: databaseUrl,
     ssl: { rejectUnauthorized: false },
   });
-  await client.connect();
+
+  // Preview 构建不改库：只在 production 跑，避免 PR 预览改动生产数据库
+  if (process.env.VERCEL_ENV === 'preview') {
+    console.log('[migrate] Preview 环境，跳过数据库同步（只在 production 执行）');
+    return;
+  }
 
   try {
+    await client.connect();
+  } catch (err) {
+    // 连不上库（比如 Supabase 闲置暂停）：只告警，不中断构建
+    console.warn('[migrate] 数据库连接失败，跳过结构同步，不中断构建：', err.message);
+    return;
+  }
+
+  // 防并发构建：多个部署同时跑时串行化（会话级锁，断开自动释放）
+  const lockKey = 'nav-schema-migrate';
+
+  try {
+    await client.query('select pg_advisory_lock(hashtext($1))', [lockKey]);
+
+    try {
     await client.query(`
       create table if not exists schema_migrations (
         name text primary key,
@@ -45,13 +68,14 @@ async function main() {
     await client.query('create extension if not exists pg_cron');
     const schemaSql = await readFile(join(root, 'supabase', 'schema.sql'), 'utf8');
 
-    // 安全检查：结构声明里不允许删表/清空表/无条件删数据
-    // （cron 任务体里的 DELETE 带 WHERE，不会被误杀）
+    // 安全检查（冒烟检查，防误写不防恶意）：结构声明里不允许删表/删列/清空表/无条件删数据
     if (
-      /(^|\n)\s*(drop\s+table|truncate(\s+table)?)\s/i.test(schemaSql) ||
+      /(^|\n)\s*drop\s+(table|schema)\s/i.test(schemaSql) ||
+      /(^|\n)\s*truncate(\s+table)?\s/i.test(schemaSql) ||
+      /(^|\n)\s*alter\s+table\s+\w+\s+drop\s+column\s/i.test(schemaSql) ||
       /(^|\n)\s*delete\s+from\s+\w+\s*;/i.test(schemaSql)
     ) {
-      throw new Error('schema.sql 中禁止出现 DROP TABLE / TRUNCATE / 无条件 DELETE，请改用 migration 文件处理');
+      throw new Error('schema.sql 中禁止出现 DROP TABLE/SCHEMA / TRUNCATE / DROP COLUMN / 无条件 DELETE，请改用 migration 文件处理');
     }
 
     console.log('[migrate] 同步表结构：supabase/schema.sql');
@@ -111,6 +135,14 @@ async function main() {
         [legacyEmail]
       );
       console.log('[migrate] 管理员邮箱已同步到数据库');
+    }
+    } finally {
+      // 释放 advisory lock（会话断开也会自动释放，这里显式处理）
+      try {
+        await client.query('select pg_advisory_unlock(hashtext($1))', [lockKey]);
+      } catch {
+        // 锁释放失败不影响结果
+      }
     }
   } finally {
     await client.end();

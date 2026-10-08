@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { createServerSupabaseClient } from './supabase-server';
+import { createServiceSupabaseClient } from './supabase-service';
 
 export const ADMIN_EMAIL_KEY = 'admin_email';
 
@@ -12,11 +12,12 @@ export const ADMIN_EMAIL_KEY = 'admin_email';
  * 其值会在构建时由 scripts/migrate.mjs 自动迁入数据库。
  */
 
-/** 从数据库读管理员邮箱；未配置或表不存在时返回空字符串 */
+/** 从数据库读管理员邮箱；未配置或读不到时返回空字符串。
+ * app_config 不对 anon/authenticated 开放读，这里走 service_role（服务端专用）。
+ */
 export async function getDbAdminEmail(): Promise<string> {
   try {
-    // 复用 supabase-server 的 anon 客户端（无会话持久化）；app_config 对所有人开放读
-    const { data, error } = await createServerSupabaseClient()
+    const { data, error } = await createServiceSupabaseClient()
       .from('app_config')
       .select('value')
       .eq('key', ADMIN_EMAIL_KEY)
@@ -42,4 +43,21 @@ export async function getAdminEmail(): Promise<string> {
 /** 管理员是否已配置（数据库或环境变量任一有值） */
 export async function isAdminConfigured(): Promise<boolean> {
   return (await getAdminEmail()) !== '';
+}
+
+/**
+ * Auth 中是否已有用户（server-only，供 setup 页判断；不在 'use server' 文件里导出，
+ * 避免成为公开可调用的接口）。
+ */
+export async function hasAnyAuthUser(): Promise<boolean> {
+  try {
+    const svc = createServiceSupabaseClient();
+    const { data, error } = await svc.auth.admin.listUsers({ perPage: 1 });
+
+    if (error) return false;
+
+    return (data?.users?.length || 0) > 0;
+  } catch {
+    return false;
+  }
 }

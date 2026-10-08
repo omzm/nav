@@ -58,8 +58,8 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
     .join('');
 }
 
-/** 常量时间比较，避免时序攻击 */
-function timingSafeEqual(a: string, b: string): boolean {
+/** 常量时间比较，避免时序攻击（SETUP_TOKEN 校验用） */
+export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
 
   let diff = 0;

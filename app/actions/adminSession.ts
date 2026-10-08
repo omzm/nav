@@ -27,14 +27,26 @@ function cookieOptions() {
 }
 
 /**
- * 供客户端布局调用：取当前管理员邮箱（数据库优先）。
- * 未配置返回空字符串，调用方据此跳转 /admin/setup。
+ * 供后台布局调用：管理员是否已配置、当前会话邮箱是什么。
+ * 只返回布尔值和会话中的邮箱，不把数据库里的管理员邮箱暴露给客户端。
  */
-export async function getAdminEmail(): Promise<string> {
+export async function getAdminStatus(): Promise<{
+  configured: boolean;
+  sessionEmail: string | null;
+}> {
   try {
-    return await getDbAdminEmail();
+    const dbEmail = await getDbAdminEmail();
+
+    if (!dbEmail) {
+      return { configured: false, sessionEmail: null };
+    }
+
+    const store = await cookies();
+    const sessionEmail = await verifyAdminToken(store.get(ADMIN_COOKIE_NAME)?.value);
+
+    return { configured: true, sessionEmail };
   } catch {
-    return '';
+    return { configured: false, sessionEmail: null };
   }
 }
 

@@ -7,6 +7,35 @@
 -- 首次部署由 /admin/setup 向导写入；RLS 策略与 RPC 均动态读取。
 -- ============================================================
 
+-- 应用配置表：存管理员邮箱等站点级配置，首次部署由 /admin/setup 向导写入
+-- RLS 已启用且不对 anon/authenticated 开放任何策略：只有 service_role 可读写。
+-- RLS 策略与 RPC 经下面的 SECURITY DEFINER 函数读取（函数需显式授权 EXECUTE）。
+CREATE TABLE IF NOT EXISTS app_config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT '',
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
+
+-- 清理旧版的公开读策略（如果存在）
+DROP POLICY IF EXISTS "Allow anyone to read app_config" ON app_config;
+
+-- 管理员邮箱读取函数：SECURITY DEFINER + 固定 search_path，
+-- 供 RLS 策略与排序 RPC 调用；返回小写，与 GoTrue 存的小写邮箱一致
+CREATE OR REPLACE FUNCTION get_admin_email()
+RETURNS text
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT lower(value) FROM app_config WHERE key = 'admin_email';
+$$;
+
+REVOKE ALL ON FUNCTION get_admin_email() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_admin_email() TO anon, authenticated;
+
 -- 创建分类表
 CREATE TABLE IF NOT EXISTS categories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -46,66 +75,51 @@ ALTER TABLE links ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read on public categories" ON categories;
 CREATE POLICY "Allow public read on public categories"
   ON categories FOR SELECT
-  USING (is_private = FALSE OR (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email')));
+  USING (is_private = FALSE OR (lower(auth.jwt() ->> 'email') = get_admin_email()));
 
 -- 创建策略：公开链接对所有人可见，私密链接只对认证用户可见
 DROP POLICY IF EXISTS "Allow public read on public links" ON links;
 CREATE POLICY "Allow public read on public links"
   ON links FOR SELECT
-  USING (is_private = FALSE OR (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email')));
+  USING (is_private = FALSE OR (lower(auth.jwt() ->> 'email') = get_admin_email()));
 
 -- 创建策略：只有管理员可以修改（管理员邮箱从 app_config 表动态读取）
 DROP POLICY IF EXISTS "Allow admin to insert categories" ON categories;
 CREATE POLICY "Allow admin to insert categories"
   ON categories FOR INSERT
   TO authenticated
-  WITH CHECK (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
+  WITH CHECK (lower(auth.jwt() ->> 'email') = get_admin_email());
 
 DROP POLICY IF EXISTS "Allow admin to update categories" ON categories;
 CREATE POLICY "Allow admin to update categories"
   ON categories FOR UPDATE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
+  USING (lower(auth.jwt() ->> 'email') = get_admin_email());
 
 DROP POLICY IF EXISTS "Allow admin to delete categories" ON categories;
 CREATE POLICY "Allow admin to delete categories"
   ON categories FOR DELETE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
+  USING (lower(auth.jwt() ->> 'email') = get_admin_email());
 
 DROP POLICY IF EXISTS "Allow admin to insert links" ON links;
 CREATE POLICY "Allow admin to insert links"
   ON links FOR INSERT
   TO authenticated
-  WITH CHECK (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
+  WITH CHECK (lower(auth.jwt() ->> 'email') = get_admin_email());
 
 DROP POLICY IF EXISTS "Allow admin to update links" ON links;
 CREATE POLICY "Allow admin to update links"
   ON links FOR UPDATE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
+  USING (lower(auth.jwt() ->> 'email') = get_admin_email());
 
 DROP POLICY IF EXISTS "Allow admin to delete links" ON links;
 CREATE POLICY "Allow admin to delete links"
   ON links FOR DELETE
   TO authenticated
-  USING (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
+  USING (lower(auth.jwt() ->> 'email') = get_admin_email());
 
--- 应用配置表：存管理员邮箱等站点级配置，首次部署由 /admin/setup 向导写入
-CREATE TABLE IF NOT EXISTS app_config (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL DEFAULT '',
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
-);
-
-ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
-
--- 管理员邮箱本就是公开信息（此前是 NEXT_PUBLIC_ 环境变量），所有人可读；
--- 写操作只允许 service_role（setup 向导经服务端 key 操作），不给普通用户写策略
-DROP POLICY IF EXISTS "Allow anyone to read app_config" ON app_config;
-CREATE POLICY "Allow anyone to read app_config"
-  ON app_config FOR SELECT
-  USING (true);
 
 -- 创建点击记录表
 CREATE TABLE IF NOT EXISTS link_clicks (
@@ -131,7 +145,7 @@ DROP POLICY IF EXISTS "Allow admin to read link_clicks" ON link_clicks;
 CREATE POLICY "Allow admin to read link_clicks"
   ON link_clicks FOR SELECT
   TO authenticated
-  USING (auth.jwt() ->> 'email' = (select value from app_config where key = 'admin_email'));
+  USING (lower(auth.jwt() ->> 'email') = get_admin_email());
 
 -- 数据库侧聚合今日热门，首页只读取聚合后的前 N 条结果
 CREATE TABLE IF NOT EXISTS site_stats (
@@ -334,7 +348,7 @@ DECLARE
   v_admin_email text;
 BEGIN
   -- 管理员邮箱存在 app_config 表中（首次部署由 /admin/setup 向导写入）
-  SELECT value INTO v_admin_email FROM app_config WHERE key = 'admin_email';
+  SELECT get_admin_email() INTO v_admin_email;
 
   IF v_caller_email IS NULL OR v_admin_email IS NULL
      OR lower(v_caller_email) IS DISTINCT FROM lower(v_admin_email) THEN
@@ -362,7 +376,7 @@ DECLARE
   v_admin_email text;
 BEGIN
   -- 管理员邮箱存在 app_config 表中（首次部署由 /admin/setup 向导写入）
-  SELECT value INTO v_admin_email FROM app_config WHERE key = 'admin_email';
+  SELECT get_admin_email() INTO v_admin_email;
 
   IF v_caller_email IS NULL OR v_admin_email IS NULL
      OR lower(v_caller_email) IS DISTINCT FROM lower(v_admin_email) THEN

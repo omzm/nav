@@ -18,7 +18,7 @@ import {
 } from '@douyinfe/semi-icons';
 import { supabase } from '@/app/lib/supabase';
 import { getLocalAdminUser, signOutLocalAdmin } from '@/app/lib/local-admin';
-import { clearAdminSession, getAdminEmail, hasAdminSession } from '@/app/actions/adminSession';
+import { clearAdminSession, getAdminStatus } from '@/app/actions/adminSession';
 import { clearAdminCache, loadAdminCache } from '@/app/utils/adminCache';
 import { prefetchAdminData } from './_components/adminPrefetch';
 import { UserContext } from './dashboard/context';
@@ -84,20 +84,19 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
     const checkUser = async () => {
       try {
-        // 管理员邮箱存在数据库（app_config 表）；未配置时去 setup 向导，
-        // fail closed，不放行
-        const adminEmail = await getAdminEmail();
+        // 管理员状态：是否已配置、会话邮箱是什么（不暴露数据库里的邮箱）
+        // 未配置时去 setup 向导，fail closed，不放行
+        const { configured, sessionEmail } = await getAdminStatus();
 
-        if (!adminEmail) {
+        if (!configured) {
           if (active) router.replace('/admin/setup');
           return;
         }
 
         const localUser = getLocalAdminUser();
         if (localUser) {
-          // 本地测试账号：仍需服务端会话二次确认
-          const localAuthed = await hasAdminSession();
-          if (!localAuthed) {
+          // 本地测试账号：仍需服务端会话二次确认（sessionEmail 为 null = 会话无效）
+          if (!sessionEmail) {
             signOutLocalAdmin();
             if (active) router.replace('/admin?error=auth');
             return;
@@ -114,14 +113,13 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           // 预取失败不影响鉴权流程，dashboard 会走正常加载
         }
 
-        // 服务端会话确认（纵深防御，middleware 已在边缘侧校验过）与
-        // Supabase 用户校验并行执行，避免两次串行网络往返
-        const [authed, { data: { user: currentUser }, error }] = await Promise.all([
-          hasAdminSession(),
+        // 会话邮箱（服务端已校验签名）与 Supabase 用户并行确认，
+        // 避免两次串行网络往返；两者必须一致（纵深防御）
+        const [{ data: { user: currentUser }, error }] = await Promise.all([
           supabase.auth.getUser(),
         ]);
 
-        if (!authed) {
+        if (!sessionEmail) {
           await supabase.auth.signOut();
           signOutLocalAdmin();
           await clearAdminSession();
@@ -138,7 +136,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           if (active) router.replace('/admin');
           return;
         }
-        if ((currentUser.email || '').toLowerCase() !== adminEmail.toLowerCase()) {
+        if ((currentUser.email || '').toLowerCase() !== sessionEmail.toLowerCase()) {
           await supabase.auth.signOut();
           await clearAdminSession();
           if (active) router.replace('/admin');

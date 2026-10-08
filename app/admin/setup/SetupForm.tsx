@@ -4,14 +4,22 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Toast } from '@douyinfe/semi-ui';
-import { IconArrowRight, IconExternalOpen, IconLock, IconMail } from '@douyinfe/semi-icons';
+import { IconArrowRight, IconExternalOpen, IconKey, IconLock, IconMail } from '@douyinfe/semi-icons';
+import { supabase } from '@/app/lib/supabase';
 import { setupAdminAccount } from '@/app/actions/setupAdmin';
 import AdminBrand from '../_components/AdminBrand';
 
-export default function SetupForm({ suggestedEmail }: { suggestedEmail: string }) {
+export default function SetupForm({
+  suggestedEmail,
+  requireToken,
+}: {
+  suggestedEmail: string;
+  requireToken: boolean;
+}) {
   const [email, setEmail] = useState(suggestedEmail);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -26,10 +34,21 @@ export default function SetupForm({ suggestedEmail }: { suggestedEmail: string }
     setLoading(true);
 
     try {
-      const result = await setupAdminAccount(email, password);
+      const result = await setupAdminAccount(email, password, token);
 
       if (!result.ok) {
         throw new Error(result.error || '初始化失败');
+      }
+
+      // 建立浏览器端的 Supabase 会话：后台的数据读写走客户端 supabase，
+      // 没有 JWT 会被 RLS 拒绝（只靠服务端 cookie 不够）
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (signInError) {
+        throw new Error('初始化成功，但自动登录失败，请前往登录页手动登录');
       }
 
       Toast.success('初始化完成，欢迎使用');
@@ -66,6 +85,12 @@ export default function SetupForm({ suggestedEmail }: { suggestedEmail: string }
               <span>确认密码</span>
               <Input value={confirmPassword} onChange={setConfirmPassword} prefix={<IconLock aria-hidden="true" />} placeholder="再输入一次" mode="password" autoComplete="new-password" required />
             </label>
+            {requireToken && (
+              <label className="admin-login-form-field">
+                <span>初始化口令</span>
+                <Input value={token} onChange={setToken} prefix={<IconKey aria-hidden="true" />} placeholder="环境变量 SETUP_TOKEN 的值" mode="password" autoComplete="off" required />
+              </label>
+            )}
             <Button block htmlType="submit" loading={loading} theme="solid" type="primary" icon={<IconArrowRight aria-hidden="true" />} iconPosition="right">
               完成初始化，进入工作台
             </Button>

@@ -2,8 +2,13 @@
 
 import { cookies } from 'next/headers';
 import { createServiceSupabaseClient } from '../lib/supabase-service';
-import { ADMIN_EMAIL_KEY, getDbAdminEmail } from '../lib/admin-email';
-import { ADMIN_COOKIE_NAME, ADMIN_SESSION_TTL_SECONDS, signAdminToken } from '../lib/admin-auth';
+import { ADMIN_EMAIL_KEY } from '../lib/admin-email';
+import {
+  ADMIN_COOKIE_NAME,
+  ADMIN_SESSION_TTL_SECONDS,
+  signAdminToken,
+  timingSafeEqual,
+} from '../lib/admin-auth';
 
 export interface SetupResult {
   ok: boolean;
@@ -14,29 +19,20 @@ function isValidEmail(email: string): boolean {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 }
 
-/** Auth 中是否已有用户（service_role 查询） */
-export async function hasAnyAuthUser(): Promise<boolean> {
-  try {
-    const svc = createServiceSupabaseClient();
-    const { data, error } = await svc.auth.admin.listUsers({ perPage: 1 });
-
-    if (error) return false;
-
-    return (data?.users?.length || 0) > 0;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * 首次部署的管理员初始化（一次性）。
  *
- * - 数据库已有管理员邮箱且 Auth 已有用户 → 拒绝（已初始化过）。
- * - 同邮箱的 Auth 用户已存在（部署者曾在控制台手动建过）→ 更新密码后收养为管理员。
- * - 否则新建 Auth 用户，并把邮箱写入 app_config（RLS 策略与 RPC 由此读取）。
- * 成功后直接签发会话，跳过登录页。
+ * 原子占位：app_config.key 是主键，insert 只有一个请求能成功（23505 = 已初始化），
+ * 不存在 check-then-act 竞态。没有"收养"分支——用已存在邮箱直接改密码等于账号接管，
+ * 故意不支持；migrate 已把老部署的邮箱自动迁入库，收养没有必要。
+ *
+ * @param token 初始化口令：仅当环境变量 SETUP_TOKEN 配置了才需要
  */
-export async function setupAdminAccount(email: string, password: string): Promise<SetupResult> {
+export async function setupAdminAccount(
+  email: string,
+  password: string,
+  token?: string
+): Promise<SetupResult> {
   try {
     email = (email || '').trim().toLowerCase();
 
@@ -48,63 +44,53 @@ export async function setupAdminAccount(email: string, password: string): Promis
       return { ok: false, error: '密码至少 8 位' };
     }
 
+    // SETUP_TOKEN 门（可选）：配置了则必须提供正确的口令，防止部署后、
+    // 首次打开 /admin 之前的时间窗口里被他人抢先初始化
+    const setupToken = (process.env.SETUP_TOKEN || '').trim();
+    if (setupToken && (!token || !timingSafeEqual(token.trim(), setupToken))) {
+      return { ok: false, error: '初始化口令不正确' };
+    }
+
     const svc = createServiceSupabaseClient();
 
-    const { data: listed } = await svc.auth.admin.listUsers();
-    const existingUser = listed?.users?.find((u) => (u.email || '').toLowerCase() === email);
-    const dbEmail = await getDbAdminEmail();
-
-    // 已完整初始化过：拒绝重复执行
-    if (dbEmail && listed && listed.users.length > 0) {
-      return { ok: false, error: '管理员已配置，无需重复初始化' };
-    }
-
-    let userId: string;
-
-    if (existingUser) {
-      // 收养：更新密码并确认邮箱
-      const { error } = await svc.auth.admin.updateUserById(existingUser.id, {
-        password,
-        email_confirm: true,
-      });
-
-      if (error) {
-        return { ok: false, error: '更新管理员密码失败：' + error.message };
-      }
-
-      userId = existingUser.id;
-    } else {
-      const { data: created, error } = await svc.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-      });
-
-      if (error || !created.user) {
-        return { ok: false, error: createError(error) };
-      }
-
-      userId = created.user.id;
-    }
-
-    // 写入管理员邮箱（RLS 策略与排序 RPC 由此动态读取）
-    const { error: cfgError } = await svc
+    // 先占位：只有第一个请求能写入，其余拿到 23505
+    const { error: claimError } = await svc
       .from('app_config')
-      .upsert({ key: ADMIN_EMAIL_KEY, value: email }, { onConflict: 'key' });
+      .insert({ key: ADMIN_EMAIL_KEY, value: email });
 
-    if (cfgError) {
-      // 回滚：删掉刚建的用户，避免半初始化状态（收养的不删）
-      if (!existingUser) {
-        await svc.auth.admin.deleteUser(userId);
-      }
-
-      return { ok: false, error: '写入配置失败：' + cfgError.message };
+    if (claimError) {
+      return {
+        ok: false,
+        error:
+          claimError.code === '23505'
+            ? '管理员已配置，无需重复初始化'
+            : '初始化失败：' + claimError.message,
+      };
     }
 
-    // 直接建立会话，跳过登录页
-    const token = await signAdminToken(email);
+    // 建 Auth 用户（自动确认邮箱）
+    const { data: created, error: createError } = await svc.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+
+    if (createError || !created.user) {
+      // 释放占位，允许重试
+      await svc.from('app_config').delete().eq('key', ADMIN_EMAIL_KEY);
+      const msg = createError?.message || '创建管理员账号失败';
+
+      if (/already exists|already registered/i.test(msg)) {
+        return { ok: false, error: '该邮箱已在认证系统中存在，请先在 Supabase 控制台删除该用户后重试' };
+      }
+
+      return { ok: false, error: msg };
+    }
+
+    // 签发管理会话 cookie，直接进后台
+    const sessionToken = await signAdminToken(email);
     const store = await cookies();
-    store.set(ADMIN_COOKIE_NAME, token, {
+    store.set(ADMIN_COOKIE_NAME, sessionToken, {
       httpOnly: true,
       path: '/',
       sameSite: 'lax' as const,
@@ -118,8 +104,4 @@ export async function setupAdminAccount(email: string, password: string): Promis
     console.error('setupAdminAccount failed:', message);
     return { ok: false, error: message };
   }
-}
-
-function createError(error: { message?: string } | null): string {
-  return error?.message || '创建管理员账号失败';
 }
