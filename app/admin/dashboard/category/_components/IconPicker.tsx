@@ -1,11 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { TextArea, Typography } from '@douyinfe/semi-ui';
+import { TextArea } from '@/app/admin/_components/ui';
 import IconFont, { BUILTIN_ICON_NAMES } from '@/app/components/IconFont';
 import CategoryIcon from '@/app/components/CategoryIcon';
-
-const { Text } = Typography;
 
 type IconTab = 'builtin' | 'emoji' | 'svg';
 
@@ -55,21 +53,17 @@ export default function IconPicker({ value, onChange }: IconPickerProps) {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 8, marginBottom: 12 }}>
+      <div className="flex gap-2 mt-2 mb-3">
         {tabs.map(({ key, label }) => (
           <button
             key={key}
             type="button"
             onClick={() => setTab(key)}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 999,
-              border: '1px solid var(--semi-color-border)',
-              background: tab === key ? 'var(--semi-color-primary)' : 'transparent',
-              color: tab === key ? '#fff' : 'var(--semi-color-text-1)',
-              fontSize: 13,
-              cursor: 'pointer',
-            }}
+            className={`px-3.5 py-1.5 rounded-full border text-[13px] cursor-pointer transition-colors ${
+              tab === key
+                ? 'bg-[#2563eb] border-[#2563eb] text-white'
+                : 'border-[#e8edf3] text-[#1e293b] hover:border-[#cbd5e1]'
+            }`}
           >
             {label}
           </button>
@@ -77,14 +71,7 @@ export default function IconPicker({ value, onChange }: IconPickerProps) {
       </div>
 
       {tab === 'builtin' && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))',
-            gap: 8,
-            marginTop: 4,
-          }}
-        >
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-2 mt-1">
           {BUILTIN_ICON_NAMES.map((name) => {
             const selected = value.trim() === name;
             return (
@@ -95,20 +82,11 @@ export default function IconPicker({ value, onChange }: IconPickerProps) {
                 aria-label={`选择图标 ${name}`}
                 aria-pressed={selected}
                 onClick={() => onChange(name)}
-                style={{
-                  aspectRatio: '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 20,
-                  borderRadius: 8,
-                  border: selected
-                    ? '2px solid var(--semi-color-primary)'
-                    : '1px solid var(--semi-color-border)',
-                  background: selected ? 'var(--semi-color-primary-light-default)' : 'transparent',
-                  cursor: 'pointer',
-                  color: 'var(--semi-color-text-1)',
-                }}
+                className={`aspect-square flex items-center justify-center text-[20px] rounded-lg cursor-pointer transition-colors ${
+                  selected
+                    ? 'border-2 border-[#2563eb] bg-[#eff6ff] text-[#1e293b]'
+                    : 'border border-[#e8edf3] text-[#1e293b] hover:border-[#cbd5e1]'
+                }`}
               >
                 <IconFont name={name} />
               </button>
@@ -118,14 +96,7 @@ export default function IconPicker({ value, onChange }: IconPickerProps) {
       )}
 
       {tab === 'emoji' && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(44px, 1fr))',
-            gap: 8,
-            marginTop: 4,
-          }}
-        >
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-2 mt-1">
           {EMOJI_OPTIONS.map((emoji) => {
             const selected = value.trim() === emoji;
             return (
@@ -135,19 +106,11 @@ export default function IconPicker({ value, onChange }: IconPickerProps) {
                 aria-label={`选择表情 ${emoji}`}
                 aria-pressed={selected}
                 onClick={() => onChange(emoji)}
-                style={{
-                  aspectRatio: '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 22,
-                  borderRadius: 8,
-                  border: selected
-                    ? '2px solid var(--semi-color-primary)'
-                    : '1px solid var(--semi-color-border)',
-                  background: selected ? 'var(--semi-color-primary-light-default)' : 'transparent',
-                  cursor: 'pointer',
-                }}
+                className={`aspect-square flex items-center justify-center text-[22px] rounded-lg cursor-pointer transition-colors ${
+                  selected
+                    ? 'border-2 border-[#2563eb] bg-[#eff6ff]'
+                    : 'border border-[#e8edf3] hover:border-[#cbd5e1]'
+                }`}
               >
                 {emoji}
               </button>
@@ -165,24 +128,23 @@ export default function IconPicker({ value, onChange }: IconPickerProps) {
               '从阿里巴巴 iconfont 复制 SVG 代码，例如：\n<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="..." /></svg>'
             }
             rows={8}
-            showClear
-            style={{ marginTop: 4 }}
+            className="mt-1"
           />
-          <Text type="tertiary" size="small" style={{ display: 'block', marginTop: 6 }}>
+          <span className="block mt-1.5 text-xs text-[#64748b]">
             支持从 iconfont 复制的完整 SVG 代码（会自动过滤危险标签与事件属性）。
-          </Text>
+          </span>
         </>
       )}
 
       {tab !== 'svg' && value.trim() !== '' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-          <Text type="tertiary" size="small">当前选择：</Text>
-          <span style={{ fontSize: 20, display: 'inline-flex' }}>
+        <div className="flex items-center gap-2 mt-2.5">
+          <span className="text-xs text-[#64748b]">当前选择：</span>
+          <span className="text-[20px] inline-flex">
             <CategoryIcon icon={value} />
           </span>
-          <Text strong size="small" style={{ fontFamily: 'monospace' }}>
+          <span className="text-xs font-semibold font-mono">
             {value.trim()}
-          </Text>
+          </span>
         </div>
       )}
     </div>

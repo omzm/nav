@@ -5,17 +5,16 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   Button,
   Card,
+  Field,
   Input,
-  InputNumber,
   Modal,
+  NumberInput,
   Select,
-  Space,
-  Spin,
+  Spinner,
   Switch,
   TextArea,
-  Toast,
-  Typography,
-} from '@douyinfe/semi-ui';
+} from '@/app/admin/_components/ui';
+import { toast } from '@/app/admin/_components/ui/toast';
 import {
   IconBulb,
   IconFolder,
@@ -24,15 +23,13 @@ import {
   IconLink,
   IconRefresh,
   IconSave,
-} from '@douyinfe/semi-icons';
+} from '@/app/admin/_components/ui/icons';
 import { supabase, Category } from '@/app/lib/supabase';
 import { getFallbackFaviconUrl, getFaviconUrl } from '@/app/utils/favicon';
 import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
 import { generateSiteDescription } from '@/app/actions/aiDescribe';
 import CategoryIcon from '@/app/components/CategoryIcon';
 import { isEmojiIcon } from '@/app/admin/_components/LinkIcon';
-
-const { Text } = Typography;
 
 /**
  * 规范化 URL 用于去重比对：host 小写、去掉末尾斜杠。
@@ -97,20 +94,20 @@ export default function LinkForm() {
   /** AI 生成网站描述：需要先填网站名称和 URL，生成后填入描述框 */
   const handleAiGenerateDescription = useCallback(async () => {
     if (!title.trim()) {
-      Toast.warning('请先填写网站名称');
+      toast.warning('请先填写网站名称');
       return;
     }
     if (!url.trim()) {
-      Toast.warning('请先填写网站 URL');
+      toast.warning('请先填写网站 URL');
       return;
     }
     setAiGenerating(true);
     try {
       const text = await generateSiteDescription({ title: title.trim(), url: url.trim() });
       setDescription(text);
-      Toast.success('描述已生成，可再手动调整');
+      toast.success('描述已生成，可再手动调整');
     } catch (error) {
-      Toast.error(error instanceof Error ? error.message : '生成失败');
+      toast.error(error instanceof Error ? error.message : '生成失败');
     } finally {
       setAiGenerating(false);
     }
@@ -141,7 +138,7 @@ export default function LinkForm() {
       setCategories(data || []);
     } catch (error) {
       console.error('加载分类失败:', error);
-      Toast.error('加载分类失败');
+      toast.error('加载分类失败');
     }
   }, []);
 
@@ -194,7 +191,7 @@ export default function LinkForm() {
       }
     } catch (error) {
       console.error('加载链接失败:', error);
-      Toast.error('加载链接失败');
+      toast.error('加载链接失败');
     } finally {
       setDataLoading(false);
     }
@@ -235,25 +232,25 @@ export default function LinkForm() {
 
   const validateForm = () => {
     if (!categoryId) {
-      Toast.warning('请选择所属分类');
+      toast.warning('请选择所属分类');
       return false;
     }
     if (!title.trim()) {
-      Toast.warning('请填写网站名称');
+      toast.warning('请填写网站名称');
       return false;
     }
     if (!url.trim()) {
-      Toast.warning('请填写网站 URL');
+      toast.warning('请填写网站 URL');
       return false;
     }
     try {
       new URL(url.trim());
     } catch {
-      Toast.warning('请输入完整有效的 URL');
+      toast.warning('请输入完整有效的 URL');
       return false;
     }
     if (!description.trim()) {
-      Toast.warning('请填写网站描述');
+      toast.warning('请填写网站描述');
       return false;
     }
     return true;
@@ -261,7 +258,7 @@ export default function LinkForm() {
 
   const handleAutoFetchIcon = async () => {
     if (!url.trim()) {
-      Toast.warning('请先填写网站 URL');
+      toast.warning('请先填写网站 URL');
       return;
     }
 
@@ -275,7 +272,7 @@ export default function LinkForm() {
     if (primaryOk) {
       setIconPreview(primaryUrl);
       setIconLoading(false);
-      Toast.success('图标获取成功');
+      toast.success('图标获取成功');
       return;
     }
 
@@ -287,9 +284,9 @@ export default function LinkForm() {
     setIconLoading(false);
 
     if (fallbackOk) {
-      Toast.success('已使用备用图标');
+      toast.success('已使用备用图标');
     } else {
-      Toast.error('图标获取失败，可以手动填写 Emoji');
+      toast.error('图标获取失败，可以手动填写 Emoji');
     }
   };
 
@@ -375,11 +372,11 @@ export default function LinkForm() {
         if (!updated || updated.length === 0) {
           throw new Error('该链接不存在，可能已被删除');
         }
-        Toast.success('链接已更新');
+        toast.success('链接已更新');
       } else {
         const { error } = await supabase.from('links').insert([linkData]);
         if (error) throw error;
-        Toast.success('链接已添加');
+        toast.success('链接已添加');
       }
 
       await revalidateNavSnapshot();
@@ -391,7 +388,7 @@ export default function LinkForm() {
       }
     } catch (error) {
       console.error('保存链接失败:', error);
-      Toast.error('保存失败，请重试');
+      toast.error('保存失败，请重试');
     } finally {
       savingRef.current = false;
       setSaving(false);
@@ -406,7 +403,7 @@ export default function LinkForm() {
 
   const renderIconPreview = () => {
     if (iconLoading) {
-      return <Spin size="middle" />;
+      return <Spinner size="default" />;
     }
 
     if (iconIsEmoji) {
@@ -430,13 +427,20 @@ export default function LinkForm() {
       );
     }
 
-    return <IconImage size="extra-large" style={{ color: 'var(--semi-color-text-2)' }} />;
+    return <IconImage size={32} style={{ color: '#64748b' }} />;
+  };
+
+  const closeDuplicateDialog = () => {
+    setDuplicateDialog({ open: false, existingLink: null, continueAdding: false });
   };
 
   if (dataLoading) {
     return (
       <div className="admin-form-page">
-        <Spin size="large" tip="正在加载链接..." style={{ width: '100%', padding: '96px 0' }} />
+        <div className="w-full flex flex-col items-center justify-center gap-3 py-24 text-sm text-[#64748b]">
+          <Spinner size="large" />
+          正在加载链接…
+        </div>
       </div>
     );
   }
@@ -445,26 +449,34 @@ export default function LinkForm() {
     <div className="admin-form-page">
       <Modal
         title="链接已存在"
-        visible={duplicateDialog.open}
-        okText="仍然保存"
-        cancelText="取消"
-        onOk={() => {
-          const continueAdding = duplicateDialog.continueAdding;
-          setDuplicateDialog({ open: false, existingLink: null, continueAdding: false });
-          void saveLink(continueAdding, true);
-        }}
-        onCancel={() => setDuplicateDialog({ open: false, existingLink: null, continueAdding: false })}
+        open={duplicateDialog.open}
+        onClose={closeDuplicateDialog}
+        footer={
+          <>
+            <Button onClick={closeDuplicateDialog}>取消</Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                const continueAdding = duplicateDialog.continueAdding;
+                closeDuplicateDialog();
+                void saveLink(continueAdding, true);
+              }}
+            >
+              仍然保存
+            </Button>
+          </>
+        }
       >
-        <Text>
+        <p className="text-sm text-[#475569] leading-relaxed">
           这个 URL 已经存在：
           {duplicateDialog.existingLink
             ? `“${duplicateDialog.existingLink.title}”（${duplicateDialog.existingLink.url}）`
             : ''}
           。确认仍然保存吗？
-        </Text>
+        </p>
       </Modal>
 
-      <Space vertical spacing={24} style={{ width: '100%' }}>
+      <div className="flex flex-col gap-6 w-full">
         <div className="admin-page-head">
           <div>
             <h1 className="admin-page-title">{isEdit ? '编辑链接' : '添加链接'}</h1>
@@ -474,126 +486,128 @@ export default function LinkForm() {
           </div>
         </div>
 
-        <Card title="链接信息" bordered={false} className="admin-form-card">
+        <Card title="链接信息" className="admin-form-card">
           <div className="admin-form-grid">
             <div className="admin-form-fields">
-            <label className="admin-form-field">
-              <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>所属分类</Text>
-              <Select
-                value={categoryId}
-                onChange={(value) => void handleCategoryChange(value ? String(value) : '')}
-                placeholder="请选择分类"
-                prefix={<IconFolder aria-hidden="true" />}
-                size="default"
-                style={{ width: '100%', marginTop: 8 }}
+              <Field label="所属分类" required className="admin-form-field">
+                <div className="relative">
+                  <Select
+                    value={categoryId}
+                    onChange={(value) => void handleCategoryChange(value ? String(value) : '')}
+                    placeholder="请选择分类"
+                    className="w-full [&_button]:pl-9"
+                    options={categories.map((category) => ({
+                      value: category.id,
+                      searchText: category.name,
+                      label: (
+                        <span className="flex items-center gap-2">
+                          <CategoryIcon icon={category.icon} />
+                          {category.name}
+                        </span>
+                      ),
+                    }))}
+                  />
+                  <IconFolder
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+                  />
+                </div>
+              </Field>
+
+              <Field label="网站名称" required className="admin-form-field">
+                <div className="relative">
+                  <Input
+                    value={title}
+                    onChange={setTitle}
+                    placeholder="例如：GitHub"
+                    className="pl-9"
+                  />
+                  <IconLink
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+                  />
+                </div>
+              </Field>
+
+              <Field label="网站 URL" required className="admin-form-field">
+                <div className="relative">
+                  <Input
+                    value={url}
+                    onChange={setUrl}
+                    placeholder="https://github.com"
+                    className="pl-9"
+                  />
+                  <IconGlobe
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+                  />
+                </div>
+              </Field>
+
+              <Field
+                label="网站描述"
+                required
+                className="admin-form-field"
+                action={
+                  <Button
+                    size="small"
+                    variant="tertiary"
+                    icon={<IconBulb />}
+                    loading={aiGenerating}
+                    onClick={handleAiGenerateDescription}
+                  >
+                    AI 生成
+                  </Button>
+                }
               >
-                {categories.map((category) => (
-                  <Select.Option key={category.id} value={category.id}>
-                    <Space spacing={8}>
-                      <CategoryIcon icon={category.icon} />
-                      {category.name}
-                    </Space>
-                  </Select.Option>
-                ))}
-              </Select>
-            </label>
+                <TextArea
+                  value={description}
+                  onChange={setDescription}
+                  placeholder="简短描述这个网站的用途"
+                  rows={4}
+                />
+              </Field>
 
-            <label className="admin-form-field">
-              <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>网站名称</Text>
-              <Input
-                value={title}
-                onChange={setTitle}
-                prefix={<IconLink aria-hidden="true" />}
-                placeholder="例如：GitHub"
-                size="default"
-                showClear
-                style={{ marginTop: 8 }}
-              />
-            </label>
+              <Field label="自定义图标" className="admin-form-field">
+                <Input
+                  value={icon}
+                  onChange={setIcon}
+                  placeholder="Emoji 或图片链接，留空自动获取"
+                />
+              </Field>
 
-            <label className="admin-form-field">
-              <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>网站 URL</Text>
-              <Input
-                value={url}
-                onChange={setUrl}
-                prefix={<IconGlobe aria-hidden="true" />}
-                placeholder="https://github.com"
-                size="default"
-                showClear
-                style={{ marginTop: 8 }}
-              />
-            </label>
-
-            <label className="admin-form-field">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text strong><span className="admin-required-mark" aria-hidden="true">*</span>网站描述</Text>
-                <Button
-                  size="small"
-                  theme="light"
-                  type="tertiary"
-                  icon={<IconBulb />}
-                  loading={aiGenerating}
-                  onClick={handleAiGenerateDescription}
-                >
-                  AI 生成
-                </Button>
-              </div>
-              <TextArea
-                value={description}
-                onChange={setDescription}
-                placeholder="简短描述这个网站的用途"
-                rows={4}
-                showClear
-                style={{ marginTop: 8 }}
-              />
-            </label>
-
-            <label className="admin-form-field">
-              <Text strong>自定义图标</Text>
-              <Input
-                value={icon}
-                onChange={setIcon}
-                placeholder="Emoji 或图片链接，留空自动获取"
-                size="default"
-                showClear
-                style={{ marginTop: 8 }}
-              />
-            </label>
-
-            <label className="admin-form-field">
-              <Text strong>排序顺序</Text>
-              <InputNumber
-                value={order}
-                onChange={(value) => setOrder(Number(value) || 0)}
-                min={0}
-                step={1}
-                size="default"
-                style={{ width: '100%', marginTop: 8 }}
-              />
-              <Text type="tertiary" size="small" style={{ display: 'block', marginTop: 6 }}>
-                {isEdit ? '数字越小越靠前。' : '选择分类后会自动填入下一个排序值。'}
-              </Text>
-            </label>
+              <Field
+                label="排序顺序"
+                className="admin-form-field"
+                hint={isEdit ? '数字越小越靠前。' : '选择分类后会自动填入下一个排序值。'}
+              >
+                <NumberInput
+                  value={order}
+                  onChange={(value) => setOrder(Number(value) || 0)}
+                  min={0}
+                  step={1}
+                />
+              </Field>
             </div>
 
             <aside className="admin-form-aside">
               <section className="admin-form-section" aria-label="图标预览">
                 <h3 className="admin-form-section-title">图标预览</h3>
-                <p className="admin-form-section-desc" style={iconError ? { color: 'var(--semi-color-danger)' } : undefined}>
+                <p className={`admin-form-section-desc ${iconError ? 'text-[#dc2626]' : ''}`}>
                   {iconError
                     ? '自动图标获取失败，可以手动填写 Emoji'
                     : icon.trim()
                       ? '正在使用自定义图标'
                       : '自动获取网站图标'}
                 </p>
-                <Space align="center" spacing="medium" style={{ marginTop: 12 }}>
+                <div className="flex items-center gap-4 mt-3">
                   <div className="admin-icon-preview" style={{ width: 64, height: 64 }}>
                     {renderIconPreview()}
                   </div>
-                  <Space wrap>
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       size="small"
-                      icon={<IconRefresh aria-hidden="true" />}
+                      icon={<IconRefresh />}
                       loading={iconLoading}
                       disabled={!url.trim()}
                       onClick={() => void handleAutoFetchIcon()}
@@ -602,31 +616,31 @@ export default function LinkForm() {
                     </Button>
                     <Button
                       size="small"
-                      theme="borderless"
+                      variant="tertiary"
                       onClick={() => window.open('https://emojipedia.org', '_blank', 'noopener,noreferrer')}
                     >
                       打开 Emojipedia
                     </Button>
-                  </Space>
-                </Space>
+                  </div>
+                </div>
               </section>
 
               <section className="admin-form-section" aria-label="可见性">
-                <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                <div className="flex items-center justify-between gap-3 w-full">
                   <div>
                     <h3 className="admin-form-section-title">设为私密链接</h3>
                     <p className="admin-form-section-desc">私密链接只会在首页隐私模式中显示。</p>
                   </div>
-                  <Switch checked={isPrivate} onChange={setIsPrivate} aria-label="设为私密链接" />
-                </Space>
+                  <Switch checked={isPrivate} onChange={setIsPrivate} ariaLabel="设为私密链接" />
+                </div>
               </section>
             </aside>
 
-            <Space className="admin-form-actions" wrap>
+            <div className="admin-form-actions">
               <Button onClick={() => router.back()}>取消</Button>
               {!isEdit && (
                 <Button
-                  icon={<IconSave aria-hidden="true" />}
+                  icon={<IconSave />}
                   loading={saveAndContinueLoading}
                   disabled={saving}
                   onClick={() => void validateAndSave(true)}
@@ -635,19 +649,18 @@ export default function LinkForm() {
                 </Button>
               )}
               <Button
-                theme="solid"
-                type="primary"
-                icon={<IconSave aria-hidden="true" />}
+                variant="primary"
+                icon={<IconSave />}
                 loading={saving}
                 disabled={saveAndContinueLoading}
                 onClick={() => void validateAndSave(false)}
               >
                 保存
               </Button>
-            </Space>
+            </div>
           </div>
         </Card>
-      </Space>
+      </div>
     </div>
   );
 }

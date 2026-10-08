@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
-import { Button, Modal, SideSheet, Spin, Toast, semiGlobal } from '@douyinfe/semi-ui';
+import { Button, Drawer, Modal, Spinner } from './_components/ui';
+import { ToastProvider, toast } from './_components/ui/toast';
 import {
   IconChevronDown,
   IconChevronRight,
@@ -16,7 +16,7 @@ import {
   IconMenu,
   IconPlus,
   IconSetting,
-} from '@douyinfe/semi-icons';
+} from './_components/ui/icons';
 import { supabase } from '@/app/lib/supabase';
 // 本地测试账号模块不静态导入：只在开发环境动态加载，
 // 生产 bundle 不包含测试账号常量（服务端本就硬拒绝非开发环境）
@@ -40,9 +40,6 @@ import { prefetchAdminData } from './_components/adminPrefetch';
 import { UserContext } from './dashboard/context';
 import AdminBrand from './_components/AdminBrand';
 import './admin.css';
-
-// Semi's imperative components (Toast, Modal) need the React 19 root API.
-semiGlobal.config.createRoot = createRoot;
 
 // 一级独立项：工作台（首页性质，不归入任何分组）
 const navStandalone = { label: '工作台', path: '/admin/dashboard', icon: IconHistogram };
@@ -200,7 +197,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
       router.replace('/admin');
     } catch (error) {
       console.error('退出登录失败:', error);
-      Toast.error('退出失败，请重试');
+      toast.error('退出失败，请重试');
     } finally {
       setLoggingOut(false);
     }
@@ -241,7 +238,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     return (
       <div className="admin-theme admin-loading-shell">
         <AdminBrand />
-        <Spin tip="正在进入工作台…" />
+        <div className="flex items-center gap-3 text-sm text-[#64748b]">
+          <Spinner />
+          <span>正在进入工作台…</span>
+        </div>
       </div>
     );
   }
@@ -262,7 +262,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
       </Link>
 
       <div className="admin-sidebar-create">
-        <Button block theme="solid" icon={<IconPlus aria-hidden="true" />} onClick={() => {
+        <Button variant="primary" className="w-full" icon={<IconPlus aria-hidden="true" />} onClick={() => {
           setNavOpen(false);
           router.push('/admin/dashboard/link/new');
         }}>
@@ -349,7 +349,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             <strong>管理员</strong>
             <span title={user.email}>{user.email}</span>
           </div>
-          <Button theme="borderless" type="tertiary" icon={<IconExit aria-hidden="true" />} aria-label="退出登录" title="退出登录" onClick={() => { setNavOpen(false); setShowLogoutConfirm(true); }} />
+          <Button variant="text" icon={<IconExit aria-hidden="true" />} aria-label="退出登录" title="退出登录" onClick={() => { setNavOpen(false); setShowLogoutConfirm(true); }} />
         </div>
       </div>
     </>
@@ -364,7 +364,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         <div className="admin-workspace">
           <header className="admin-topbar">
             <div className="admin-topbar-start">
-              <Button className="admin-mobile-menu" theme="borderless" type="tertiary" icon={<IconMenu aria-hidden="true" />} aria-label="打开导航" aria-expanded={navOpen} onClick={() => setNavOpen(true)} />
+              <Button className="admin-mobile-menu" variant="text" icon={<IconMenu aria-hidden="true" />} aria-label="打开导航" aria-expanded={navOpen} onClick={() => setNavOpen(true)} />
               <nav className="admin-breadcrumb" aria-label="面包屑导航">
                 <Link href="/admin/dashboard">管理台</Link>
                 <IconChevronRight aria-hidden="true" />
@@ -376,27 +376,25 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           <main id="admin-main" className="admin-main" tabIndex={-1}>{children}</main>
         </div>
 
-        <SideSheet
-          title="导航菜单"
-          visible={navOpen}
-          placement="left"
+        <Drawer
+          open={navOpen}
+          onClose={() => setNavOpen(false)}
           width={272}
-          closeOnEsc
-          onCancel={() => setNavOpen(false)}
-          className="admin-theme admin-mobile-nav"
-          bodyStyle={{ padding: 0 }}
+          side="left"
         >
           <div className="admin-mobile-nav-body">{renderNavigation('mobile-nav')}</div>
-        </SideSheet>
+        </Drawer>
 
         <Modal
           title="退出登录"
-          visible={showLogoutConfirm}
-          okText="退出登录"
-          cancelText="取消"
-          okButtonProps={{ type: 'danger', theme: 'solid', loading: loggingOut }}
-          onOk={() => void handleLogout()}
-          onCancel={() => { if (!loggingOut) setShowLogoutConfirm(false); }}
+          open={showLogoutConfirm}
+          onClose={() => { if (!loggingOut) setShowLogoutConfirm(false); }}
+          footer={
+            <>
+              <Button disabled={loggingOut} onClick={() => setShowLogoutConfirm(false)}>取消</Button>
+              <Button variant="danger" loading={loggingOut} onClick={() => void handleLogout()}>退出登录</Button>
+            </>
+          }
         >
           退出后需要重新登录，才能继续管理分类和链接。
         </Modal>
@@ -413,8 +411,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => document.body.classList.remove('admin-theme');
   }, []);
 
-  if (pathname === '/admin' || pathname === '/admin/setup') {
-    return <div className="admin-theme">{children}</div>;
-  }
-  return <AuthenticatedLayout>{children}</AuthenticatedLayout>;
+  return (
+    <>
+      <ToastProvider />
+      {pathname === '/admin' || pathname === '/admin/setup' ? (
+        <div className="admin-theme">{children}</div>
+      ) : (
+        <AuthenticatedLayout>{children}</AuthenticatedLayout>
+      )}
+    </>
+  );
 }

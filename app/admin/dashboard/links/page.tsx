@@ -1,8 +1,9 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
+  Badge,
   Button,
   Card,
   Checkbox,
@@ -11,33 +12,28 @@ import {
   Input,
   Modal,
   Select,
-  Spin,
-  Table,
-  Tag,
-  Toast,
-  Typography,
-} from '@douyinfe/semi-ui';
+  Spinner,
+} from '@/app/admin/_components/ui';
+import { toast } from '@/app/admin/_components/ui/toast';
 import {
   IconChevronDown,
   IconChevronUp,
   IconDelete,
   IconEdit,
   IconExternalOpen,
-  IconFilter,
   IconHandle,
-  IconLock,
   IconMore,
   IconPlus,
   IconRefresh,
   IconSearch,
-} from '@douyinfe/semi-icons';
+} from '@/app/admin/_components/ui/icons';
 import LinkIcon from '../../_components/LinkIcon';
 import { Category, Link as NavLink, supabase } from '@/app/lib/supabase';
 import { useAdminData } from '../_components/useAdminData';
 import { useMediaQuery } from '@/app/hooks/useMediaQuery';
 
-const { Text } = Typography;
 const ALL_CATEGORIES = 'all';
+const PAGE_SIZE = 12;
 
 function sortLinksByContext(links: NavLink[], categories: Category[], categoryFilter: string) {
   const categoryOrder = new Map(categories.map((category) => [category.id, category.order]));
@@ -75,6 +71,7 @@ function LinksPageInner() {
   const [batchBusy, setBatchBusy] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [moveTargetId, setMoveTargetId] = useState('');
+  const [page, setPage] = useState(1);
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
   const router = useRouter();
@@ -157,9 +154,10 @@ function LinksPageInner() {
       .sort((a, b) => a.order - b.order);
   }, [links, selectedCategory]);
 
-  // 筛选变化时清空多选，避免对看不见的行做批量操作
+  // 筛选变化时清空多选、回到第一页，避免对看不见的行做批量操作
   useEffect(() => {
     setSelectedIds([]);
+    setPage(1);
   }, [keyword, categoryFilter, visibilityFilter]);
 
   // 数据变化后剔除已不存在的 id（如刚被删除的行）
@@ -182,6 +180,16 @@ function LinksPageInner() {
     setSelectedIds(filteredLinks.map((link) => link.id));
   }, [filteredLinks]);
 
+  // 分页（替代 Semi Table 内置分页）
+  const totalPages = Math.max(1, Math.ceil(filteredLinks.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageLinks = filteredLinks.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // 表头全选：选中当前筛选的全部链接（与原 Semi rowSelection 行为一致）
+  const allFilteredSelected =
+    filteredLinks.length > 0 && filteredLinks.every((link) => selectedIds.includes(link.id));
+  const someFilteredSelected = selectedIds.length > 0 && !allFilteredSelected;
+
   const handleDelete = async (link: NavLink) => {
     setDeletingId(link.id);
 
@@ -189,13 +197,13 @@ function LinksPageInner() {
       const { error } = await supabase.from('links').delete().eq('id', link.id);
       if (error) throw error;
 
-      Toast.success('链接已删除');
+      toast.success('链接已删除');
       setLinkToDelete(null);
       await invalidateHomeCache();
       await loadData(true, { silent: true });
     } catch (error) {
       console.error('删除链接失败:', error);
-      Toast.error('删除链接失败，请稍后重试');
+      toast.error('删除链接失败，请稍后重试');
     } finally {
       setDeletingId('');
     }
@@ -212,14 +220,14 @@ function LinksPageInner() {
     try {
       const { error } = await supabase.from('links').delete().in('id', selectedIds);
       if (error) throw error;
-      Toast.success(`已删除 ${selectedIds.length} 条链接`);
+      toast.success(`已删除 ${selectedIds.length} 条链接`);
       setSelectedIds([]);
       setShowBatchDelete(false);
       await invalidateHomeCache();
       await loadData(true, { silent: true });
     } catch (error) {
       console.error('批量删除链接失败:', error);
-      Toast.error('批量删除失败，请稍后重试');
+      toast.error('批量删除失败，请稍后重试');
     } finally {
       setBatchBusy(false);
     }
@@ -233,7 +241,7 @@ function LinksPageInner() {
     if (!isPrivate && selectedLinks.length > 0) {
       shadowedCount = selectedLinks.filter((link) => categoryMap.get(link.category_id)?.is_private).length;
       if (shadowedCount === selectedLinks.length) {
-        Toast.warning('所选链接都在私密分类下，设为公开不会生效（请先将分类设为公开）');
+        toast.warning('所选链接都在私密分类下，设为公开不会生效（请先将分类设为公开）');
         return;
       }
     }
@@ -245,16 +253,16 @@ function LinksPageInner() {
         .in('id', selectedIds);
       if (error) throw error;
       if (shadowedCount > 0) {
-        Toast.warning(`已设置，其中 ${shadowedCount} 条位于私密分类下仍显示为私密`);
+        toast.warning(`已设置，其中 ${shadowedCount} 条位于私密分类下仍显示为私密`);
       } else {
-        Toast.success(`已将 ${selectedIds.length} 条链接设为${isPrivate ? '私密' : '公开'}`);
+        toast.success(`已将 ${selectedIds.length} 条链接设为${isPrivate ? '私密' : '公开'}`);
       }
       setSelectedIds([]);
       await invalidateHomeCache();
       await loadData(true, { silent: true });
     } catch (error) {
       console.error('批量设置可见性失败:', error);
-      Toast.error('操作失败，请稍后重试');
+      toast.error('操作失败，请稍后重试');
     } finally {
       setBatchBusy(false);
     }
@@ -262,18 +270,18 @@ function LinksPageInner() {
 
   const handleBatchMove = async () => {
     if (selectedIds.length === 0 || !moveTargetId) {
-      Toast.warning('请选择目标分类');
+      toast.warning('请选择目标分类');
       return;
     }
     const targetCategory = categoryMap.get(moveTargetId);
     if (!targetCategory) {
-      Toast.warning('目标分类不存在');
+      toast.warning('目标分类不存在');
       return;
     }
     // 全部已在目标分类时无需移动
     const selectedLinks = links.filter((link) => selectedIds.includes(link.id));
     if (selectedLinks.length > 0 && selectedLinks.every((link) => link.category_id === moveTargetId)) {
-      Toast.info('所选链接已在该分类下');
+      toast.info('所选链接已在该分类下');
       return;
     }
 
@@ -306,7 +314,7 @@ function LinksPageInner() {
       });
       if (rpcError) throw rpcError;
 
-      Toast.success(`已将 ${selectedIds.length} 条链接移动到「${targetCategory.name}」`);
+      toast.success(`已将 ${selectedIds.length} 条链接移动到「${targetCategory.name}」`);
       setSelectedIds([]);
       setShowMoveModal(false);
       setMoveTargetId('');
@@ -316,10 +324,10 @@ function LinksPageInner() {
       console.error('批量移动链接失败:', error);
       if (moved) {
         // 分类已更新成功：刷新展示真实状态，并准确告知用户排序未保存
-        Toast.error('链接已移动，但排序保存失败，请手动调整顺序');
+        toast.error('链接已移动，但排序保存失败，请手动调整顺序');
         await loadData(true, { silent: true });
       } else {
-        Toast.error('移动失败，请稍后重试');
+        toast.error('移动失败，请稍后重试');
       }
     } finally {
       setBatchBusy(false);
@@ -351,7 +359,7 @@ function LinksPageInner() {
         await loadData(true, { silent: true });
       } catch (error) {
         console.error('移动链接排序失败:', error);
-        Toast.error('移动失败，已重新加载数据');
+        toast.error('移动失败，已重新加载数据');
         await loadData(true, { silent: true });
       }
     },
@@ -399,71 +407,56 @@ function LinksPageInner() {
       });
       if (error) throw error;
 
-      Toast.success('链接排序已保存');
+      toast.success('链接排序已保存');
       await invalidateHomeCache();
       await loadData(true, { silent: true });
     } catch (error) {
       console.error('保存链接排序失败:', error);
-      Toast.error('保存排序失败，已重新加载数据');
+      toast.error('保存排序失败，已重新加载数据');
       await loadData(true, { silent: true });
     }
   };
 
-  const columns = [
-    {
-      title: '排序',
-      dataIndex: 'order',
-      width: 80,
-      render: (_text: unknown, record: NavLink) => (
-        <span className="admin-sort-cell"><IconHandle className={canSort ? 'admin-drag-handle' : 'admin-drag-handle disabled'} /><span>{String(record.order).padStart(2, '0')}</span></span>
-      ),
-    },
-    {
-      title: '网站信息',
-      dataIndex: 'title',
-      render: (_text: unknown, record: NavLink) => (
-        <div className="admin-cell">
-          <div className="admin-icon-preview"><LinkIcon link={record} /></div>
-          <div className="admin-cell-content">
-            <a className="admin-cell-title" href={record.url} target="_blank" rel="noopener noreferrer" title={record.url}>{record.title}</a>
-            <span className="admin-cell-caption" title={record.description}>{record.description}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: '所属分类',
-      width: 130,
-      render: (_text: unknown, record: NavLink) => {
-        const category = categoryMap.get(record.category_id);
-        return category ? <Tag>{category.name}</Tag> : <Tag color="red">分类不存在</Tag>;
+  // 表格行拖拽属性（替代 Semi Table 的 onRow；仅选中分类且未筛选时可拖拽排序）
+  const getRowDragProps = (record: NavLink): {
+    draggable?: boolean;
+    onDragStart?: (event: DragEvent<HTMLTableRowElement>) => void;
+    onDragEnter?: () => void;
+    onDragOver?: (event: DragEvent<HTMLTableRowElement>) => void;
+    onDrop?: () => void;
+  } => {
+    if (!canSort) return {};
+    return {
+      draggable: !isFiltering,
+      onDragStart: (event) => {
+        dragItem.current = record.id;
+        // Firefox 要求 dataTransfer 写入数据才会触发拖拽
+        try {
+          event.dataTransfer?.setData('text/plain', record.id);
+          if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+        } catch {
+          // 忽略不支持 dataTransfer 的环境
+        }
       },
-    },
-    {
-      title: '可见性',
-      width: 94,
-      render: (_text: unknown, record: NavLink) => {
-        const isPrivate = record.is_private || categoryMap.get(record.category_id)?.is_private;
-        return <span className={'admin-visibility' + (isPrivate ? ' is-private' : '')}>{isPrivate ? '私密' : '公开'}</span>;
+      onDragEnter: () => {
+        dragOverItem.current = record.id;
       },
-    },
-    {
-      title: '操作',
-      width: 124,
-      render: (_text: unknown, record: NavLink) => (
-        <div className="admin-table-actions">
-          <Button size="small" theme="borderless" type="tertiary" icon={<IconExternalOpen aria-hidden="true" />} aria-label={'打开 ' + record.title} title="打开网站" onClick={() => window.open(record.url, '_blank', 'noopener,noreferrer')} />
-          <Button size="small" theme="borderless" type="tertiary" icon={<IconEdit aria-hidden="true" />} aria-label={'编辑 ' + record.title} title="编辑链接" onClick={() => router.push('/admin/dashboard/link/' + record.id)} />
-          <Button size="small" type="danger" theme="borderless" icon={<IconDelete aria-hidden="true" />} aria-label={'删除 ' + record.title} title="删除链接" loading={deletingId === record.id} onClick={() => confirmDelete(record)} />
-        </div>
-      ),
-    },
-  ];
+      onDragOver: (event) => {
+        event.preventDefault();
+      },
+      onDrop: () => {
+        void handleDrop();
+      },
+    };
+  };
 
   if (loading) {
     return (
       <div className="admin-content">
-        <Spin size="large" tip="正在加载链接..." style={{ width: '100%', padding: '96px 0' }} />
+        <div className="w-full py-24 flex flex-col items-center justify-center gap-3">
+          <Spinner size="large" />
+          <span className="text-[13px] text-[#64748b]">正在加载链接...</span>
+        </div>
       </div>
     );
   }
@@ -479,13 +472,12 @@ function LinksPageInner() {
             </p>
           </div>
           <div className="admin-actions-row">
-            <Button icon={<IconRefresh aria-hidden="true" />} loading={refreshing} onClick={() => void loadData(true)}>
+            <Button icon={<IconRefresh />} loading={refreshing} onClick={() => void loadData(true)}>
               刷新
             </Button>
             <Button
-              theme="solid"
-              type="primary"
-              icon={<IconPlus aria-hidden="true" />}
+              variant="primary"
+              icon={<IconPlus />}
               onClick={() => router.push('/admin/dashboard/link/new')}
             >
               添加链接
@@ -493,31 +485,65 @@ function LinksPageInner() {
           </div>
         </div>
 
-        <Card bordered={false} shadows="hover" className="admin-table-card">
+        <Card className="admin-table-card">
           <div className="admin-list-toolbar">
             <div className="admin-toolbar-filters">
-              <Input className="admin-search-input" value={keyword} onChange={setKeyword} prefix={<IconSearch aria-hidden="true" />} placeholder="搜索标题、描述或网址…" aria-label="搜索链接" showClear />
-              <Select className="admin-category-filter" value={categoryFilter} onChange={(value) => syncCategoryFilter(value ? String(value) : ALL_CATEGORIES)} prefix={<IconFilter aria-hidden="true" />} aria-label="筛选分类">
-                <Select.Option value={ALL_CATEGORIES}>全部分类</Select.Option>
-                {categories.map((category) => <Select.Option key={category.id} value={category.id}>{category.name}</Select.Option>)}
-              </Select>
-              <Select className="admin-category-filter" value={visibilityFilter} onChange={(value) => syncVisibilityFilter(value ? String(value) : 'all')} prefix={<IconLock aria-hidden="true" />} aria-label="筛选可见性">
-                <Select.Option value="all">全部</Select.Option>
-                <Select.Option value="public">公开</Select.Option>
-                <Select.Option value="private">私密</Select.Option>
-              </Select>
-              {(keyword || categoryFilter !== ALL_CATEGORIES || visibilityFilter !== 'all') && <Button theme="borderless" type="tertiary" size="small" onClick={() => { setKeyword(''); syncCategoryFilter(ALL_CATEGORIES); syncVisibilityFilter('all'); }}>重置</Button>}
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none">
+                  <IconSearch size={15} />
+                </span>
+                <Input
+                  className="admin-search-input pl-9"
+                  value={keyword}
+                  onChange={setKeyword}
+                  placeholder="搜索标题、描述或网址…"
+                  aria-label="搜索链接"
+                />
+              </div>
+              <Select
+                className="admin-category-filter"
+                value={categoryFilter}
+                onChange={(value) => syncCategoryFilter(value || ALL_CATEGORIES)}
+                options={[
+                  { value: ALL_CATEGORIES, label: '全部分类' },
+                  ...categories.map((category) => ({ value: category.id, label: category.name })),
+                ]}
+                searchable
+              />
+              <Select
+                className="admin-category-filter"
+                value={visibilityFilter}
+                onChange={(value) => syncVisibilityFilter(value || 'all')}
+                options={[
+                  { value: 'all', label: '全部' },
+                  { value: 'public', label: '公开' },
+                  { value: 'private', label: '私密' },
+                ]}
+              />
+              {(keyword || categoryFilter !== ALL_CATEGORIES || visibilityFilter !== 'all') && (
+                <Button
+                  size="small"
+                  variant="tertiary"
+                  onClick={() => {
+                    setKeyword('');
+                    syncCategoryFilter(ALL_CATEGORIES);
+                    syncVisibilityFilter('all');
+                  }}
+                >
+                  重置
+                </Button>
+              )}
             </div>
             <span className="admin-result-count">共 <strong>{filteredLinks.length}</strong> 条链接</span>
           </div>
 
           {selectedIds.length > 0 && (
             <div className="admin-batch-bar" role="toolbar" aria-label="批量操作">
-              <Text strong>已选 {selectedIds.length} 项</Text>
-              <Button size="small" theme="borderless" type="tertiary" onClick={selectAllFiltered}>
+              <span className="text-[13px] font-semibold text-[#1e293b]">已选 {selectedIds.length} 项</span>
+              <Button size="small" variant="tertiary" onClick={selectAllFiltered}>
                 全选 {filteredLinks.length} 条
               </Button>
-              <Button size="small" theme="borderless" type="tertiary" onClick={() => setSelectedIds([])}>
+              <Button size="small" variant="tertiary" onClick={() => setSelectedIds([])}>
                 取消选择
               </Button>
               <span className="admin-batch-divider" />
@@ -530,7 +556,7 @@ function LinksPageInner() {
               <Button size="small" onClick={() => void handleBatchVisibility(true)} loading={batchBusy}>
                 设为私密
               </Button>
-              <Button size="small" type="danger" onClick={() => setShowBatchDelete(true)} loading={batchBusy}>
+              <Button size="small" variant="danger" onClick={() => setShowBatchDelete(true)} loading={batchBusy}>
                 删除
               </Button>
             </div>
@@ -538,45 +564,99 @@ function LinksPageInner() {
 
           {!isMobile && (
           <div className="admin-table-scroll">
-            <Table<NavLink>
-              size="small"
-              rowKey="id"
-              columns={columns}
-              dataSource={filteredLinks}
-              pagination={filteredLinks.length > 12 ? { pageSize: 12 } : false}
-              rowSelection={{
-                selectedRowKeys: selectedIds,
-                onChange: (keys) => setSelectedIds((keys || []).map(String)),
-              }}
-              empty={<Empty title="暂无链接" description="添加链接后，首页会按分类与排序展示。" />}
-              onRow={(record) => {
-                if (!record || !canSort) return {};
-
-                return {
-                  draggable: !isFiltering,
-                  className: 'admin-draggable-row',
-                  onDragStart: (event) => {
-                    dragItem.current = record.id;
-                    // Firefox 要求 dataTransfer 写入数据才会触发拖拽
-                    try {
-                      event.dataTransfer?.setData('text/plain', record.id);
-                      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
-                    } catch {
-                      // 忽略不支持 dataTransfer 的环境
-                    }
-                  },
-                  onDragEnter: () => {
-                    dragOverItem.current = record.id;
-                  },
-                  onDragOver: (event) => {
-                    event.preventDefault();
-                  },
-                  onDrop: () => {
-                    void handleDrop();
-                  },
-                };
-              }}
-            />
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-[#fafbfe] text-left">
+                  <th className="w-11 px-4 py-3">
+                    <Checkbox
+                      checked={allFilteredSelected}
+                      indeterminate={someFilteredSelected}
+                      onChange={() => {
+                        if (allFilteredSelected) setSelectedIds([]);
+                        else selectAllFiltered();
+                      }}
+                      ariaLabel="全选当前筛选结果"
+                    />
+                  </th>
+                  <th className="w-20 px-4 py-3 text-[11px] font-medium tracking-wide text-[#94a3b8]">排序</th>
+                  <th className="px-4 py-3 text-[11px] font-medium tracking-wide text-[#94a3b8]">网站信息</th>
+                  <th className="w-[130px] px-4 py-3 text-[11px] font-medium tracking-wide text-[#94a3b8]">所属分类</th>
+                  <th className="w-24 px-4 py-3 text-[11px] font-medium tracking-wide text-[#94a3b8]">可见性</th>
+                  <th className="w-[124px] px-4 py-3 text-[11px] font-medium tracking-wide text-[#94a3b8]">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageLinks.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8">
+                      <Empty title="暂无链接" description="添加链接后，首页会按分类与排序展示。" />
+                    </td>
+                  </tr>
+                ) : (
+                  pageLinks.map((link) => {
+                    const category = categoryMap.get(link.category_id);
+                    const isPrivate = link.is_private || category?.is_private;
+                    const checked = selectedIds.includes(link.id);
+                    return (
+                      <tr
+                        key={link.id}
+                        className={`border-t border-[#eef1f6] hover:bg-[#fafcff] ${canSort ? 'admin-draggable-row' : ''}`}
+                        {...getRowDragProps(link)}
+                      >
+                        <td className="px-4 py-3 align-middle">
+                          <Checkbox
+                            checked={checked}
+                            onChange={(next) => toggleSelect(link.id, next)}
+                            ariaLabel={'选择 ' + link.title}
+                          />
+                        </td>
+                        <td className="px-4 py-3 align-middle">
+                          <span className="admin-sort-cell">
+                            <IconHandle className={canSort ? 'admin-drag-handle' : 'admin-drag-handle disabled'} />
+                            <span>{String(link.order).padStart(2, '0')}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 align-middle">
+                          <div className="admin-cell">
+                            <div className="admin-icon-preview"><LinkIcon link={link} /></div>
+                            <div className="admin-cell-content">
+                              <a className="admin-cell-title" href={link.url} target="_blank" rel="noopener noreferrer" title={link.url}>{link.title}</a>
+                              <span className="admin-cell-caption" title={link.description}>{link.description}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 align-middle">
+                          {category ? <Badge>{category.name}</Badge> : <Badge color="red">分类不存在</Badge>}
+                        </td>
+                        <td className="px-4 py-3 align-middle">
+                          <span className={'admin-visibility' + (isPrivate ? ' is-private' : '')}>{isPrivate ? '私密' : '公开'}</span>
+                        </td>
+                        <td className="px-4 py-3 align-middle">
+                          <div className="admin-table-actions">
+                            <Button size="small" variant="text" icon={<IconExternalOpen size={15} />} aria-label={'打开 ' + link.title} title="打开网站" onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')} />
+                            <Button size="small" variant="text" icon={<IconEdit size={15} />} aria-label={'编辑 ' + link.title} title="编辑链接" onClick={() => router.push('/admin/dashboard/link/' + link.id)} />
+                            <Button size="small" variant="text" icon={<span className="text-[#dc2626]"><IconDelete size={15} /></span>} aria-label={'删除 ' + link.title} title="删除链接" loading={deletingId === link.id} onClick={() => confirmDelete(link)} />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-[#eef1f6]">
+                <span className="text-xs text-[#94a3b8]">第 {safePage} / {totalPages} 页</span>
+                <div className="flex items-center gap-2">
+                  <Button size="small" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
+                    上一页
+                  </Button>
+                  <Button size="small" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
+                    下一页
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
           )}
 
@@ -593,67 +673,64 @@ function LinksPageInner() {
                     <div className="admin-mobile-card-head">
                       <Checkbox
                         checked={checked}
-                        onChange={(event) => toggleSelect(link.id, Boolean(event.target.checked))}
-                        aria-label={'选择 ' + link.title}
+                        onChange={(next) => toggleSelect(link.id, next)}
+                        ariaLabel={'选择 ' + link.title}
                       />
                       <div className="admin-icon-preview"><LinkIcon link={link} /></div>
                       <div className="admin-mobile-card-title">
                         <span className="admin-mobile-card-title-row">
-                          <Text strong className="admin-mobile-card-title-text">{link.title}</Text>
-                          {link.is_private && <Tag color="orange" size="small">私密</Tag>}
+                          <span className="admin-mobile-card-title-text text-sm font-semibold text-[#1e293b]">{link.title}</span>
+                          {link.is_private && <Badge color="amber" className="flex-none">私密</Badge>}
                         </span>
-                        <Text type="tertiary" size="small" className="admin-mobile-card-meta">
+                        <span className="admin-mobile-card-meta text-xs text-[#94a3b8]">
                           {category ? category.name : '分类不存在'} · 排序 #{link.order}
-                        </Text>
+                        </span>
                       </div>
                       <Dropdown
-                        trigger="click"
-                        position="bottomRight"
-                        menu={[
+                        trigger={
+                          <Button
+                            size="small"
+                            variant="tertiary"
+                            icon={<IconMore size={15} />}
+                            aria-label={'更多操作：' + link.title}
+                          />
+                        }
+                        items={[
                           {
-                            node: 'item',
-                            name: '打开',
-                            icon: <IconExternalOpen aria-hidden="true" />,
+                            key: 'open',
+                            label: (<span className="flex items-center gap-2"><IconExternalOpen size={14} />打开</span>),
                             onClick: () => window.open(link.url, '_blank', 'noopener,noreferrer'),
                           },
                           {
-                            node: 'item',
-                            name: '编辑',
-                            icon: <IconEdit aria-hidden="true" />,
+                            key: 'edit',
+                            label: (<span className="flex items-center gap-2"><IconEdit size={14} />编辑</span>),
                             onClick: () => router.push(`/admin/dashboard/link/${link.id}`),
                           },
                           {
-                            node: 'item',
-                            name: '删除',
-                            icon: <IconDelete aria-hidden="true" />,
-                            type: 'danger',
+                            key: 'delete',
+                            label: (<span className="flex items-center gap-2"><IconDelete size={14} />删除</span>),
+                            danger: true,
                             onClick: () => confirmDelete(link),
                           },
                         ]}
-                      >
-                        <Button
-                          size="small"
-                          theme="borderless"
-                          icon={<IconMore aria-hidden="true" />}
-                          aria-label={'更多操作：' + link.title}
-                        />
-                      </Dropdown>
+                      />
                     </div>
 
                     {link.description ? (
-                      <Text type="tertiary" size="small" className="admin-mobile-card-text">
+                      <p className="admin-mobile-card-text text-xs text-[#94a3b8]">
                         {link.description}
-                      </Text>
+                      </p>
                     ) : null}
-                    <Text type="tertiary" size="small" className="admin-mobile-card-text admin-mobile-card-url">
+                    <p className="admin-mobile-card-text admin-mobile-card-url text-xs text-[#94a3b8]">
                       {link.url}
-                    </Text>
+                    </p>
 
                     {canSort && (
                       <div className="admin-mobile-card-actions admin-mobile-card-sort">
                         <Button
                           size="small"
-                          icon={<IconChevronUp aria-hidden="true" />}
+                          className="flex-1"
+                          icon={<IconChevronUp size={14} />}
                           disabled={isFiltering || sortIndex <= 0}
                           onClick={() => void moveLink(link.id, -1)}
                         >
@@ -661,7 +738,8 @@ function LinksPageInner() {
                         </Button>
                         <Button
                           size="small"
-                          icon={<IconChevronDown aria-hidden="true" />}
+                          className="flex-1"
+                          icon={<IconChevronDown size={14} />}
                           disabled={isFiltering || sortIndex < 0 || sortIndex >= sortableLinks.length - 1}
                           onClick={() => void moveLink(link.id, 1)}
                         >
@@ -677,71 +755,90 @@ function LinksPageInner() {
             )}
           </div>
           )}
-          <div className="admin-table-note"><IconHandle aria-hidden="true" /><span>{canSort ? (isFiltering ? '筛选时暂不支持拖拽排序' : selectedCategory?.name + ' · 拖动表格行调整链接顺序') : '选择一个分类后，即可拖动调整链接顺序。'}</span></div>
+          <div className="admin-table-note"><IconHandle /><span>{canSort ? (isFiltering ? '筛选时暂不支持拖拽排序' : selectedCategory?.name + ' · 拖动表格行调整链接顺序') : '选择一个分类后，即可拖动调整链接顺序。'}</span></div>
         </Card>
       </div>
 
       <Modal
         title="删除链接"
-        visible={Boolean(linkToDelete)}
-        okText="删除"
-        cancelText="取消"
-        okButtonProps={{ type: 'danger', theme: 'solid', loading: Boolean(linkToDelete && deletingId === linkToDelete.id) }}
-        onOk={() => {
-          if (linkToDelete) void handleDelete(linkToDelete);
-        }}
-        onCancel={() => {
+        open={Boolean(linkToDelete)}
+        onClose={() => {
           if (!deletingId) setLinkToDelete(null);
         }}
+        footer={
+          <>
+            <Button onClick={() => { if (!deletingId) setLinkToDelete(null); }}>
+              取消
+            </Button>
+            <Button
+              variant="danger"
+              loading={Boolean(linkToDelete && deletingId === linkToDelete.id)}
+              onClick={() => {
+                if (linkToDelete) void handleDelete(linkToDelete);
+              }}
+            >
+              删除
+            </Button>
+          </>
+        }
       >
-        <Text>确定删除「{linkToDelete?.title}」吗？</Text>
+        <p>确定删除「{linkToDelete?.title}」吗？</p>
       </Modal>
 
       <Modal
         title={`批量删除 ${selectedIds.length} 条链接`}
-        visible={showBatchDelete}
-        okText="删除"
-        cancelText="取消"
-        okButtonProps={{ type: 'danger', theme: 'solid', loading: batchBusy }}
-        onOk={() => void handleBatchDelete()}
-        onCancel={() => {
+        open={showBatchDelete}
+        onClose={() => {
           if (!batchBusy) setShowBatchDelete(false);
         }}
+        footer={
+          <>
+            <Button onClick={() => { if (!batchBusy) setShowBatchDelete(false); }}>
+              取消
+            </Button>
+            <Button variant="danger" loading={batchBusy} onClick={() => void handleBatchDelete()}>
+              删除
+            </Button>
+          </>
+        }
       >
-        <Text>确定删除已选的 {selectedIds.length} 条链接吗？此操作不可撤销。</Text>
+        <p>确定删除已选的 {selectedIds.length} 条链接吗？此操作不可撤销。</p>
       </Modal>
 
       <Modal
         title={`移动 ${selectedIds.length} 条链接`}
-        visible={showMoveModal}
-        okText="移动"
-        cancelText="取消"
-        okButtonProps={{ loading: batchBusy }}
-        onOk={() => void handleBatchMove()}
-        onCancel={() => {
+        open={showMoveModal}
+        onClose={() => {
           if (!batchBusy) {
             setShowMoveModal(false);
             setMoveTargetId('');
           }
         }}
+        footer={
+          <>
+            <Button onClick={() => { if (!batchBusy) { setShowMoveModal(false); setMoveTargetId(''); } }}>
+              取消
+            </Button>
+            <Button variant="primary" loading={batchBusy} onClick={() => void handleBatchMove()}>
+              移动
+            </Button>
+          </>
+        }
       >
-        <Text strong>目标分类</Text>
+        <span className="block text-[13px] font-medium text-[#1e293b] mb-2">目标分类</span>
         <Select
           value={moveTargetId}
-          onChange={(value) => setMoveTargetId(value ? String(value) : '')}
+          onChange={setMoveTargetId}
           placeholder="请选择分类"
-          style={{ width: '100%', marginTop: 8 }}
-        >
-          {categories.map((category) => (
-            <Select.Option key={category.id} value={category.id}>
-              {category.name}
-              {category.is_private ? '（私密）' : ''}
-            </Select.Option>
-          ))}
-        </Select>
-        <Text type="tertiary" size="small" style={{ display: 'block', marginTop: 8 }}>
+          searchable
+          options={categories.map((category) => ({
+            value: category.id,
+            label: category.name + (category.is_private ? '（私密）' : ''),
+          }))}
+        />
+        <p className="text-xs text-[#94a3b8] mt-2">
           链接将追加到目标分类末尾，公开/私密状态与目标分类保持一致。
-        </Text>
+        </p>
       </Modal>
     </div>
   );

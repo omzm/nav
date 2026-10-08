@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { IconLink } from '@douyinfe/semi-icons';
+import { IconLink } from '@/app/admin/_components/ui/icons';
 import { getFaviconUrl } from '@/app/utils/favicon';
 
 export function isIconUrl(value: string) {
