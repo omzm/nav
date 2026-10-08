@@ -98,7 +98,7 @@ export default function SetupForm({
         </Link>
       </header>
       <div className="flex items-center justify-center flex-1 w-full py-12 pb-20 max-sm:py-8 max-sm:pb-16">
-        <section className="w-full max-w-[420px] bg-white border border-[#e8edf3] rounded-[14px] p-9 max-sm:p-7 max-sm:px-6 shadow-[0_8px_32px_rgba(34,51,75,0.04)]">
+        <section className="w-full max-w-[420px] bg-white border border-[#e8edf3] rounded-[14px] p-9 max-sm:p-7 max-sm:px-6">
           <div className="mb-7">
             <h1 className="m-0 text-2xl font-semibold tracking-[-0.5px] text-[#1e293b]">
               初始化管理员

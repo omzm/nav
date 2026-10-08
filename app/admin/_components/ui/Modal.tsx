@@ -57,7 +57,7 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         style={{ maxWidth }}
-        className="w-full bg-white rounded-2xl shadow-[0_20px_60px_rgba(15,23,42,0.2)] overflow-hidden animate-[modal-panel-in_0.22s_cubic-bezier(0.32,0.72,0,1)]"
+        className="w-full bg-white rounded-2xl overflow-hidden animate-[modal-panel-in_0.22s_cubic-bezier(0.32,0.72,0,1)]"
       >
         {(title || true) && (
           <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#f1f5f9]">

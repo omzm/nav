@@ -40,7 +40,7 @@ export default function Drawer({ open, onClose, children, width = 280, side = 'l
         style={{ width }}
         className={`absolute top-0 bottom-0 ${
           side === 'left' ? 'left-0' : 'right-0'
-        } bg-white shadow-2xl flex flex-col animate-[drawer-in_0.25s_cubic-bezier(0.32,0.72,0,1)]`}
+        } bg-white flex flex-col animate-[drawer-in_0.25s_cubic-bezier(0.32,0.72,0,1)]`}
       >
         {children}
       </div>
