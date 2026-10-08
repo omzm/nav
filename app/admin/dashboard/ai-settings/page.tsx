@@ -127,7 +127,7 @@ export default function AiSettingsPage() {
             style={{ marginTop: 8 }}
           />
           <Text type="tertiary" size="small" style={{ marginTop: 4 }}>
-            OpenAI 兼容接口的 Base URL，不带 /v1 后缀，程序会自动拼接 /chat/completions
+            OpenAI 兼容接口的 Base URL，带 /v1 后缀，程序会自动拼接 /chat/completions
           </Text>
         </label>
 
