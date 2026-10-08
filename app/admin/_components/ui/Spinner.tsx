@@ -16,7 +16,7 @@ export default function Spinner({ size = 'default', className = '' }: SpinnerPro
       aria-label="加载中"
       role="status"
     >
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" />
       <path
         className="opacity-75"
         fill="currentColor"
