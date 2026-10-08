@@ -5,11 +5,11 @@ import { createServiceSupabaseClient } from './supabase-service';
 export const ADMIN_EMAIL_KEY = 'admin_email';
 
 /**
- * 管理员邮箱：数据库优先（app_config 表），环境变量兜底。
+ * 管理员邮箱：app_config 是唯一真相来源。
  *
- * 数据库是唯一真相来源——RLS 策略与排序 RPC 都从 app_config.admin_email
- * 动态读取；环境变量 NEXT_PUBLIC_ADMIN_EMAIL 仅为老部署兼容保留，
- * 其值会在构建时由 scripts/migrate.mjs 自动迁入数据库。
+ * RLS 策略与排序 RPC 都从 app_config.admin_email 动态读取（经 is_admin()），
+ * 服务端也只认数据库里的值。环境变量 NEXT_PUBLIC_ADMIN_EMAIL 不再参与运行时判断，
+ * 只在构建时由 scripts/migrate.mjs 负责一次性迁入数据库（老部署兼容）。
  */
 
 /** 从数据库读管理员邮箱；未配置或读不到时返回空字符串。
@@ -31,32 +31,34 @@ export async function getDbAdminEmail(): Promise<string> {
   }
 }
 
-/** 管理员邮箱（数据库优先，环境变量兜底），未配置返回空字符串 */
+/** 管理员邮箱（只读数据库），未配置返回空字符串 */
 export async function getAdminEmail(): Promise<string> {
-  const dbEmail = await getDbAdminEmail();
-
-  if (dbEmail) return dbEmail;
-
-  return (process.env.NEXT_PUBLIC_ADMIN_EMAIL || '').trim();
+  return getDbAdminEmail();
 }
 
-/** 管理员是否已配置（数据库或环境变量任一有值） */
+/** 管理员是否已配置（数据库里有邮箱） */
 export async function isAdminConfigured(): Promise<boolean> {
   return (await getAdminEmail()) !== '';
 }
 
 /**
- * Auth 中是否已有用户（server-only，供 setup 页判断；不在 'use server' 文件里导出，
- * 避免成为公开可调用的接口）。
+ * 指定邮箱的 Auth 用户是否存在（server-only，供 setup 页判断恢复场景）。
+ * 注意：查的是"该邮箱"的用户，不是"有没有用户"——管理员被删但其他用户存在时，
+ * 必须能进恢复流程。用 listUsers 是 UX 判断，真正的安全门在 setupAdminAccount
+ * 里（邮箱必须与已配置的一致 + SETUP_TOKEN）。
  */
-export async function hasAnyAuthUser(): Promise<boolean> {
+export async function hasAuthUserByEmail(email: string): Promise<boolean> {
   try {
+    const target = (email || '').trim().toLowerCase();
+    if (!target) return false;
+
     const svc = createServiceSupabaseClient();
-    const { data, error } = await svc.auth.admin.listUsers({ perPage: 1 });
+    // 单管理员站点，用户数极少，一页足以
+    const { data, error } = await svc.auth.admin.listUsers({ page: 1, perPage: 100 });
 
-    if (error) return false;
+    if (error || !data?.users) return false;
 
-    return (data?.users?.length || 0) > 0;
+    return data.users.some((u) => (u.email || '').toLowerCase() === target);
   } catch {
     return false;
   }

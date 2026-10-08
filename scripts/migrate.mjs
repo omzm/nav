@@ -6,7 +6,8 @@
 // 单独文件，按文件名顺序执行一次（记录在 schema_migrations 表）。
 //
 // 注意：Preview 构建不跑（只在 production 跑），避免 PR 预览改动生产库。
-// 数据库连不上（比如 Supabase 闲置暂停）时只告警、不中断构建。
+// 生产构建连不上数据库时中断构建（新代码与 schema 强耦合，不能"新代码+旧库"上线）；
+// 本地连不上只告警、不中断，方便无库开发。
 //
 // 安全：schema.sql 里禁止出现删表/删数据的语句，构建时做冒烟检查
 // （正则只能防误写，不能防恶意提交，真正的防线是 PR review），
@@ -46,7 +47,12 @@ async function main() {
   try {
     await client.connect();
   } catch (err) {
-    // 连不上库（比如 Supabase 闲置暂停）：只告警，不中断构建
+    // 生产构建：连不上库必须中断构建。代码与 schema 强耦合（RLS/is_admin()），
+    // 放行会导致"新代码 + 旧数据库"上线；中断后 Vercel 保留旧版本继续服务。
+    // 本地则只告警，方便无库开发。
+    if (process.env.VERCEL_ENV === 'production') {
+      throw err;
+    }
     console.warn('[migrate] 数据库连接失败，跳过结构同步，不中断构建：', err.message);
     return;
   }
