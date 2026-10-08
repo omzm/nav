@@ -17,9 +17,24 @@ import {
   IconPlus,
 } from '@douyinfe/semi-icons';
 import { supabase } from '@/app/lib/supabase';
-import { getLocalAdminUser, signOutLocalAdmin } from '@/app/lib/local-admin';
+// 本地测试账号模块不静态导入：只在开发环境动态加载，
+// 生产 bundle 不包含测试账号常量（服务端本就硬拒绝非开发环境）
 import { clearAdminSession, getAdminStatus } from '@/app/actions/adminSession';
 import { clearAdminCache, loadAdminCache } from '@/app/utils/adminCache';
+
+/** 开发环境取本地测试账号；生产直接返回 null */
+async function getDevLocalAdminUser() {
+  if (process.env.NODE_ENV !== 'development') return null;
+  const { getLocalAdminUser } = await import('@/app/lib/local-admin');
+  return getLocalAdminUser();
+}
+
+/** 清除本地测试账号标记；生产为 no-op */
+async function clearDevLocalAdminFlag() {
+  if (process.env.NODE_ENV !== 'development') return;
+  const { signOutLocalAdmin } = await import('@/app/lib/local-admin');
+  signOutLocalAdmin();
+}
 import { prefetchAdminData } from './_components/adminPrefetch';
 import { UserContext } from './dashboard/context';
 import AdminBrand from './_components/AdminBrand';
@@ -93,11 +108,11 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const localUser = getLocalAdminUser();
+        const localUser = await getDevLocalAdminUser();
         if (localUser) {
           // 本地测试账号：仍需服务端会话二次确认（sessionEmail 为 null = 会话无效）
           if (!sessionEmail) {
-            signOutLocalAdmin();
+            await clearDevLocalAdminFlag();
             if (active) router.replace('/admin?error=auth');
             return;
           }
@@ -121,7 +136,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
         if (!sessionEmail) {
           await supabase.auth.signOut();
-          signOutLocalAdmin();
+          await clearDevLocalAdminFlag();
           await clearAdminSession();
           if (active) router.replace('/admin?error=auth');
           return;
@@ -167,7 +182,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      signOutLocalAdmin();
+      await clearDevLocalAdminFlag();
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       await clearAdminSession();
