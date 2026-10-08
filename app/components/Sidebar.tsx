@@ -217,7 +217,7 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-30 transition-[transform,visibility] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        className={`fixed top-0 left-0 h-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-30 transition-[translate,visibility] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           isOpen ? 'translate-x-0' : '-translate-x-full invisible'
         } lg:translate-x-0 lg:visible lg:static lg:z-0 w-56 sm:w-64 flex flex-col shadow-2xl lg:shadow-none border-r border-gray-200 dark:border-gray-700/50`}
       >
