@@ -14,7 +14,7 @@ import {
   Toast,
   Typography,
 } from '@douyinfe/semi-ui';
-import { IconArrowLeft, IconFolder, IconSave } from '@douyinfe/semi-icons';
+import { IconFolder, IconSave } from '@douyinfe/semi-icons';
 import { supabase } from '@/app/lib/supabase';
 import { revalidateNavSnapshot } from '@/app/actions/revalidateNavSnapshot';
 import CategoryIcon from '@/app/components/CategoryIcon';
@@ -181,11 +181,6 @@ export default function CategoryForm() {
             <p className="admin-page-subtitle">
               设置分类名称、图标与展示方式。
             </p>
-          </div>
-          <div className="admin-actions-row">
-            <Button icon={<IconArrowLeft aria-hidden="true" />} onClick={() => router.back()}>
-              返回
-            </Button>
           </div>
         </div>
 
