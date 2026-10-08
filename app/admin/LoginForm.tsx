@@ -6,22 +6,30 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Input, Toast } from '@douyinfe/semi-ui';
 import { IconArrowRight, IconExternalOpen, IconLock, IconMail } from '@douyinfe/semi-icons';
 import { supabase, isSupabaseConfigured } from '@/app/lib/supabase';
-import {
-  LOCAL_ADMIN_EMAIL,
-  LOCAL_ADMIN_PASSWORD,
-  isLocalAdminCredentials,
-  signInLocalAdmin,
-} from '@/app/lib/local-admin';
+// 本地测试账号逻辑不静态导入：只在开发环境动态加载，
+// 生产构建的 bundle 里不包含测试账号常量（纵深防御；服务端本就硬拒绝非开发环境）
 import { establishAdminSession, establishLocalAdminSession, hasAdminSession } from '@/app/actions/adminSession';
 import AdminBrand from './_components/AdminBrand';
 
 export default function LoginForm() {
-  const [email, setEmail] = useState(process.env.NODE_ENV === 'development' ? LOCAL_ADMIN_EMAIL : '');
-  const [password, setPassword] = useState(process.env.NODE_ENV === 'development' ? LOCAL_ADMIN_PASSWORD : '');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const authError = searchParams.get('error');
+
+  // 开发环境预填本地测试账号（动态导入，生产包无此代码）
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      import('@/app/lib/local-admin')
+        .then(({ LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_PASSWORD }) => {
+          setEmail(LOCAL_ADMIN_EMAIL);
+          setPassword(LOCAL_ADMIN_PASSWORD);
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   // 已登录直接进工作台，不用重复登录
   useEffect(() => {
@@ -41,7 +49,12 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      const isLocalCredentials = isLocalAdminCredentials(email, password);
+      // 本地测试账号只在开发环境判定（动态导入，生产包不含该模块）
+      let isLocalCredentials = false;
+      if (process.env.NODE_ENV === 'development') {
+        const { isLocalAdminCredentials } = await import('@/app/lib/local-admin');
+        isLocalCredentials = isLocalAdminCredentials(email, password);
+      }
 
       if (!isLocalCredentials || isSupabaseConfigured) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -71,6 +84,7 @@ export default function LoginForm() {
           throw new Error(localResult.error || '本地管理会话建立失败');
         }
 
+        const { signInLocalAdmin } = await import('@/app/lib/local-admin');
         signInLocalAdmin();
         Toast.success('本地测试登录成功');
         router.push('/admin/dashboard');

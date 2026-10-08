@@ -21,20 +21,28 @@ ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
 -- 清理旧版的公开读策略（如果存在）
 DROP POLICY IF EXISTS "Allow anyone to read app_config" ON app_config;
 
--- 管理员邮箱读取函数：SECURITY DEFINER + 固定 search_path，
--- 供 RLS 策略与排序 RPC 调用；返回小写，与 GoTrue 存的小写邮箱一致
-CREATE OR REPLACE FUNCTION get_admin_email()
-RETURNS text
+-- 管理员判断函数：SECURITY DEFINER + 固定 search_path，
+-- 只返回 boolean，不泄露管理员邮箱；供 RLS 策略与排序 RPC 调用
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT lower(value) FROM app_config WHERE key = 'admin_email';
+  SELECT EXISTS (
+    SELECT 1 FROM app_config
+    WHERE key = 'admin_email'
+      AND lower(value) <> ''
+      AND lower(value) = lower(auth.jwt()->>'email')
+  );
 $$;
 
-REVOKE ALL ON FUNCTION get_admin_email() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION get_admin_email() TO anon, authenticated;
+-- 旧版返回邮箱的函数不再使用，直接删除（不向客户端泄露邮箱）
+DROP FUNCTION IF EXISTS get_admin_email();
+
+REVOKE ALL ON FUNCTION is_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION is_admin() TO anon, authenticated;
 
 -- 创建分类表
 CREATE TABLE IF NOT EXISTS categories (
@@ -75,50 +83,50 @@ ALTER TABLE links ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read on public categories" ON categories;
 CREATE POLICY "Allow public read on public categories"
   ON categories FOR SELECT
-  USING (is_private = FALSE OR (lower(auth.jwt() ->> 'email') = get_admin_email()));
+  USING (is_private = FALSE OR (is_admin()));
 
 -- 创建策略：公开链接对所有人可见，私密链接只对认证用户可见
 DROP POLICY IF EXISTS "Allow public read on public links" ON links;
 CREATE POLICY "Allow public read on public links"
   ON links FOR SELECT
-  USING (is_private = FALSE OR (lower(auth.jwt() ->> 'email') = get_admin_email()));
+  USING (is_private = FALSE OR (is_admin()));
 
 -- 创建策略：只有管理员可以修改（管理员邮箱从 app_config 表动态读取）
 DROP POLICY IF EXISTS "Allow admin to insert categories" ON categories;
 CREATE POLICY "Allow admin to insert categories"
   ON categories FOR INSERT
   TO authenticated
-  WITH CHECK (lower(auth.jwt() ->> 'email') = get_admin_email());
+  WITH CHECK (is_admin());
 
 DROP POLICY IF EXISTS "Allow admin to update categories" ON categories;
 CREATE POLICY "Allow admin to update categories"
   ON categories FOR UPDATE
   TO authenticated
-  USING (lower(auth.jwt() ->> 'email') = get_admin_email());
+  USING (is_admin());
 
 DROP POLICY IF EXISTS "Allow admin to delete categories" ON categories;
 CREATE POLICY "Allow admin to delete categories"
   ON categories FOR DELETE
   TO authenticated
-  USING (lower(auth.jwt() ->> 'email') = get_admin_email());
+  USING (is_admin());
 
 DROP POLICY IF EXISTS "Allow admin to insert links" ON links;
 CREATE POLICY "Allow admin to insert links"
   ON links FOR INSERT
   TO authenticated
-  WITH CHECK (lower(auth.jwt() ->> 'email') = get_admin_email());
+  WITH CHECK (is_admin());
 
 DROP POLICY IF EXISTS "Allow admin to update links" ON links;
 CREATE POLICY "Allow admin to update links"
   ON links FOR UPDATE
   TO authenticated
-  USING (lower(auth.jwt() ->> 'email') = get_admin_email());
+  USING (is_admin());
 
 DROP POLICY IF EXISTS "Allow admin to delete links" ON links;
 CREATE POLICY "Allow admin to delete links"
   ON links FOR DELETE
   TO authenticated
-  USING (lower(auth.jwt() ->> 'email') = get_admin_email());
+  USING (is_admin());
 
 
 -- 创建点击记录表
@@ -145,7 +153,7 @@ DROP POLICY IF EXISTS "Allow admin to read link_clicks" ON link_clicks;
 CREATE POLICY "Allow admin to read link_clicks"
   ON link_clicks FOR SELECT
   TO authenticated
-  USING (lower(auth.jwt() ->> 'email') = get_admin_email());
+  USING (is_admin());
 
 -- 数据库侧聚合今日热门，首页只读取聚合后的前 N 条结果
 CREATE TABLE IF NOT EXISTS site_stats (
@@ -344,14 +352,9 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_caller_email text := auth.jwt() ->> 'email';
-  v_admin_email text;
 BEGIN
-  -- 管理员邮箱存在 app_config 表中（首次部署由 /admin/setup 向导写入）
-  SELECT get_admin_email() INTO v_admin_email;
-
-  IF v_caller_email IS NULL OR v_admin_email IS NULL
-     OR lower(v_caller_email) IS DISTINCT FROM lower(v_admin_email) THEN
+  -- 管理员身份由 is_admin() 判断（只返回 boolean，不泄露邮箱）
+  IF NOT is_admin() THEN
     RAISE EXCEPTION '未授权：仅管理员可调整链接排序';
   END IF;
 
@@ -372,14 +375,9 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_caller_email text := auth.jwt() ->> 'email';
-  v_admin_email text;
 BEGIN
-  -- 管理员邮箱存在 app_config 表中（首次部署由 /admin/setup 向导写入）
-  SELECT get_admin_email() INTO v_admin_email;
-
-  IF v_caller_email IS NULL OR v_admin_email IS NULL
-     OR lower(v_caller_email) IS DISTINCT FROM lower(v_admin_email) THEN
+  -- 管理员身份由 is_admin() 判断（只返回 boolean，不泄露邮箱）
+  IF NOT is_admin() THEN
     RAISE EXCEPTION '未授权：仅管理员可调整分类排序';
   END IF;
 

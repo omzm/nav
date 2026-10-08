@@ -35,9 +35,11 @@ async function main() {
     ssl: { rejectUnauthorized: false },
   });
 
-  // Preview 构建不改库：只在 production 跑，避免 PR 预览改动生产数据库
-  if (process.env.VERCEL_ENV === 'preview') {
-    console.log('[migrate] Preview 环境，跳过数据库同步（只在 production 执行）');
+  // 只允许 production 执行：Preview/Development 一律跳过，避免非生产构建改动生产库；
+  // 本地（VERCEL_ENV 未设置）仍可手动执行，用于开发调试
+  const vercelEnv = process.env.VERCEL_ENV;
+  if (vercelEnv && vercelEnv !== 'production') {
+    console.log(`[migrate] ${vercelEnv} 环境，跳过数据库同步（只在 production 执行）`);
     return;
   }
 
