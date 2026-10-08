@@ -16,8 +16,8 @@ import { ADMIN_COOKIE_NAME, verifyAdminToken } from './app/lib/admin-auth';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 登录页本身放行
-  if (pathname === '/admin') {
+  // 登录页与初始化向导放行（含 setup 下的子路径写法）
+  if (pathname === '/admin' || pathname === '/admin/setup' || pathname.startsWith('/admin/setup/')) {
     return NextResponse.next();
   }
 

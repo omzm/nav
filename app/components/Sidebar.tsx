@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { HotLink, NavCategory } from '../types';
 import CategoryIcon from './CategoryIcon';
@@ -160,12 +160,15 @@ export default function Sidebar({
     };
   }, [isOpen]);
 
-  const handleCategoryClick = (categoryId: string | null) => {
-    onSelectCategory(categoryId);
-    if (window.innerWidth < 1024) {
-      onToggle();
-    }
-  };
+  const handleCategoryClick = useCallback(
+    (categoryId: string | null) => {
+      onSelectCategory(categoryId);
+      if (window.innerWidth < 1024) {
+        onToggle();
+      }
+    },
+    [onSelectCategory, onToggle]
+  );
 
   const categoryCountText = useMemo(() => `共 ${categories.length} 个分类`, [categories.length]);
   // 提交收录弹窗用的分类下拉数据（只取需要的字段）

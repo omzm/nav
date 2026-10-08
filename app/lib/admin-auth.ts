@@ -27,19 +27,6 @@ function getSessionSecret(): string {
   return secret;
 }
 
-/** 管理员邮箱未配置时直接抛错 —— fail closed，绝不放行 */
-export function getRequiredAdminEmail(): string {
-  const email = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || '').trim();
-
-  if (!email) {
-    throw new Error(
-      'NEXT_PUBLIC_ADMIN_EMAIL 未配置：拒绝所有后台访问，请先配置管理员邮箱'
-    );
-  }
-
-  return email;
-}
-
 /** base64url 编解码（btoa/atob 在 Edge 与 Node 均可用） */
 function base64UrlEncode(input: string): string {
   const bytes = new TextEncoder().encode(input);
@@ -71,8 +58,8 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
     .join('');
 }
 
-/** 常量时间比较，避免时序攻击 */
-function timingSafeEqual(a: string, b: string): boolean {
+/** 常量时间比较，避免时序攻击（SETUP_TOKEN 校验用） */
+export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
 
   let diff = 0;

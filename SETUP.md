@@ -3,9 +3,10 @@
 ## 1. 准备 Supabase
 
 1. 在 [Supabase](https://supabase.com) 创建一个新项目。
-2. 进入 **Project Settings -> API**，记录：
+2. 进入 **Project Settings -> Data API**，记录：
    - `NEXT_PUBLIC_SUPABASE_URL`（Project URL）
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`（anon public key）
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`（anon public）
+   - `SUPABASE_SERVICE_ROLE_KEY`（service_role secret，用于初始化管理员）
 3. 进入 **Project Settings -> Database**，用 Connection Pooling 的 session 模式连接串拼出：
    - `DATABASE_URL=postgresql://postgres.项目ref:数据库密码@aws-0-区域.pooler.supabase.com:5432/postgres`
 
@@ -14,7 +15,7 @@
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=Supabase Project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=Supabase anon public key
-NEXT_PUBLIC_ADMIN_EMAIL=你的管理员邮箱
+SUPABASE_SERVICE_ROLE_KEY=Supabase service_role secret
 ADMIN_SESSION_SECRET=随机长字符串（openssl rand -hex 32 生成）
 DATABASE_URL=上面的 pooler 连接串
 ```
@@ -23,12 +24,17 @@ DATABASE_URL=上面的 pooler 连接串
 
 - **Vercel**：导入 GitHub 仓库，填好上面 5 个环境变量，点 Deploy。
 - 数据库表结构、RLS 策略、RPC 函数会在构建时自动创建好，不用手动执行 SQL。
-- 以后改表结构：往 `supabase/migrations/` 里加新的 SQL 文件（按日期命名），部署时自动按顺序执行。
+- 以后改表结构：直接改 `supabase/schema.sql`（保持幂等写法），部署时自动同步。
 
-## 4. 创建管理员账号
+## 4. 初始化管理员
 
-1. Supabase 控制台 → **Authentication -> Users** → Add user。
-2. 邮箱必须和 `NEXT_PUBLIC_ADMIN_EMAIL` 完全一致，勾选 Auto Confirm。
+1. **部署完成后立刻**打开 `你的域名/admin`，会自动进入初始化向导。
+   （部署后到你第一次打开这段时间，谁先访问谁就是管理员，不要拖延。）
+2. 输入初始化口令（环境变量 `SETUP_TOKEN` 的值，生产环境必填）、管理员邮箱和密码（至少 8 位），点完成。
+3. 直接进入工作台。初始化只执行一次，之后走正常登录。
+
+> 恢复场景：如果数据库里已有管理员邮箱、但 Supabase Auth 用户被删了，
+> 用当初配置的邮箱走一遍向导即可补建用户（仍需初始化口令）。
 
 ## 5. 本地开发
 
@@ -39,7 +45,7 @@ npm run dev
 ```
 
 - 首页：`http://localhost:3000`
-- 后台：`http://localhost:3000/admin`
+- 后台：`http://localhost:3000/admin`（首次访问走初始化向导）
 
 ## 6. 检查清单
 
@@ -49,6 +55,6 @@ npm run dev
 
 ## 7. 常见问题
 
-**后台能登录但保存失败**：三处邮箱不一致——Supabase Auth 用户邮箱、`NEXT_PUBLIC_ADMIN_EMAIL`。保持完全一致。
-
 **今日热门为空**：只统计当天点击，先点几个链接再刷新。
+
+**初始化页面一直出现**：说明管理员还没建好；检查 `SUPABASE_SERVICE_ROLE_KEY` 是否配置正确。

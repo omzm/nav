@@ -15,12 +15,26 @@ import {
   IconHistogram,
   IconMenu,
   IconPlus,
-  IconSetting,
 } from '@douyinfe/semi-icons';
-import { ADMIN_EMAIL, supabase } from '@/app/lib/supabase';
-import { getLocalAdminUser, signOutLocalAdmin } from '@/app/lib/local-admin';
-import { clearAdminSession, hasAdminSession } from '@/app/actions/adminSession';
+import { supabase } from '@/app/lib/supabase';
+// 本地测试账号模块不静态导入：只在开发环境动态加载，
+// 生产 bundle 不包含测试账号常量（服务端本就硬拒绝非开发环境）
+import { clearAdminSession, getAdminStatus } from '@/app/actions/adminSession';
 import { clearAdminCache, loadAdminCache } from '@/app/utils/adminCache';
+
+/** 开发环境取本地测试账号；生产直接返回 null */
+async function getDevLocalAdminUser() {
+  if (process.env.NODE_ENV !== 'development') return null;
+  const { getLocalAdminUser } = await import('@/app/lib/local-admin');
+  return getLocalAdminUser();
+}
+
+/** 清除本地测试账号标记；生产为 no-op */
+async function clearDevLocalAdminFlag() {
+  if (process.env.NODE_ENV !== 'development') return;
+  const { signOutLocalAdmin } = await import('@/app/lib/local-admin');
+  signOutLocalAdmin();
+}
 import { prefetchAdminData } from './_components/adminPrefetch';
 import { UserContext } from './dashboard/context';
 import AdminBrand from './_components/AdminBrand';
@@ -41,15 +55,6 @@ const navGroups = [
       { label: '链接管理', path: '/admin/dashboard/links' },
     ],
   },
-  {
-    title: '系统工具',
-    icon: IconSetting,
-    items: [
-      { label: '认证诊断', path: '/admin/diagnostic' },
-      { label: '数据库检查', path: '/admin/init' },
-      { label: '环境配置', path: '/admin/env-check' },
-    ],
-  },
 ];
 const allNavItems = [navStandalone, ...navGroups.flatMap((group) => group.items)];
 
@@ -68,7 +73,7 @@ function isActivePath(pathname: string, path: string) {
 function getPageLabel(pathname: string) {
   if (pathname.startsWith('/admin/dashboard/category/')) return pathname.endsWith('/new') ? '添加分类' : '编辑分类';
   if (pathname.startsWith('/admin/dashboard/link/')) return pathname.endsWith('/new') ? '添加链接' : '编辑链接';
-  if (pathname === '/admin/test') return '连接测试';
+  if (pathname === '/admin/setup') return '初始化管理员';
   return allNavItems.find((item) => item.path === pathname)?.label || '工作台';
 }
 
@@ -98,21 +103,20 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
     const checkUser = async () => {
       try {
-        // fail closed：管理员邮箱未配置时拒绝一切后台访问（安全修复 S2）
-        if (!ADMIN_EMAIL) {
-          console.error('NEXT_PUBLIC_ADMIN_EMAIL 未配置，拒绝后台访问');
-          await supabase.auth.signOut();
-          signOutLocalAdmin();
-          if (active) router.replace('/admin?error=config');
+        // 管理员状态：是否已配置、会话邮箱是什么（不暴露数据库里的邮箱）
+        // 未配置时去 setup 向导，fail closed，不放行
+        const { configured, sessionEmail } = await getAdminStatus();
+
+        if (!configured) {
+          if (active) router.replace('/admin/setup');
           return;
         }
 
-        const localUser = getLocalAdminUser();
+        const localUser = await getDevLocalAdminUser();
         if (localUser) {
-          // 本地测试账号：仍需服务端会话二次确认
-          const localAuthed = await hasAdminSession();
-          if (!localAuthed) {
-            signOutLocalAdmin();
+          // 本地测试账号：仍需服务端会话二次确认（sessionEmail 为 null = 会话无效）
+          if (!sessionEmail) {
+            await clearDevLocalAdminFlag();
             if (active) router.replace('/admin?error=auth');
             return;
           }
@@ -128,16 +132,15 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           // 预取失败不影响鉴权流程，dashboard 会走正常加载
         }
 
-        // 服务端会话确认（纵深防御，middleware 已在边缘侧校验过）与
-        // Supabase 用户校验并行执行，避免两次串行网络往返
-        const [authed, { data: { user: currentUser }, error }] = await Promise.all([
-          hasAdminSession(),
+        // 会话邮箱（服务端已校验签名）与 Supabase 用户并行确认，
+        // 避免两次串行网络往返；两者必须一致（纵深防御）
+        const [{ data: { user: currentUser }, error }] = await Promise.all([
           supabase.auth.getUser(),
         ]);
 
-        if (!authed) {
+        if (!sessionEmail) {
           await supabase.auth.signOut();
-          signOutLocalAdmin();
+          await clearDevLocalAdminFlag();
           await clearAdminSession();
           if (active) router.replace('/admin?error=auth');
           return;
@@ -152,7 +155,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
           if (active) router.replace('/admin');
           return;
         }
-        if ((currentUser.email || '').toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+        if ((currentUser.email || '').toLowerCase() !== sessionEmail.toLowerCase()) {
           await supabase.auth.signOut();
           await clearAdminSession();
           if (active) router.replace('/admin');
@@ -183,7 +186,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      signOutLocalAdmin();
+      await clearDevLocalAdminFlag();
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       await clearAdminSession();
@@ -404,6 +407,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => document.body.classList.remove('admin-theme');
   }, []);
 
-  if (pathname === '/admin') return <div className="admin-theme">{children}</div>;
+  if (pathname === '/admin' || pathname === '/admin/setup') {
+    return <div className="admin-theme">{children}</div>;
+  }
   return <AuthenticatedLayout>{children}</AuthenticatedLayout>;
 }

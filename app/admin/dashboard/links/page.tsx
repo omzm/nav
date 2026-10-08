@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Button,
   Card,
@@ -52,7 +52,7 @@ function sortLinksByContext(links: NavLink[], categories: Category[], categoryFi
   });
 }
 
-export default function LinksPage() {
+function LinksPageInner() {
   const {
     categories,
     links,
@@ -81,18 +81,17 @@ export default function LinksPage() {
   // 与 admin.css 中 @media (max-width: 767px) 断点一致：移动端只渲染卡片列表，桌面端只渲染表格
   const isMobile = useMediaQuery('(max-width: 767px)');
 
+  // URL 参数响应式同步：分类页/工作台 router.push 跳转过来时同组件不 remount，
+  // 靠 searchParams 变化更新筛选
+  const searchParams = useSearchParams();
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const category = params.get('category');
-    if (category) {
-      setCategoryFilter(category);
-    }
+    const category = searchParams.get('category');
+    setCategoryFilter(category || ALL_CATEGORIES);
     // 工作台统计卡跳过来的可见性筛选
-    const visibility = params.get('visibility');
-    if (visibility === 'public' || visibility === 'private') {
-      setVisibilityFilter(visibility);
-    }
-  }, []);
+    const visibility = searchParams.get('visibility');
+    setVisibilityFilter(visibility === 'public' || visibility === 'private' ? visibility : 'all');
+  }, [searchParams]);
 
   const syncCategoryFilter = useCallback((nextValue: string) => {
     setCategoryFilter(nextValue);
@@ -146,6 +145,17 @@ export default function LinksPage() {
 
   const selectedCategory = categoryFilter === ALL_CATEGORIES ? null : categoryMap.get(categoryFilter);
   const canSort = Boolean(selectedCategory);
+
+  // 关键词筛选时看到的是子集，拖拽/按钮排序会错位，禁用（与分类页一致）
+  const isFiltering = keyword.trim() !== '';
+
+  // 排序以下标为准的列表：选中分类下的全量链接（不能用筛选后的 filteredLinks，下标会错位）
+  const sortableLinks = useMemo(() => {
+    if (!selectedCategory) return [];
+    return links
+      .filter((link) => link.category_id === selectedCategory.id)
+      .sort((a, b) => a.order - b.order);
+  }, [links, selectedCategory]);
 
   // 筛选变化时清空多选，避免对看不见的行做批量操作
   useEffect(() => {
@@ -543,7 +553,7 @@ export default function LinksPage() {
                 if (!record || !canSort) return {};
 
                 return {
-                  draggable: true,
+                  draggable: !isFiltering,
                   className: 'admin-draggable-row',
                   onDragStart: (event) => {
                     dragItem.current = record.id;
@@ -576,7 +586,7 @@ export default function LinksPage() {
               filteredLinks.map((link) => {
                 const category = categoryMap.get(link.category_id);
                 const checked = selectedIds.includes(link.id);
-                const sortIndex = filteredLinks.findIndex((item) => item.id === link.id);
+                const sortIndex = sortableLinks.findIndex((item) => item.id === link.id);
 
                 return (
                   <article className="admin-mobile-card" key={link.id}>
@@ -644,7 +654,7 @@ export default function LinksPage() {
                         <Button
                           size="small"
                           icon={<IconChevronUp aria-hidden="true" />}
-                          disabled={sortIndex <= 0}
+                          disabled={isFiltering || sortIndex <= 0}
                           onClick={() => void moveLink(link.id, -1)}
                         >
                           上移
@@ -652,7 +662,7 @@ export default function LinksPage() {
                         <Button
                           size="small"
                           icon={<IconChevronDown aria-hidden="true" />}
-                          disabled={sortIndex < 0 || sortIndex >= filteredLinks.length - 1}
+                          disabled={isFiltering || sortIndex < 0 || sortIndex >= sortableLinks.length - 1}
                           onClick={() => void moveLink(link.id, 1)}
                         >
                           下移
@@ -667,7 +677,7 @@ export default function LinksPage() {
             )}
           </div>
           )}
-          <div className="admin-table-note"><IconHandle aria-hidden="true" /><span>{canSort ? selectedCategory?.name + ' · 拖动表格行调整链接顺序' : '选择一个分类后，即可拖动调整链接顺序。'}</span></div>
+          <div className="admin-table-note"><IconHandle aria-hidden="true" /><span>{canSort ? (isFiltering ? '筛选时暂不支持拖拽排序' : selectedCategory?.name + ' · 拖动表格行调整链接顺序') : '选择一个分类后，即可拖动调整链接顺序。'}</span></div>
         </Card>
       </div>
 
@@ -734,5 +744,14 @@ export default function LinksPage() {
         </Text>
       </Modal>
     </div>
+  );
+}
+
+// useSearchParams 需要 Suspense 边界（构建预渲染要求）
+export default function LinksPage() {
+  return (
+    <Suspense>
+      <LinksPageInner />
+    </Suspense>
   );
 }

@@ -26,8 +26,12 @@ npm run dev
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=你的 Supabase Project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=你的 Supabase anon public key
-NEXT_PUBLIC_ADMIN_EMAIL=你的管理员邮箱
+SUPABASE_SERVICE_ROLE_KEY=你的 Supabase service_role secret
 ADMIN_SESSION_SECRET=随机长字符串（openssl rand -hex 32 生成）
+DATABASE_URL=你的数据库 pooler 连接串
+```
+
+首次打开 `/admin` 会进入初始化向导，设置管理员邮箱和密码即可。
 ```
 
 完整部署流程见 [SETUP.md](./SETUP.md)。

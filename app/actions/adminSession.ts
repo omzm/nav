@@ -2,10 +2,10 @@
 
 import { cookies } from 'next/headers';
 import { createServerSupabaseClient } from '../lib/supabase-server';
+import { getAdminEmail as getDbAdminEmail } from '../lib/admin-email';
 import {
   ADMIN_COOKIE_NAME,
   ADMIN_SESSION_TTL_SECONDS,
-  getRequiredAdminEmail,
   signAdminToken,
   verifyAdminToken,
 } from '../lib/admin-auth';
@@ -27,13 +27,41 @@ function cookieOptions() {
 }
 
 /**
+ * 供后台布局调用：管理员是否已配置、当前会话邮箱是什么。
+ * 只返回布尔值和会话中的邮箱，不把数据库里的管理员邮箱暴露给客户端。
+ */
+export async function getAdminStatus(): Promise<{
+  configured: boolean;
+  sessionEmail: string | null;
+}> {
+  try {
+    const dbEmail = await getDbAdminEmail();
+
+    if (!dbEmail) {
+      return { configured: false, sessionEmail: null };
+    }
+
+    const store = await cookies();
+    const sessionEmail = await verifyAdminToken(store.get(ADMIN_COOKIE_NAME)?.value);
+
+    return { configured: true, sessionEmail };
+  } catch {
+    return { configured: false, sessionEmail: null };
+  }
+}
+
+/**
  * 用 Supabase access token 建立管理员会话。
  * 服务端校验：token 有效 + 邮箱等于管理员邮箱（fail closed）。
  * 成功后写入 HttpOnly Cookie，供 middleware 校验。
  */
 export async function establishAdminSession(accessToken: string): Promise<AdminSessionResult> {
   try {
-    const adminEmail = getRequiredAdminEmail();
+    const adminEmail = await getDbAdminEmail();
+
+    if (!adminEmail) {
+      return { ok: false, error: '管理员未初始化，请先访问 /admin/setup 完成设置' };
+    }
 
     if (!accessToken) {
       return { ok: false, error: '缺少登录凭证' };
