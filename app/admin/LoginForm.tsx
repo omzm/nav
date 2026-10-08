@@ -116,7 +116,7 @@ export default function LoginForm() {
       </header>
 
       <div className="flex-1 flex items-center justify-center px-4 py-10">
-        <section className="w-full max-w-[400px] bg-white border border-[#e8edf3] rounded-[14px] px-6 sm:px-8 py-8 shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
+        <section className="w-full max-w-[400px] bg-white border border-[#e8edf3] rounded-[14px] px-6 sm:px-8 py-8">
           <div className="mb-6">
             <h1 className="text-xl font-semibold text-[#1e293b]">管理员登录</h1>
             <p className="mt-1.5 text-[13px] text-[#64748b]">欢迎回来，登录后继续整理你的收藏。</p>

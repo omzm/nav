@@ -116,8 +116,8 @@ export default function AiSettingsPage() {
 
   return (
     <div className="max-w-[640px]">
-      <h2 className="text-lg font-semibold text-[#1e293b] mb-1">AI 设置</h2>
-      <p className="text-sm text-[#64748b] mb-4">
+      <h2 className="text-lg font-semibold text-[#1e293b] mb-1 px-5">AI 设置</h2>
+      <p className="text-sm text-[#64748b] mb-4 px-5">
         配置 OpenAI 兼容接口后，可在添加/编辑链接时一键生成网站描述。Key 只保存在服务端，不会暴露给前端。
       </p>
 

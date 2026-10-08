@@ -121,7 +121,7 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
           {items.map((item) => (
             <div
               key={item.id}
-              className="pointer-events-auto flex items-center gap-2.5 pl-1 pr-3 py-1 bg-white rounded-xl shadow-[0_8px_30px_rgba(15,23,42,0.16)] border border-[#e8edf3] animate-[toast-in_0.22s_cubic-bezier(0.32,0.72,0,1)]"
+              className="pointer-events-auto flex items-center gap-2.5 pl-1 pr-3 py-1 bg-white rounded-xl border border-[#e8edf3] animate-[toast-in_0.22s_cubic-bezier(0.32,0.72,0,1)]"
             >
               <span className={`w-1 self-stretch rounded-full ${styles[item.type].bar}`} />
               {styles[item.type].icon}

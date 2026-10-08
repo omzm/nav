@@ -11,13 +11,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<string, string> = {
   primary:
-    'bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] text-white border border-transparent shadow-sm disabled:bg-[#93c5fd]',
+    'bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] text-white border border-transparent disabled:bg-[#93c5fd]',
   default:
-    'bg-white hover:bg-[#f8fafc] active:bg-[#f1f5f9] text-[#1e293b] border border-[#e2e8f0] shadow-sm disabled:text-[#94a3b8]',
+    'bg-white hover:bg-[#f8fafc] active:bg-[#f1f5f9] text-[#1e293b] border border-[#e2e8f0] disabled:text-[#94a3b8]',
   tertiary:
     'bg-transparent hover:bg-[#f1f5f9] active:bg-[#e2e8f0] text-[#475569] border border-transparent disabled:text-[#cbd5e1]',
   danger:
-    'bg-white hover:bg-[#fef2f2] active:bg-[#fee2e2] text-[#dc2626] border border-[#fecaca] shadow-sm disabled:text-[#fca5a5]',
+    'bg-white hover:bg-[#fef2f2] active:bg-[#fee2e2] text-[#dc2626] border border-[#fecaca] disabled:text-[#fca5a5]',
   text: 'bg-transparent text-[#2563eb] hover:text-[#1d4ed8] border border-transparent disabled:text-[#93c5fd] p-0',
 };
 
@@ -46,12 +46,12 @@ export default function Button({
     <button
       type={type}
       disabled={isDisabled}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors whitespace-nowrap disabled:cursor-not-allowed disabled:shadow-none ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors whitespace-nowrap disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
       {...rest}
     >
       {loading ? (
         <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" />
           <path
             className="opacity-75"
             fill="currentColor"
