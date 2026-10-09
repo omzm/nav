@@ -1,7 +1,8 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { lockBodyScroll, unlockBodyScroll } from './scrollLock';
 
 export interface ModalProps {
   open: boolean;
@@ -11,6 +12,8 @@ export interface ModalProps {
   footer?: ReactNode;
   maxWidth?: number;
   closeOnMask?: boolean;
+  /** 禁用右上关闭按钮（loading 时用，避免"能点但没反应"） */
+  closeDisabled?: boolean;
 }
 
 /** 弹窗（替代 Semi Modal，挂载到 body） */
@@ -22,8 +25,11 @@ export default function Modal({
   footer,
   maxWidth = 480,
   closeOnMask = true,
+  closeDisabled = false,
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     setMounted(true);
@@ -35,11 +41,18 @@ export default function Modal({
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', handler);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    lockBodyScroll();
+    // 焦点管理：打开时聚焦面板内首个可聚焦元素，关闭时恢复之前焦点
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    const focusTarget = panel?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    (focusTarget ?? panel)?.focus();
     return () => {
       document.removeEventListener('keydown', handler);
-      document.body.style.overflow = prev;
+      unlockBodyScroll();
+      previouslyFocused?.focus?.();
     };
   }, [open, onClose]);
 
@@ -54,19 +67,23 @@ export default function Modal({
       role="presentation"
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
         style={{ maxWidth }}
-        className="w-full bg-white rounded-2xl overflow-hidden animate-[modal-panel-in_0.22s_cubic-bezier(0.32,0.72,0,1)]"
+        className="w-full bg-white rounded-2xl max-h-[85vh] overflow-y-auto animate-[modal-panel-in_0.22s_cubic-bezier(0.32,0.72,0,1)]"
       >
-        {(title || true) && (
+        {title && (
           <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#f1f5f9]">
-            <div className="text-[15px] font-semibold text-[#1e293b]">{title}</div>
+            <div id={titleId} className="text-[15px] font-semibold text-[#1e293b]">{title}</div>
             <button
               type="button"
               onClick={onClose}
+              disabled={closeDisabled}
               aria-label="关闭"
-              className="p-1.5 -m-1 rounded-lg text-[#94a3b8] hover:text-[#475569] hover:bg-[#f1f5f9] transition-colors"
+              className="p-1.5 -m-1 rounded-lg text-[#94a3b8] hover:text-[#475569] hover:bg-[#f1f5f9] transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-[#94a3b8] disabled:hover:bg-transparent"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M18 6 6 18M6 6l12 12" />

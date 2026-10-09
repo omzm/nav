@@ -296,7 +296,13 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_expected text := COALESCE(NULLIF(current_setting('app.settings.unlock_phrase', true), ''), '开门');
+  -- 解锁口令来源（按优先级）：app_config 表（后台"解锁口令"页可配）→
+  -- GUC app.settings.unlock_phrase（运维覆盖）→ 默认'开门'
+  v_expected text := COALESCE(
+    NULLIF((SELECT value FROM public.app_config WHERE key = 'unlock_phrase'), ''),
+    NULLIF(current_setting('app.settings.unlock_phrase', true), ''),
+    '开门'
+  );
 BEGIN
   IF p_phrase IS NULL OR p_phrase <> v_expected THEN
     RETURN jsonb_build_object('unlocked', false, 'categories', '[]'::jsonb);

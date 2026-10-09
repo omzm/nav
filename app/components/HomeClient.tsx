@@ -49,7 +49,7 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
   // "开门"成功后由服务端下发的私密分类（不再包含在初始快照中，见安全修复 S1）
   const [privateCategories, setPrivateCategories] = useState<NavCategory[]>([]);
   const [unlocking, setUnlocking] = useState(false);
-  const [unlockFailed, setUnlockFailed] = useState(false);
+  const prefetchTimerRef = useRef<number | null>(null);
   // 刷新按钮仅管理员可见（安全修复 S4：公开刷新可被滥用打穿缓存）
   const [canRefresh, setCanRefresh] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -180,70 +180,83 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // "开门"：口令校验与私密数据下发走服务端（安全修复 S1）。
-  // 口令正确才展示；失败时给出提示，避免静默无响应。
+  // 暗号解锁：口令校验与私密数据下发走服务端（安全修复 S1）。
+  // 隐藏交互——搜索框输入口令即尝试开门，无按钮、无弹窗、无提示：
+  // 口令正确则展示私密分类；不对或服务异常都静默（它就是个搜索框）。
   //
-  // 预取优化：用户在搜索框输入"开"字时即在后台发起请求，
-  // 输入完"开门"时数据大概率已就绪，体感接近之前的即时显示。
-  // 注意只在用户交互时预取（不随页面加载），爬虫与被动访问不会触发。
-  const privatePrefetchRef = useRef<Promise<UnlockPrivateResult> | null>(null);
+  // 防抖 500ms 后用输入值发起校验；输入过程中先行预取，停顿后解锁大概率已就绪。
+  // 只在用户交互时触发（不随页面加载），爬虫与被动访问不会触发。
+  const privatePrefetchRef = useRef<{ phrase: string; promise: Promise<UnlockPrivateResult> } | null>(null);
 
-  const prefetchPrivate = useCallback(() => {
-    if (showPrivate || privatePrefetchRef.current) {
-      return privatePrefetchRef.current;
-    }
+  const prefetchPrivate = useCallback(
+    (phrase: string) => {
+      const clean = phrase.trim();
+      if (showPrivate || !clean) return;
+      const existing = privatePrefetchRef.current;
+      if (existing && existing.phrase === clean) return existing.promise;
 
-    const pending = unlockPrivateLinks('开门').catch(
-      (): UnlockPrivateResult => ({ ok: false, categories: [], reason: 'error' })
-    );
-    privatePrefetchRef.current = pending;
-    return pending;
-  }, [showPrivate]);
+      const promise = unlockPrivateLinks(clean).catch(
+        (): UnlockPrivateResult => ({ ok: false, categories: [], reason: 'error' })
+      );
+      privatePrefetchRef.current = { phrase: clean, promise };
+      return promise;
+    },
+    [showPrivate]
+  );
 
-  const handleUnlock = useCallback(async () => {
-    if (unlocking) return;
+  const handleUnlock = useCallback(
+    async (phrase: string) => {
+      const clean = phrase.trim();
+      if (showPrivate || clean.length < 2 || unlocking) return;
 
-    setUnlocking(true);
-    setUnlockFailed(false);
+      setUnlocking(true);
 
-    try {
-      let result = await (privatePrefetchRef.current ?? unlockPrivateLinks('开门'));
+      try {
+        const pending = privatePrefetchRef.current;
+        let result =
+          pending && pending.phrase === clean
+            ? await pending.promise
+            : await unlockPrivateLinks(clean);
 
-      // 预取遇到服务异常时重试一次，避免缓存单次网络抖动
-      if (!result.ok && result.reason === 'error') {
+        // 预取遇到服务异常时重试一次，避免缓存单次网络抖动
+        if (!result.ok && result.reason === 'error') {
+          privatePrefetchRef.current = null;
+          result = await unlockPrivateLinks(clean);
+        }
+
+        if (!result.ok) {
+          privatePrefetchRef.current = null;
+          return; // 暗号不对或服务异常：静默，不打扰搜索体验
+        }
+
         privatePrefetchRef.current = null;
-        result = await unlockPrivateLinks('开门');
+        setPrivateCategories(result.categories);
+        setShowPrivate(true);
+      } catch (error) {
+        console.error('Failed to unlock private links:', error);
+      } finally {
+        setUnlocking(false);
       }
+    },
+    [showPrivate, unlocking]
+  );
 
-      if (!result.ok) {
-        setUnlockFailed(true);
-        return;
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value);
+      const clean = value.trim();
+      if (clean.length >= 2) {
+        prefetchPrivate(clean); // 先行预取：停顿后解锁大概率已就绪，体感接近即时
       }
-
-      setPrivateCategories(result.categories);
-      setShowPrivate(true);
-    } catch (error) {
-      console.error('Failed to unlock private links:', error);
-      setUnlockFailed(true);
-    } finally {
-      setUnlocking(false);
-    }
-  }, [unlocking]);
-
-  const handleSearchChange = useCallback((value: string) => {
-    if (value.trim() === '开门') {
-      setSearchQuery('');
-      void handleUnlock();
-      return;
-    }
-
-    if (!showPrivate && value.includes('开')) {
-      prefetchPrivate();
-    }
-
-    setUnlockFailed(false);
-    setSearchQuery(value);
-  }, [handleUnlock, prefetchPrivate, showPrivate]);
+      if (prefetchTimerRef.current) {
+        window.clearTimeout(prefetchTimerRef.current);
+      }
+      prefetchTimerRef.current = window.setTimeout(() => {
+        void handleUnlock(value);
+      }, 500);
+    },
+    [handleUnlock, prefetchPrivate]
+  );
 
   const handleSelectCategory = useCallback((categoryId: string | null) => {
     setSelectedCategory(categoryId);
@@ -375,21 +388,10 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
             </div>
 
             <div className="flex justify-center px-2 sm:px-0">
-              <SearchBar value={searchQuery} onChange={handleSearchChange} />
+              <div className="w-full max-w-md">
+                <SearchBar value={searchQuery} onChange={handleSearchChange} />
+              </div>
             </div>
-            {unlocking && (
-              <div className="flex justify-center px-2 sm:px-0 mt-2">
-                <p className="text-xs text-gray-400 dark:text-gray-500">正在开门…</p>
-              </div>
-            )}
-            {unlockFailed && (
-              <div className="flex justify-center px-2 sm:px-0 mt-2">
-                <p className="text-xs text-red-500 dark:text-red-400">
-                  解锁失败，请稍后重试
-                </p>
-              </div>
-            )}
-
             <div className="flex justify-center px-2 sm:px-0 mt-3 sm:mt-4">
               <div className="w-full max-w-md px-3 py-1 rounded-full bg-white/60 dark:bg-gray-800/60 backdrop-blur-md text-gray-500 dark:text-gray-500 text-[10px] sm:text-xs text-center shadow-sm transition-all duration-300 hover:bg-white/70 dark:hover:bg-gray-800/70 hover:shadow-md leading-tight">
                 {dailyQuote || ' '}

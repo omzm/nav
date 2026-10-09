@@ -45,6 +45,9 @@ export async function callChatCompletions(userPrompt: string, maxTokens = 200): 
     throw new Error('AI 未配置：请先在后台「AI 设置」中填写 API 地址、Key 并选择模型');
   }
 
+  // SSRF 防护：只允许公网 http(s) 地址，拒绝内网/回环字面量（正则层面，不做 DNS 解析）
+  assertPublicHttpUrl(apiBase);
+
   let response: Response;
   try {
     response = await fetch(`${apiBase}/chat/completions`, {
@@ -95,6 +98,32 @@ export async function callChatCompletions(userPrompt: string, maxTokens = 200): 
 }
 
 /**
+ * 校验 AI 接口地址：必须为 http(s) 协议，且 host 不得是回环/内网字面量。
+ * 注意：只做字面量正则检查，不做 DNS 解析，防御配置被恶意改写后打内网。
+ */
+function assertPublicHttpUrl(apiBase: string): void {
+  let url: URL;
+  try {
+    url = new URL(apiBase);
+  } catch {
+    throw new Error('API 地址格式不正确');
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('API 地址必须以 http:// 或 https:// 开头');
+  }
+  const host = url.hostname.toLowerCase();
+  const blocked =
+    /^(localhost|0\.0\.0\.0|\[::1\]|::1)$/.test(host) ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host);
+  if (blocked) {
+    throw new Error('API 地址不允许指向本地或内网地址');
+  }
+}
+
+/**
  * 有界读取 JSON：防止异常中转返回超大 body 拖垮服务端函数。
  * 超过上限直接抛错，不做无界缓冲。
  */
@@ -104,10 +133,28 @@ async function readJsonBounded(response: Response, maxBytes = 1_000_000): Promis
     await response.body?.cancel().catch(() => {});
     throw new Error('AI 接口返回数据过大，疑似中转异常');
   }
-  const text = await response.text();
-  if (text.length > maxBytes) {
-    throw new Error('AI 接口返回数据过大，疑似中转异常');
+  // 流式逐块读取：累计超限立即 cancel，不做无界缓冲
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('AI 接口返回了空响应体');
   }
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      if (received > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw new Error('AI 接口返回数据过大，疑似中转异常');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const text = Buffer.concat(chunks).toString('utf-8');
   try {
     return JSON.parse(text);
   } catch {

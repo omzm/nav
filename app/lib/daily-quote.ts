@@ -14,24 +14,21 @@ function getFallbackQuote() {
 }
 
 async function loadDailyQuote(): Promise<string> {
-  try {
-    // 只保留外层 unstable_cache 这一层缓存，fetch 本身不再叠加 revalidate
-    const response = await fetch('https://v.api.aa1.cn/api/yiyan/index.php', {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(3000),
-    });
+  // 失败直接抛错：让 unstable_cache 不缓存失败结果，上游恢复后下次即取到新文案；
+  // 上游返回空字符串时才用备用句（正常兜底，可缓存）。
+  // 只保留外层 unstable_cache 这一层缓存，fetch 本身不再叠加 revalidate
+  const response = await fetch('https://v.api.aa1.cn/api/yiyan/index.php', {
+    cache: 'no-store',
+    signal: AbortSignal.timeout(3000),
+  });
 
-    if (!response.ok) {
-      throw new Error(`Quote request failed: ${response.status}`);
-    }
-
-    const text = await response.text();
-    const quote = text.replace(/<[^>]*>/g, '').trim();
-    return quote || getFallbackQuote();
-  } catch (error) {
-    console.error('Failed to load daily quote:', error);
-    return getFallbackQuote();
+  if (!response.ok) {
+    throw new Error(`Quote request failed: ${response.status}`);
   }
+
+  const text = await response.text();
+  const quote = text.replace(/<[^>]*>/g, '').trim();
+  return quote || getFallbackQuote();
 }
 
 export const getDailyQuote = unstable_cache(loadDailyQuote, ['daily-quote'], {

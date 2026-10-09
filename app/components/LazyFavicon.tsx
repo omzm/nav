@@ -45,6 +45,12 @@ export default function LazyFavicon({ url, alt, className, fallback }: LazyFavic
     return () => observer.disconnect();
   }, [shouldLoad]);
 
+  // URL 变化时重置失败状态：避免旧地址的失败记忆污染新地址
+  useEffect(() => {
+    setUseFallback(false);
+    setImgError(false);
+  }, [url]);
+
   const faviconUrl = useMemo(() => {
     if (!shouldLoad || imgError) return '';
     return useFallback ? getFallbackFaviconUrl(url) : getFaviconUrl(url);

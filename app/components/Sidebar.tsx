@@ -19,7 +19,7 @@ interface SidebarProps {
 }
 
 // 建站日期：如需调整"已稳定运行"的起始时间，改这里即可
-const START_DATE = new Date('2026-02-16T00:00:00');
+const START_DATE = new Date('2026-02-16T00:00:00+08:00');
 const ALL_CATEGORIES_ICON = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M3 10.75L12 3l9 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M5.5 9.75V20h13V9.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -27,13 +27,22 @@ const ALL_CATEGORIES_ICON = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://
 </svg>`;
 
 const RunTimer = memo(function RunTimer() {
-  // 每秒更新一次，显示 天/时/分/秒
-  const [now, setNow] = useState(() => Date.now());
+  // 首屏先渲染占位，挂载后再启动计时：避免服务端 HTML 与客户端 hydration 跨秒导致文本不一致
+  const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
+    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  if (now === null) {
+    return (
+      <div className="flex items-center justify-center gap-1 tabular-nums">
+        <span>已稳定运行 -- 天 -- 时 -- 分 -- 秒</span>
+      </div>
+    );
+  }
 
   const diff = Math.max(0, now - START_DATE.getTime());
   const days = Math.floor(diff / 86400000);

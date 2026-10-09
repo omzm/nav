@@ -162,6 +162,11 @@ export function useAdminData() {
       '<DL><p>',
     ];
 
+    const categoryIds = new Set(categories.map((category) => category.id));
+    // 孤儿链接（category_id 无匹配，多见于 realtime 增量与分类状态短暂不一致）：导出时单独成组
+    const orphanLinks = links
+      .filter((link) => !categoryIds.has(link.category_id))
+      .sort((a, b) => a.order - b.order);
     const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
     for (const category of sortedCategories) {
       lines.push(`    <DT><H3 ADD_DATE="${now}" LAST_MODIFIED="${now}">${escapeHtml(category.name)}</H3>`);
@@ -170,6 +175,16 @@ export function useAdminData() {
         .filter((link) => link.category_id === category.id)
         .sort((a, b) => a.order - b.order);
       for (const link of categoryLinks) {
+        lines.push(
+          `        <DT><A HREF="${escapeHtml(link.url)}" ADD_DATE="${now}">${escapeHtml(link.title)}</A>`
+        );
+      }
+      lines.push('    </DL><p>');
+    }
+    if (orphanLinks.length > 0) {
+      lines.push(`    <DT><H3 ADD_DATE="${now}" LAST_MODIFIED="${now}">未分类</H3>`);
+      lines.push('    <DL><p>');
+      for (const link of orphanLinks) {
         lines.push(
           `        <DT><A HREF="${escapeHtml(link.url)}" ADD_DATE="${now}">${escapeHtml(link.title)}</A>`
         );
@@ -190,6 +205,9 @@ export function useAdminData() {
   }, [categories, links]);
 
   const exportData = useCallback(() => {
+    const exportCategoryIds = new Set(categories.map((category) => category.id));
+    // 孤儿链接单独归入"未分类"，保证 total_links 与明细一致
+    const exportOrphanLinks = links.filter((link) => !exportCategoryIds.has(link.category_id));
     const exportCategories = categories.map((category) => ({
       name: category.name,
       icon: category.icon,
@@ -212,9 +230,29 @@ export function useAdminData() {
         JSON.stringify(
           {
             exported_at: new Date().toISOString(),
-            total_categories: categories.length,
+            total_categories: categories.length + (exportOrphanLinks.length > 0 ? 1 : 0),
             total_links: links.length,
-            categories: exportCategories,
+            categories: [
+              ...exportCategories,
+              ...(exportOrphanLinks.length > 0
+                ? [
+                    {
+                      name: '未分类',
+                      icon: '',
+                      order: 9999,
+                      is_private: false,
+                      links: exportOrphanLinks.map((link) => ({
+                        title: link.title,
+                        url: link.url,
+                        description: link.description,
+                        icon: link.icon || null,
+                        order: link.order,
+                        is_private: link.is_private,
+                      })),
+                    },
+                  ]
+                : []),
+            ],
           },
           null,
           2
@@ -285,7 +323,12 @@ export function useAdminData() {
         applyChange<NavLink>(setLinks, payload as unknown as ChangePayload);
         debouncedLoad();
       })
-      .subscribe();
+      .subscribe((status) => {
+        // 建连/重连成功后补偿一次全量同步：断线期间的变更不会漏到下一次事件
+        if (status === 'SUBSCRIBED') {
+          debouncedLoad();
+        }
+      });
 
     return () => {
       debouncedLoad.cancel();
