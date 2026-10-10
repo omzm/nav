@@ -61,7 +61,7 @@ export default function UnlockPhrasePage() {
       <p className="text-sm text-[#64748b] mb-4 px-5">
         访客在首页输入该口令后可查看私密收藏。保存后立即生效。
         {isDefault ? '当前为默认口令「开门」。' : '已自定义口令。'}
-        注意：这只是"暗号门"式的便捷查看方式，不做强安全隔离。
+        注意：这只是「暗号门」式的便捷查看方式，不做强安全隔离。
       </p>
 
       <Card>

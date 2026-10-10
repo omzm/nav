@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 export interface DropdownItem {
   key: string;
@@ -31,36 +31,34 @@ export default function Dropdown({
   const rootRef = useRef<HTMLDivElement>(null);
 
   const open = controlledOpen ?? uncontrolledOpen;
-  const changeOpenRef = useRef<(next: boolean) => void>(() => {});
-  changeOpenRef.current = (next: boolean) => {
+  const changeOpen = useCallback((next: boolean) => {
     if (controlledOpen === undefined) {
       setUncontrolledOpen(next);
     }
     onOpenChange?.(next);
-  };
-  const changeOpen = (next: boolean) => changeOpenRef.current(next);
+  }, [controlledOpen, onOpenChange]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        changeOpenRef.current(false);
+        changeOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [changeOpen]);
 
   // Escape 关闭（焦点在菜单内时）
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        changeOpenRef.current(false);
+        changeOpen(false);
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [open]);
+  }, [open, changeOpen]);
 
   return (
     <div ref={rootRef} className="relative inline-block">

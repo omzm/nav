@@ -16,6 +16,14 @@ export default function LazyFavicon({ url, alt, className, fallback }: LazyFavic
   const [useFallback, setUseFallback] = useState(false);
   const [imgError, setImgError] = useState(false);
 
+  // URL 变化时重置失败状态：避免旧地址的失败记忆污染新地址
+  const [prevUrl, setPrevUrl] = useState(url);
+  if (prevUrl !== url) {
+    setPrevUrl(url);
+    setUseFallback(false);
+    setImgError(false);
+  }
+
   useEffect(() => {
     if (shouldLoad) return;
 
@@ -45,12 +53,6 @@ export default function LazyFavicon({ url, alt, className, fallback }: LazyFavic
     return () => observer.disconnect();
   }, [shouldLoad]);
 
-  // URL 变化时重置失败状态：避免旧地址的失败记忆污染新地址
-  useEffect(() => {
-    setUseFallback(false);
-    setImgError(false);
-  }, [url]);
-
   const faviconUrl = useMemo(() => {
     if (!shouldLoad || imgError) return '';
     return useFallback ? getFallbackFaviconUrl(url) : getFaviconUrl(url);
@@ -71,7 +73,6 @@ export default function LazyFavicon({ url, alt, className, fallback }: LazyFavic
   return (
     <span ref={ref} className="inline-flex items-center justify-center">
       {faviconUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- Favicons are arbitrary external domains and are loaded only after intersection.
         <img
           src={faviconUrl}
           alt={alt}

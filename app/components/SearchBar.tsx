@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 interface SearchBarProps {
   value: string;
@@ -10,12 +10,11 @@ interface SearchBarProps {
 
 export default function SearchBar({ value, onChange, onFocus }: SearchBarProps) {
   // 快捷键修饰键：苹果设备显示 ⌘，其他显示 Ctrl（与 HomeClient 的 keydown 处理一致）
-  const [modifierLabel, setModifierLabel] = useState('Ctrl');
-  useEffect(() => {
-    if (/Mac|iPhone|iPad|iPod/.test(navigator.platform || '')) {
-      setModifierLabel('⌘');
-    }
-  }, []);
+  const modifierLabel = useSyncExternalStore(
+    () => () => {},
+    () => (/Mac|iPhone|iPad|iPod/.test(navigator.platform || '') ? '⌘' : 'Ctrl'),
+    () => 'Ctrl'
+  );
 
   return (
     <div className="relative w-full max-w-md group">

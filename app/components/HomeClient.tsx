@@ -306,7 +306,7 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
         void handleUnlock(latestInputRef.current);
       }, 150);
     },
-    [handleUnlock, prefetchPrivate]
+    [applyUnlock, handleUnlock, prefetchPrivate]
   );
 
   const handleSelectCategory = useCallback((categoryId: string | null) => {

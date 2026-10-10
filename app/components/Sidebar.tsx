@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import Image from 'next/image';
 import { HotLink, NavCategory } from '../types';
 import CategoryIcon from './CategoryIcon';
@@ -28,13 +28,14 @@ const ALL_CATEGORIES_ICON = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://
 
 const RunTimer = memo(function RunTimer() {
   // 首屏先渲染占位，挂载后再启动计时：避免服务端 HTML 与客户端 hydration 跨秒导致文本不一致
-  const [now, setNow] = useState<number | null>(null);
-
-  useEffect(() => {
-    setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const now = useSyncExternalStore(
+    (notify) => {
+      const timer = setInterval(notify, 1000);
+      return () => clearInterval(timer);
+    },
+    () => Math.floor(Date.now() / 1000) * 1000,
+    () => null
+  );
 
   if (now === null) {
     return (
@@ -207,7 +208,7 @@ export default function Sidebar({
       <aside
         className={`fixed top-0 left-0 h-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl z-30 transition-[translate,visibility] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           isOpen ? 'translate-x-0' : '-translate-x-full invisible'
-        } lg:translate-x-0 lg:visible lg:static lg:z-0 w-56 sm:w-64 flex flex-col shadow-2xl lg:shadow-none border-r border-gray-200 dark:border-gray-700/50`}
+        } lg:translate-x-0 lg:visible lg:sticky lg:top-0 lg:h-screen lg:shrink-0 lg:z-0 w-56 sm:w-64 flex flex-col shadow-2xl lg:shadow-none border-r border-gray-200 dark:border-gray-700/50`}
       >
         <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700/50 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50">
           <div className="flex items-center space-x-2 sm:space-x-2.5">
