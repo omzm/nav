@@ -232,6 +232,7 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
         privatePrefetchRef.current = null;
         setPrivateCategories(result.categories);
         setShowPrivate(true);
+        setSearchQuery(''); // 暗号解锁成功后清空搜索框，否则"开门"会把刚解锁的私密链接过滤掉
       } catch (error) {
         console.error('Failed to unlock private links:', error);
       } finally {
