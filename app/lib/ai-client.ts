@@ -87,8 +87,16 @@ export async function callChatCompletions(userPrompt: string, maxTokens = 200): 
     throw new Error(`AI 接口返回 ${response.status}，请检查 API 地址和 Key`);
   }
 
-  const data = await readJsonBounded(response);
-  const text = data?.choices?.[0]?.message?.content?.trim();
+  const data: unknown = await readJsonBounded(response);
+  const choices =
+    typeof data === 'object' && data !== null && 'choices' in data
+      ? (data as { choices?: unknown }).choices
+      : undefined;
+  const firstChoice = Array.isArray(choices)
+    ? (choices[0] as { message?: { content?: unknown } } | undefined)
+    : undefined;
+  const rawContent = firstChoice?.message?.content;
+  const text = typeof rawContent === 'string' ? rawContent.trim() : '';
 
   if (!text) {
     throw new Error('AI 没有返回有效内容');
@@ -127,7 +135,7 @@ function assertPublicHttpUrl(apiBase: string): void {
  * 有界读取 JSON：防止异常中转返回超大 body 拖垮服务端函数。
  * 超过上限直接抛错，不做无界缓冲。
  */
-async function readJsonBounded(response: Response, maxBytes = 1_000_000): Promise<any> {
+async function readJsonBounded(response: Response, maxBytes = 1_000_000): Promise<unknown> {
   const declared = Number(response.headers.get('content-length') || 0);
   if (declared > maxBytes) {
     await response.body?.cancel().catch(() => {});

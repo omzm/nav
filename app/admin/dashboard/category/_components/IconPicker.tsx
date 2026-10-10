@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { TextArea } from '@/app/admin/_components/ui';
 import IconFont, { BUILTIN_ICON_NAMES } from '@/app/components/IconFont';
 import CategoryIcon from '@/app/components/CategoryIcon';
@@ -36,14 +36,13 @@ interface IconPickerProps {
 export default function IconPicker({ value, onChange }: IconPickerProps) {
   const [tab, setTab] = useState<IconTab>(() => detectTab(value));
   // 编辑页异步加载出已有图标时（空 -> 有值），自动切到对应 tab；用户手动切换后不再干预
-  const lastExternalValue = useRef(value);
-  useEffect(() => {
-    const prev = lastExternalValue.current;
-    lastExternalValue.current = value;
-    if (prev.trim() === '' && value.trim() !== '') {
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
+    if (prevValue.trim() === '' && value.trim() !== '') {
       setTab(detectTab(value));
     }
-  }, [value]);
+  }
 
   const tabs: Array<{ key: IconTab; label: string }> = [
     { key: 'builtin', label: '内置图标' },

@@ -37,6 +37,7 @@ export default function RootLayout({
         {/* 字体预连接：提前建连，减少首屏字体链路延迟 */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- App Router 项目：Google Fonts 用 <link> 是刻意选择（字重裁剪优化），该规则针对 Pages Router，不适用 */}
         <link
           href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
           rel="stylesheet"
