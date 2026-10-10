@@ -368,11 +368,6 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
       .filter((category) => category.links.length > 0);
   }, [normalizedQuery, sidebarCategories]);
 
-  const visibleLinkCount = useMemo(
-    () => sidebarCategories.reduce((acc, category) => acc + category.links.length, 0),
-    [sidebarCategories]
-  );
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex">
       <ThemeToggle />
@@ -505,14 +500,16 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
             <div className="max-w-4xl mx-auto space-y-3">
               <div className="text-center">
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">
-                  已收录 <span className="font-semibold text-gray-700 dark:text-gray-300">{sidebarCategories.length}</span> 个分类，
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">{visibleLinkCount}</span> 个网站
-                </p>
-              </div>
-
-              <div className="text-center">
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 italic">
-                  精选实用工具，提升工作效率 ✓
+                  内容来源于互联网，如有侵权，请联系删除
+                  <a
+                    href="mailto:anchen770@gmail.com"
+                    aria-label="发送邮件联系删除"
+                    className="ml-1.5 inline-flex align-middle text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </a>
                 </p>
               </div>
 
