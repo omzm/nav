@@ -52,6 +52,7 @@ export default memo(CategorySection, (prevProps, nextProps) => {
     const pLink = prev.links[i];
     const nLink = next.links[i];
     if (
+      pLink.id !== nLink.id ||
       pLink.url !== nLink.url ||
       pLink.title !== nLink.title ||
       pLink.description !== nLink.description ||

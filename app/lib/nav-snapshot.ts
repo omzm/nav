@@ -8,6 +8,7 @@ type CategoryRow = {
   name: string;
   icon: string;
   is_private: boolean | null;
+  order: number;
 };
 
 type LinkRow = {
@@ -78,7 +79,7 @@ async function loadNavSnapshotFromTables(
     const [categoriesResult, linksResult, hotLinksResult, totalViewCount] = await Promise.all([
       supabase
         .from('categories')
-        .select('id,name,icon,is_private')
+        .select('id,name,icon,is_private,order')
         .order('order', { ascending: true }),
       supabase
         .from('links')
@@ -118,6 +119,7 @@ async function loadNavSnapshotFromTables(
       name: category.name,
       icon: category.icon,
       isPrivate: category.is_private || false,
+      order: category.order,
       links: linksByCategory.get(category.id) || [],
     }));
 
@@ -135,7 +137,9 @@ async function loadNavSnapshotFromTables(
       hotLinks,
       stats: {
         categoryCount: categories.length,
-        linkCount: linkRows.length,
+        // 按实际挂载到分类上的链接统计：读取期间若有并发写入，
+        // linkRows 可能含分类快照中不存在的孤儿链接
+        linkCount: categories.reduce((sum, category) => sum + category.links.length, 0),
         totalViewCount,
       },
       generatedAt: new Date().toISOString(),
@@ -162,6 +166,12 @@ async function loadNavSnapshot(): Promise<NavSnapshot> {
     const { data, error } = await supabase.rpc('get_nav_snapshot_data', { limit_count: 3 });
 
     if (error) throw error;
+
+    // RPC 返回 null 或缺关键字段时走降级：避免把接口契约变化掩盖成"有效空快照"
+    const rawData = data as SnapshotRpcData | null;
+    if (!rawData || typeof rawData !== 'object' || !Array.isArray(rawData.categories)) {
+      throw new Error('get_nav_snapshot_data 返回结构缺失关键字段');
+    }
 
     const snapshot = normalizeRpcSnapshot((data || {}) as SnapshotRpcData);
 

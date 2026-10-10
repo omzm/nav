@@ -57,7 +57,10 @@ const navGroups = [
   {
     title: '系统设置',
     icon: IconSetting,
-    items: [{ label: 'AI 设置', path: '/admin/dashboard/ai-settings' }],
+    items: [
+      { label: 'AI 设置', path: '/admin/dashboard/ai-settings' },
+      { label: '解锁口令', path: '/admin/dashboard/unlock-phrase' },
+    ],
   },
 ];
 const allNavItems = [navStandalone, ...navGroups.flatMap((group) => group.items)];
@@ -255,7 +258,18 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) return null;
+  // 鉴权结束但用户仍为空（路由跳转中）：保留轻量 loading，避免白屏
+  if (!user) {
+    return (
+      <div className="admin-theme admin-loading-shell">
+        <AdminBrand />
+        <div className="flex items-center gap-3 text-sm text-[#64748b]">
+          <Spinner />
+          <span>正在进入工作台…</span>
+        </div>
+      </div>
+    );
+  }
 
   const parentPage = pathname.startsWith('/admin/dashboard/category/')
     ? { label: '分类管理', path: '/admin/dashboard/categories' }
@@ -297,6 +311,25 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         {navGroups.map((group) => {
+          // 单子项分组直接平铺为一级导航，省一次展开操作
+          if (group.items.length === 1) {
+            const singleItem = group.items[0];
+            const singleActive = isActivePath(pathname, singleItem.path);
+            const SingleIcon = group.icon;
+            return (
+              <Link
+                key={singleItem.path}
+                href={singleItem.path}
+                className={`admin-nav-item${singleActive ? ' is-active' : ''}`}
+                aria-current={singleActive ? 'page' : undefined}
+                onClick={() => setNavOpen(false)}
+              >
+                <SingleIcon aria-hidden="true" />
+                <span>{singleItem.label}</span>
+                {singleActive && <span className="admin-nav-active-dot" />}
+              </Link>
+            );
+          }
           const groupActive = group.items.some((item) => isActivePath(pathname, item.path));
           const isCollapsed = !!collapsed[group.title];
           const childrenId = `${idPrefix}-nav-group-${group.title}`;
@@ -355,7 +388,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             <strong>管理员</strong>
             <span title={user.email}>{user.email}</span>
           </div>
-          <Button variant="text" icon={<IconExit aria-hidden="true" />} aria-label="退出登录" title="退出登录" onClick={() => { setNavOpen(false); setShowLogoutConfirm(true); }} />
+          <Button variant="text" icon={<IconExit aria-hidden="true" />} aria-label="退出登录" title="退出登录" onClick={() => setShowLogoutConfirm(true)} />
         </div>
       </div>
     </>
@@ -372,10 +405,17 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
             <div className="admin-topbar-start">
               <Button className="admin-mobile-menu" variant="text" icon={<IconMenu aria-hidden="true" />} aria-label="打开导航" aria-expanded={navOpen} onClick={() => setNavOpen(true)} />
               <nav className="admin-breadcrumb" aria-label="面包屑导航">
-                <Link href="/admin/dashboard">管理台</Link>
-                <IconChevronRight aria-hidden="true" />
-                {parentPage && <><Link href={parentPage.path}>{parentPage.label}</Link><IconChevronRight aria-hidden="true" /></>}
-                <span aria-current="page">{getPageLabel(pathname)}</span>
+                {pathname === '/admin/dashboard' ? (
+                  // 工作台首页只显示当前页，不造"管理台 › 工作台"虚假层级
+                  <span aria-current="page">工作台</span>
+                ) : (
+                  <>
+                    <Link href="/admin/dashboard">管理台</Link>
+                    <IconChevronRight aria-hidden="true" />
+                    {parentPage && <><Link href={parentPage.path}>{parentPage.label}</Link><IconChevronRight aria-hidden="true" /></>}
+                    <span aria-current="page">{getPageLabel(pathname)}</span>
+                  </>
+                )}
               </nav>
             </div>
           </header>
@@ -394,11 +434,12 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
         <Modal
           title="退出登录"
           open={showLogoutConfirm}
-          onClose={() => { if (!loggingOut) setShowLogoutConfirm(false); }}
+          closeDisabled={loggingOut}
+          onClose={() => { if (!loggingOut) { setNavOpen(false); setShowLogoutConfirm(false); } }}
           footer={
             <>
-              <Button disabled={loggingOut} onClick={() => setShowLogoutConfirm(false)}>取消</Button>
-              <Button variant="danger" loading={loggingOut} onClick={() => void handleLogout()}>退出登录</Button>
+              <Button disabled={loggingOut} onClick={() => { setNavOpen(false); setShowLogoutConfirm(false); }}>取消</Button>
+              <Button variant="danger" loading={loggingOut} onClick={() => { setNavOpen(false); void handleLogout(); }}>退出登录</Button>
             </>
           }
         >

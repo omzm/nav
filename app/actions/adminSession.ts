@@ -33,21 +33,31 @@ function cookieOptions() {
 export async function getAdminStatus(): Promise<{
   configured: boolean;
   sessionEmail: string | null;
+  /** 数据库故障时为 true：此时 configured 仍为 true，避免误导用户进初始化向导 */
+  dbError?: boolean;
 }> {
+  let dbEmail: string | null;
   try {
-    const dbEmail = await getDbAdminEmail();
+    dbEmail = await getDbAdminEmail();
+  } catch (error) {
+    // 数据库故障 ≠ 未初始化：configured 保持 true，由调用方提示服务异常
+    console.error('getAdminStatus: 读取管理员邮箱失败:', error);
+    return { configured: true, sessionEmail: null, dbError: true };
+  }
 
-    if (!dbEmail) {
-      return { configured: false, sessionEmail: null };
-    }
-
-    const store = await cookies();
-    const sessionEmail = await verifyAdminToken(store.get(ADMIN_COOKIE_NAME)?.value);
-
-    return { configured: true, sessionEmail };
-  } catch {
+  if (!dbEmail) {
     return { configured: false, sessionEmail: null };
   }
+
+  let sessionEmail: string | null = null;
+  try {
+    const store = await cookies();
+    sessionEmail = await verifyAdminToken(store.get(ADMIN_COOKIE_NAME)?.value);
+  } catch (error) {
+    console.error('getAdminStatus: 校验会话失败:', error);
+  }
+
+  return { configured: true, sessionEmail };
 }
 
 /**
@@ -86,9 +96,9 @@ export async function establishAdminSession(accessToken: string): Promise<AdminS
 
     return { ok: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : '建立管理会话失败';
-    console.error('establishAdminSession failed:', message);
-    return { ok: false, error: message };
+    // 异常原文只记服务端日志，不返回客户端
+    console.error('establishAdminSession failed:', error);
+    return { ok: false, error: '建立管理会话失败，请稍后重试' };
   }
 }
 
@@ -108,9 +118,8 @@ export async function establishLocalAdminSession(): Promise<AdminSessionResult> 
 
     return { ok: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : '建立本地管理会话失败';
-    console.error('establishLocalAdminSession failed:', message);
-    return { ok: false, error: message };
+    console.error('establishLocalAdminSession failed:', error);
+    return { ok: false, error: '建立管理会话失败，请稍后重试' };
   }
 }
 
@@ -120,7 +129,13 @@ export async function hasAdminSession(): Promise<boolean> {
     const store = await cookies();
     const email = await verifyAdminToken(store.get(ADMIN_COOKIE_NAME)?.value);
 
-    return email !== null;
+    if (email === null) {
+      return false;
+    }
+
+    // 会话邮箱必须等于当前数据库管理员邮箱：更换管理员后旧 Cookie 即失效
+    const adminEmail = await getDbAdminEmail();
+    return !!adminEmail && email.toLowerCase() === adminEmail.toLowerCase();
   } catch {
     return false;
   }

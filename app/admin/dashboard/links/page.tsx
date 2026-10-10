@@ -43,6 +43,9 @@ function sortLinksByContext(links: NavLink[], categories: Category[], categoryFi
     if (categoryFilter === ALL_CATEGORIES) {
       const categoryDiff = (categoryOrder.get(a.category_id) || 0) - (categoryOrder.get(b.category_id) || 0);
       if (categoryDiff !== 0) return categoryDiff;
+      // 分类 order 相同时先按分类 id 分组，避免 A1、B1、A2、B2 交错
+      const groupDiff = a.category_id.localeCompare(b.category_id);
+      if (groupDiff !== 0) return groupDiff;
     }
 
     return a.order - b.order;

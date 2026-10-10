@@ -31,6 +31,9 @@ export default function RootLayout({
             __html: `(function(){try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
         />
+        {/* 壁纸是首屏视觉主体（LCP）：preload 放在 layout 层静态声明，
+            不等导航快照返回就开始下载。注意 URL 必须与 HomeClient 里 backgroundImage 完全一致 */}
+        <link rel="preload" as="image" href="/api/bing-wallpaper" fetchPriority="high" />
         {/* 字体预连接：提前建连，减少首屏字体链路延迟 */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
