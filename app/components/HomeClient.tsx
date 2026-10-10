@@ -390,7 +390,7 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
         version={version}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
         <div className={`fixed top-0 left-0 right-0 z-10 lg:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700/50 shadow-sm transition-transform duration-300 ${
           scrolledPastHeader ? 'translate-y-0' : '-translate-y-full'
         }`}>
