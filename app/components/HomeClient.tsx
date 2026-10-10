@@ -184,30 +184,57 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
   // 隐藏交互——搜索框输入口令即尝试开门，无按钮、无弹窗、无提示：
   // 口令正确则展示私密分类；不对或服务异常都静默（它就是个搜索框）。
   //
-  // 防抖 500ms 后用输入值发起校验；输入过程中先行预取，停顿后解锁大概率已就绪。
+  // 防抖 150ms 兜底；每次输入即预取，正确口令的 RPC 一返回就直接开门（投机解锁）。
   // 只在用户交互时触发（不随页面加载），爬虫与被动访问不会触发。
   const privatePrefetchRef = useRef<{ phrase: string; promise: Promise<UnlockPrivateResult> } | null>(null);
+  const latestInputRef = useRef('');
+  const showPrivateRef = useRef(false);
+  // 本 session 验证通过的口令 + 私密数据：二次解锁直接用缓存，零网络延迟
+  const lastPhraseRef = useRef<string | null>(null);
+  const privateCategoriesRef = useRef<NavCategory[]>([]);
+  useEffect(() => {
+    showPrivateRef.current = showPrivate;
+  }, [showPrivate]);
+
+  const applyUnlock = useCallback((result: UnlockPrivateResult, phrase: string) => {
+    if (!result.ok) return;
+    privatePrefetchRef.current = null;
+    showPrivateRef.current = true;
+    privateCategoriesRef.current = result.categories;
+    lastPhraseRef.current = phrase;
+    setPrivateCategories(result.categories);
+    setShowPrivate(true);
+    setSearchQuery(''); // 暗号解锁成功后清空搜索框，否则口令会把私密链接过滤掉
+    latestInputRef.current = '';
+  }, []);
 
   const prefetchPrivate = useCallback(
     (phrase: string) => {
       const clean = phrase.trim();
-      if (showPrivate || !clean) return;
+      if (showPrivateRef.current || !clean) return;
       const existing = privatePrefetchRef.current;
       if (existing && existing.phrase === clean) return existing.promise;
 
-      const promise = unlockPrivateLinks(clean).catch(
+      // 投机解锁：口令正确就立即开门，不等防抖，体感接近零延迟
+      const promise = unlockPrivateLinks(clean).then(
+        (result): UnlockPrivateResult => {
+          if (result.ok && !showPrivateRef.current && latestInputRef.current.trim() === clean) {
+            applyUnlock(result, clean);
+          }
+          return result;
+        },
         (): UnlockPrivateResult => ({ ok: false, categories: [], reason: 'error' })
       );
       privatePrefetchRef.current = { phrase: clean, promise };
       return promise;
     },
-    [showPrivate]
+    [applyUnlock]
   );
 
   const handleUnlock = useCallback(
     async (phrase: string) => {
       const clean = phrase.trim();
-      if (showPrivate || clean.length < 2 || unlocking) return;
+      if (showPrivateRef.current || clean.length < 2 || unlocking) return;
 
       setUnlocking(true);
 
@@ -229,32 +256,55 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
           return; // 暗号不对或服务异常：静默，不打扰搜索体验
         }
 
-        privatePrefetchRef.current = null;
-        setPrivateCategories(result.categories);
-        setShowPrivate(true);
-        setSearchQuery(''); // 暗号解锁成功后清空搜索框，否则"开门"会把刚解锁的私密链接过滤掉
+        applyUnlock(result, clean);
       } catch (error) {
         console.error('Failed to unlock private links:', error);
       } finally {
         setUnlocking(false);
       }
     },
-    [showPrivate, unlocking]
+    [unlocking, applyUnlock]
   );
+
+  // 聚焦搜索框即预取上次验证过的口令（或默认口令），抢在输入完成前把数据拿回来
+  const handleSearchFocus = useCallback(() => {
+    if (!showPrivateRef.current) {
+      prefetchPrivate(lastPhraseRef.current || '开门');
+    }
+  }, [prefetchPrivate]);
 
   const handleSearchChange = useCallback(
     (value: string) => {
       setSearchQuery(value);
+      latestInputRef.current = value;
       const clean = value.trim();
-      if (clean.length >= 2) {
-        prefetchPrivate(clean); // 先行预取：停顿后解锁大概率已就绪，体感接近即时
+      // 极速路径：与本 session 已验证的口令一致，直接用缓存数据开门，零网络延迟；
+      // 同时后台静默 revalidate，保证数据新鲜
+      if (
+        clean.length >= 2 &&
+        lastPhraseRef.current &&
+        clean === lastPhraseRef.current &&
+        privateCategoriesRef.current.length > 0 &&
+        !showPrivateRef.current
+      ) {
+        applyUnlock({ ok: true, categories: privateCategoriesRef.current }, clean);
+        void unlockPrivateLinks(clean).then((result) => {
+          if (result.ok && result.categories.length > 0) {
+            privateCategoriesRef.current = result.categories;
+            setPrivateCategories(result.categories);
+          }
+        }).catch(() => {});
+        return;
+      }
+      if (clean.length >= 1) {
+        prefetchPrivate(clean);
       }
       if (prefetchTimerRef.current) {
         window.clearTimeout(prefetchTimerRef.current);
       }
       prefetchTimerRef.current = window.setTimeout(() => {
-        void handleUnlock(value);
-      }, 500);
+        void handleUnlock(latestInputRef.current);
+      }, 150);
     },
     [handleUnlock, prefetchPrivate]
   );
@@ -390,7 +440,7 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
 
             <div className="flex justify-center px-2 sm:px-0">
               <div className="w-full max-w-md">
-                <SearchBar value={searchQuery} onChange={handleSearchChange} />
+                <SearchBar value={searchQuery} onChange={handleSearchChange} onFocus={handleSearchFocus} />
               </div>
             </div>
             <div className="flex justify-center px-2 sm:px-0 mt-3 sm:mt-4">

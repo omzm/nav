@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react';
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
+  onFocus?: () => void;
 }
 
-export default function SearchBar({ value, onChange }: SearchBarProps) {
+export default function SearchBar({ value, onChange, onFocus }: SearchBarProps) {
   // 快捷键修饰键：苹果设备显示 ⌘，其他显示 Ctrl（与 HomeClient 的 keydown 处理一致）
   const [modifierLabel, setModifierLabel] = useState('Ctrl');
   useEffect(() => {
@@ -22,6 +23,7 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
         placeholder="搜索..."
         id="search-input"
         aria-label="搜索链接"
