@@ -5,8 +5,8 @@ import 'server-only';
 import { createServiceSupabaseClient } from '@/app/lib/supabase-service';
 import { assertAdmin } from './adminSession';
 
-export const UNLOCK_PHRASE_KEY = 'unlock_phrase';
-export const DEFAULT_UNLOCK_PHRASE = '开门';
+const UNLOCK_PHRASE_KEY = 'unlock_phrase';
+const DEFAULT_UNLOCK_PHRASE = '开门';
 
 export interface UnlockPhraseStatus {
   /** 当前生效口令（未配置时为默认值） */
