@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useAdminNavigation } from '@/app/admin/_components/NavigationProgress';
 import { Button, Empty, Spinner } from '@/app/admin/_components/ui';
 import NavButton from '@/app/admin/_components/NavButton';
 import {
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
     categories, links, categoryMap, linkCountByCategory,
     loading, refreshing, stats, exportData, exportBookmarks, loadData,
   } = useAdminData();
-  const router = useRouter();
+  const { navigate } = useAdminNavigation();
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -42,10 +42,10 @@ export default function AdminDashboard() {
 
       if (event.key.toLowerCase() === 'n') {
         event.preventDefault();
-        router.push('/admin/dashboard/link/new');
+        navigate('/admin/dashboard/link/new');
       } else if (event.key.toLowerCase() === 'c') {
         event.preventDefault();
-        router.push('/admin/dashboard/category/new');
+        navigate('/admin/dashboard/category/new');
       } else if (event.key.toLowerCase() === 'r') {
         event.preventDefault();
         void loadData(true);
@@ -54,7 +54,7 @@ export default function AdminDashboard() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [loadData, router]);
+  }, [loadData, navigate]);
 
   if (loading) {
     return (
@@ -104,7 +104,7 @@ export default function AdminDashboard() {
               key={label}
               type="button"
               className="admin-stat-seg"
-              onClick={() => router.push(href)}
+              onClick={() => navigate(href)}
               title={'查看' + label}
             >
               <span className="admin-stat-label">{label}</span>
@@ -117,6 +117,34 @@ export default function AdminDashboard() {
         <div className="admin-overview-grid">
           <section className="admin-panel">
             <div className="admin-panel-head">
+              <div><h2>最近添加</h2><p>最新收录的网站与工具</p></div>
+              <Link className="admin-inline-link" href="/admin/dashboard/links">全部链接 <IconChevronRight aria-hidden="true" /></Link>
+            </div>
+            {latestLinks.length ? (
+              <div className="admin-recent-list">
+                {latestLinks.map((link) => (
+                  <div className="admin-recent-row" key={link.id}>
+                    <span className="admin-icon-preview"><LinkIcon link={link} /></span>
+                    <div className="admin-recent-info">
+                      <a className="admin-recent-title" href={link.url} target="_blank" rel="noopener noreferrer" title={link.title}>{link.title}</a>
+                      <span className="admin-recent-domain">{getHostname(link.url)}</span>
+                    </div>
+                    <span className="admin-recent-category">{categoryMap.get(link.category_id)?.name || '未分类'}</span>
+                    <Button variant="tertiary" size="small" icon={<IconEdit aria-hidden="true" />} aria-label={'编辑 ' + link.title} title="编辑链接" onClick={() => navigate('/admin/dashboard/link/' + link.id)} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Empty
+                title="还没有收录链接"
+                description="添加一个常用网站，开始建立你的收藏夹。"
+                action={<NavButton size="small" href="/admin/dashboard/link/new">添加链接</NavButton>}
+              />
+            )}
+          </section>
+
+<section className="admin-panel">
+            <div className="admin-panel-head">
               <div><h2>分类分布</h2><p>链接最多的 {visibleCategories.length} 个分类</p></div>
               <Link className="admin-inline-link" href="/admin/dashboard/categories">全部分类 <IconChevronRight aria-hidden="true" /></Link>
             </div>
@@ -125,7 +153,7 @@ export default function AdminDashboard() {
                 {visibleCategories.map((category) => {
                   const count = linkCountByCategory.get(category.id)?.total || 0;
                   return (
-                    <button className="admin-category-row" key={category.id} onClick={() => router.push('/admin/dashboard/links?category=' + category.id)}>
+                    <button className="admin-category-row" key={category.id} onClick={() => navigate('/admin/dashboard/links?category=' + category.id)}>
                       <span className="admin-icon-preview"><CategoryIcon icon={category.icon} /></span>
                       <span className="admin-category-detail">
                         <span className="admin-category-label">
@@ -146,38 +174,10 @@ export default function AdminDashboard() {
               />
             )}
           </section>
-
-          <section className="admin-panel">
-            <div className="admin-panel-head">
-              <div><h2>最近添加</h2><p>最新收录的网站与工具</p></div>
-              <Link className="admin-inline-link" href="/admin/dashboard/links">全部链接 <IconChevronRight aria-hidden="true" /></Link>
-            </div>
-            {latestLinks.length ? (
-              <div className="admin-recent-list">
-                {latestLinks.map((link) => (
-                  <div className="admin-recent-row" key={link.id}>
-                    <span className="admin-icon-preview"><LinkIcon link={link} /></span>
-                    <div className="admin-recent-info">
-                      <a className="admin-recent-title" href={link.url} target="_blank" rel="noopener noreferrer" title={link.title}>{link.title}</a>
-                      <span className="admin-recent-domain">{getHostname(link.url)}</span>
-                    </div>
-                    <span className="admin-recent-category">{categoryMap.get(link.category_id)?.name || '未分类'}</span>
-                    <Button variant="tertiary" size="small" icon={<IconEdit aria-hidden="true" />} aria-label={'编辑 ' + link.title} title="编辑链接" onClick={() => router.push('/admin/dashboard/link/' + link.id)} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Empty
-                title="还没有收录链接"
-                description="添加一个常用网站，开始建立你的收藏夹。"
-                action={<NavButton size="small" href="/admin/dashboard/link/new">添加链接</NavButton>}
-              />
-            )}
-          </section>
         </div>
 
         <div className="admin-quick-actions">
-          <button className="admin-quick-action" title="添加分类 (C)" onClick={() => router.push('/admin/dashboard/category/new')}>
+          <button className="admin-quick-action" title="添加分类 (C)" onClick={() => navigate('/admin/dashboard/category/new')}>
             <IconFolder aria-hidden="true" /><span><strong>添加分类</strong><small>为收藏建立新的分组</small></span><IconChevronRight aria-hidden="true" />
           </button>
           <button className="admin-quick-action" onClick={exportData}>
