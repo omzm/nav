@@ -189,14 +189,19 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
   const privatePrefetchRef = useRef<{ phrase: string; promise: Promise<UnlockPrivateResult> } | null>(null);
   const latestInputRef = useRef('');
   const showPrivateRef = useRef(false);
+  // 本 session 验证通过的口令 + 私密数据：二次解锁直接用缓存，零网络延迟
+  const lastPhraseRef = useRef<string | null>(null);
+  const privateCategoriesRef = useRef<NavCategory[]>([]);
   useEffect(() => {
     showPrivateRef.current = showPrivate;
   }, [showPrivate]);
 
-  const applyUnlock = useCallback((result: UnlockPrivateResult) => {
+  const applyUnlock = useCallback((result: UnlockPrivateResult, phrase: string) => {
     if (!result.ok) return;
     privatePrefetchRef.current = null;
     showPrivateRef.current = true;
+    privateCategoriesRef.current = result.categories;
+    lastPhraseRef.current = phrase;
     setPrivateCategories(result.categories);
     setShowPrivate(true);
     setSearchQuery(''); // 暗号解锁成功后清空搜索框，否则口令会把私密链接过滤掉
@@ -214,7 +219,7 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
       const promise = unlockPrivateLinks(clean).then(
         (result): UnlockPrivateResult => {
           if (result.ok && !showPrivateRef.current && latestInputRef.current.trim() === clean) {
-            applyUnlock(result);
+            applyUnlock(result, clean);
           }
           return result;
         },
@@ -251,7 +256,7 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
           return; // 暗号不对或服务异常：静默，不打扰搜索体验
         }
 
-        applyUnlock(result);
+        applyUnlock(result, clean);
       } catch (error) {
         console.error('Failed to unlock private links:', error);
       } finally {
@@ -261,11 +266,36 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
     [unlocking, applyUnlock]
   );
 
+  // 聚焦搜索框即预取上次验证过的口令（或默认口令），抢在输入完成前把数据拿回来
+  const handleSearchFocus = useCallback(() => {
+    if (!showPrivateRef.current) {
+      prefetchPrivate(lastPhraseRef.current || '开门');
+    }
+  }, [prefetchPrivate]);
+
   const handleSearchChange = useCallback(
     (value: string) => {
       setSearchQuery(value);
       latestInputRef.current = value;
       const clean = value.trim();
+      // 极速路径：与本 session 已验证的口令一致，直接用缓存数据开门，零网络延迟；
+      // 同时后台静默 revalidate，保证数据新鲜
+      if (
+        clean.length >= 2 &&
+        lastPhraseRef.current &&
+        clean === lastPhraseRef.current &&
+        privateCategoriesRef.current.length > 0 &&
+        !showPrivateRef.current
+      ) {
+        applyUnlock({ ok: true, categories: privateCategoriesRef.current }, clean);
+        void unlockPrivateLinks(clean).then((result) => {
+          if (result.ok && result.categories.length > 0) {
+            privateCategoriesRef.current = result.categories;
+            setPrivateCategories(result.categories);
+          }
+        }).catch(() => {});
+        return;
+      }
       if (clean.length >= 1) {
         prefetchPrivate(clean);
       }
@@ -410,7 +440,7 @@ export default function HomeClient({ snapshot, submitEnabled, version }: HomeCli
 
             <div className="flex justify-center px-2 sm:px-0">
               <div className="w-full max-w-md">
-                <SearchBar value={searchQuery} onChange={handleSearchChange} />
+                <SearchBar value={searchQuery} onChange={handleSearchChange} onFocus={handleSearchFocus} />
               </div>
             </div>
             <div className="flex justify-center px-2 sm:px-0 mt-3 sm:mt-4">
