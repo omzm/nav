@@ -63,3 +63,34 @@ export async function hasAuthUserByEmail(email: string): Promise<boolean> {
     return false;
   }
 }
+
+export const ADMIN_USERNAME_KEY = 'admin_username';
+
+/**
+ * 管理员登录用户名（可空）：设置后可用"用户名或邮箱"登录。
+ * 只是登录别名，Supabase Auth 侧仍用邮箱；登录时服务端把用户名映射回邮箱。
+ */
+export async function getDbAdminUsername(): Promise<string> {
+  try {
+    const { data, error } = await createServiceSupabaseClient()
+      .from('app_config')
+      .select('value')
+      .eq('key', ADMIN_USERNAME_KEY)
+      .maybeSingle();
+
+    if (error) return '';
+
+    return (data?.value || '').trim();
+  } catch {
+    return '';
+  }
+}
+
+/** 写管理员登录用户名；传空字符串表示清除（只用邮箱登录） */
+export async function setDbAdminUsername(username: string): Promise<void> {
+  const { error } = await createServiceSupabaseClient()
+    .from('app_config')
+    .upsert({ key: ADMIN_USERNAME_KEY, value: username.trim() }, { onConflict: 'key' });
+
+  if (error) throw new Error('保存用户名失败：' + error.message);
+}

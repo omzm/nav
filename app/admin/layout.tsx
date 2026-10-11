@@ -61,6 +61,7 @@ const navGroups = [
     items: [
       { label: 'AI 设置', path: '/admin/dashboard/ai-settings' },
       { label: '解锁口令', path: '/admin/dashboard/unlock-phrase' },
+      { label: '账号安全', path: '/admin/dashboard/account' },
     ],
   },
 ];
