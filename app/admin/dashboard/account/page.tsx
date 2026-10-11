@@ -11,12 +11,16 @@ import {
 } from '@/app/admin/_components/ui';
 import { toast } from '@/app/admin/_components/ui/toast';
 import { IconSave } from '@/app/admin/_components/ui/icons';
-import { getAdminStatus } from '@/app/actions/adminSession';
-import { updateAdminAccount } from '@/app/actions/updateAdminAccount';
+import { getAdminAccount, setAdminUsername, updateAdminAccount } from '@/app/actions/updateAdminAccount';
 
 export default function AccountPage() {
   const [currentEmail, setCurrentEmail] = useState('');
+  const [currentUsername, setCurrentUsername] = useState('');
   const [loading, setLoading] = useState(true);
+
+  const [newUsername, setNewUsername] = useState('');
+  const [usernamePassword, setUsernamePassword] = useState('');
+  const [savingUsername, setSavingUsername] = useState(false);
 
   const [newEmail, setNewEmail] = useState('');
   const [emailPassword, setEmailPassword] = useState('');
@@ -28,11 +32,34 @@ export default function AccountPage() {
   const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
-    getAdminStatus()
-      .then((status) => setCurrentEmail(status.sessionEmail || ''))
+    getAdminAccount()
+      .then((account) => {
+        setCurrentEmail(account.email);
+        setCurrentUsername(account.username);
+      })
       .catch(() => toast.error('加载账号信息失败'))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleSaveUsername = async () => {
+    setSavingUsername(true);
+    try {
+      const result = await setAdminUsername({ currentPassword: usernamePassword, username: newUsername });
+      if (!result.ok) {
+        toast.error(result.error || '保存失败');
+        return;
+      }
+      const clean = newUsername.trim();
+      setCurrentUsername(clean);
+      setNewUsername('');
+      setUsernamePassword('');
+      toast.success(clean ? '登录用户名已设置，可用用户名或邮箱登录' : '已清除用户名，恢复为仅邮箱登录');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '保存失败');
+    } finally {
+      setSavingUsername(false);
+    }
+  };
 
   const handleSaveEmail = async () => {
     const clean = newEmail.trim();
@@ -97,10 +124,50 @@ export default function AccountPage() {
     <div className="max-w-[640px]">
       <h2 className="text-lg font-semibold text-[#1e293b] mb-1 px-5">账号安全</h2>
       <p className="text-sm text-[#64748b] mb-4 px-5">
-        修改管理员登录邮箱与密码。修改即时生效，邮箱修改后当前登录态保持有效。
+        修改管理员登录账号与密码。修改即时生效，邮箱修改后当前登录态保持有效。
       </p>
 
       <div className="space-y-4">
+        <Card>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-[#1e293b]">登录用户名</h3>
+              <p className="text-sm text-[#64748b] mt-1">
+                当前：<span className="font-medium text-[#334155]">{currentUsername || '未设置（仅邮箱登录）'}</span>
+              </p>
+            </div>
+            <Field
+              label="用户名"
+              hint="2–32 位，可用字母、数字、下划线、连字符、中文；留空保存则清除用户名"
+            >
+              <Input
+                value={newUsername}
+                onChange={setNewUsername}
+                placeholder={currentUsername ? '输入新用户名，或留空清除' : '例如 admin'}
+                autoComplete="username"
+              />
+            </Field>
+            <Field label="当前密码" hint="确认是本人操作">
+              <PasswordInput
+                value={usernamePassword}
+                onChange={setUsernamePassword}
+                placeholder="输入当前登录密码"
+                autoComplete="current-password"
+              />
+            </Field>
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="primary"
+                icon={<IconSave aria-hidden="true" />}
+                loading={savingUsername}
+                onClick={handleSaveUsername}
+              >
+                保存用户名
+              </Button>
+            </div>
+          </div>
+        </Card>
+
         <Card>
           <div className="space-y-4">
             <div>

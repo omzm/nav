@@ -14,7 +14,7 @@ import {
 import { supabase, isSupabaseConfigured } from '@/app/lib/supabase';
 // 本地测试账号逻辑不静态导入：只在开发环境动态加载，
 // 生产构建的 bundle 里不包含测试账号常量（纵深防御；服务端本就硬拒绝非开发环境）
-import { establishAdminSession, establishLocalAdminSession, hasAdminSession } from '@/app/actions/adminSession';
+import { adminSignIn, establishLocalAdminSession, hasAdminSession } from '@/app/actions/adminSession';
 import AdminBrand from './_components/AdminBrand';
 
 export default function LoginForm() {
@@ -63,16 +63,18 @@ export default function LoginForm() {
       }
 
       if (!isLocalCredentials || isSupabaseConfigured) {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (!isLocalCredentials && error) throw error;
-        if (data.user) {
-          // 服务端建立管理员会话（校验邮箱 + 签发 HttpOnly Cookie），失败则拒绝进入后台
-          const { data: sessionData } = await supabase.auth.getSession();
-          const sessionResult = await establishAdminSession(sessionData.session?.access_token || '');
-
-          if (!sessionResult.ok) {
+        // 服务端登录：支持"邮箱或用户名"，校验通过后签发 HttpOnly Cookie，
+        // 并把 Supabase 会话 token 交给客户端建立会话（后台 RLS 依赖它）
+        const signInResult = await adminSignIn(email, password);
+        if (!isLocalCredentials && !signInResult.ok) throw new Error(signInResult.error);
+        if (signInResult.ok) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: signInResult.accessToken || '',
+            refresh_token: signInResult.refreshToken || '',
+          });
+          if (sessionError) {
             await supabase.auth.signOut();
-            throw new Error(sessionResult.error || '管理员身份校验失败');
+            throw new Error('建立登录会话失败，请重试');
           }
 
           toast.success('登录成功');
@@ -129,7 +131,7 @@ export default function LoginForm() {
           )}
 
           <form onSubmit={handleLogin} className="space-y-4">
-            <Field label="邮箱地址">
+            <Field label="账号">
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none">
                   <IconMail size={15} />
@@ -137,8 +139,7 @@ export default function LoginForm() {
                 <Input
                   value={email}
                   onChange={setEmail}
-                  placeholder="请输入管理员邮箱"
-                  type="email"
+                  placeholder="管理员邮箱或用户名"
                   autoComplete="username"
                   required
                   className="pl-9"

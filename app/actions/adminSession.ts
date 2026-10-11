@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { createServerSupabaseClient } from '../lib/supabase-server';
-import { getAdminEmail as getDbAdminEmail } from '../lib/admin-email';
+import { getAdminEmail as getDbAdminEmail, getDbAdminUsername } from '../lib/admin-email';
 import {
   ADMIN_COOKIE_NAME,
   ADMIN_SESSION_TTL_SECONDS,
@@ -154,4 +154,66 @@ export async function assertAdmin(): Promise<void> {
 export async function clearAdminSession(): Promise<void> {
   const store = await cookies();
   store.delete(ADMIN_COOKIE_NAME);
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export interface AdminSignInResult {
+  ok: boolean;
+  error?: string;
+  accessToken?: string;
+  refreshToken?: string;
+}
+
+/**
+ * 管理员登录（支持"邮箱或用户名"）。
+ *
+ * 流程：标识符 → 解析为邮箱（邮箱格式直接用；否则匹配 app_config.admin_username
+ * 映射回管理员邮箱）→ 服务端 signInWithPassword → 校验邮箱等于数据库管理员邮箱
+ * （fail closed）→ 签发 HttpOnly Cookie。
+ * 成功时把 Supabase 会话 token 交给客户端，由客户端 setSession 建立会话
+ * （后台 RLS 依赖客户端 Supabase 会话）。
+ * 失败一律返回"账号或密码不正确"，不透露是账号错还是密码错。
+ */
+export async function adminSignIn(identifier: string, password: string): Promise<AdminSignInResult> {
+  try {
+    const id = (identifier || '').trim();
+    if (!id || !password) {
+      return { ok: false, error: '请输入账号和密码' };
+    }
+
+    let email: string | null = null;
+    if (EMAIL_RE.test(id)) {
+      email = id.toLowerCase();
+    } else {
+      const username = await getDbAdminUsername();
+      if (username && id.toLowerCase() === username.toLowerCase()) {
+        email = (await getDbAdminEmail()).toLowerCase();
+      }
+    }
+
+    const dbEmail = (await getDbAdminEmail()).toLowerCase();
+    if (!email || !dbEmail || email !== dbEmail) {
+      return { ok: false, error: '账号或密码不正确' };
+    }
+
+    const supabase = createServerSupabaseClient();
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user || !data.session) {
+      return { ok: false, error: '账号或密码不正确' };
+    }
+
+    const token = await signAdminToken(email);
+    const store = await cookies();
+    store.set(ADMIN_COOKIE_NAME, token, cookieOptions());
+
+    return {
+      ok: true,
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+    };
+  } catch (error) {
+    console.error('adminSignIn failed:', error);
+    return { ok: false, error: '登录失败，请稍后重试' };
+  }
 }
