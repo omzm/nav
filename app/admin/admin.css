@@ -28,7 +28,7 @@ body.admin-theme { background: var(--admin-background); }
 .admin-skip-link:focus { transform: translateY(0); }
 .admin-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 30; width: 224px; display: flex; flex-direction: column; background: var(--admin-sidebar-bg); border-right: 1px solid var(--admin-border); }
 .admin-brand { display: inline-flex; align-items: center; gap: 11px; color: var(--admin-text); }
-.admin-brand-mark { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 12px; color: #fff; background: var(--admin-primary); }
+.admin-brand-mark { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: transparent; }
 .admin-brand-text { display: grid; gap: 1px; }
 .admin-brand-text strong { font-size: 17px; line-height: 24px; font-weight: 650; letter-spacing: .5px; }
 .admin-brand-text small { color: #8994a5; font-size: 10px; letter-spacing: 1px; }
