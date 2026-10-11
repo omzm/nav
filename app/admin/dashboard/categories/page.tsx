@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAdminNavigation } from '@/app/admin/_components/NavigationProgress';
 import {
   Badge,
   Button,
@@ -53,7 +53,7 @@ export default function CategoriesPage() {
   const [page, setPage] = useState(1);
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
-  const router = useRouter();
+  const { navigate } = useAdminNavigation();
   // 与 admin.css 中 @media (max-width: 767px) 断点一致：移动端只渲染卡片列表，桌面端只渲染表格
   const isMobile = useMediaQuery('(max-width: 767px)');
 
@@ -311,9 +311,9 @@ export default function CategoriesPage() {
                             </td>
                             <td className={tdClass}>
                               <div className="admin-table-actions">
-                                <Button size="small" variant="tertiary" icon={<IconEye aria-hidden="true" />} aria-label={'查看 ' + category.name + ' 的链接'} title="查看链接" className="w-7 px-0! text-[#8d9ab0]! hover:text-[#2563eb]" onClick={() => router.push('/admin/dashboard/links?category=' + category.id)} />
-                                <Button size="small" variant="tertiary" icon={<IconPlus aria-hidden="true" />} aria-label={'在 ' + category.name + ' 下添加链接'} title="添加链接" className="w-7 px-0! text-[#8d9ab0]! hover:text-[#2563eb]" onClick={() => router.push('/admin/dashboard/link/new?category=' + category.id)} />
-                                <Button size="small" variant="tertiary" icon={<IconEdit aria-hidden="true" />} aria-label={'编辑 ' + category.name} title="编辑分类" className="w-7 px-0! text-[#8d9ab0]! hover:text-[#2563eb]" onClick={() => router.push('/admin/dashboard/category/' + category.id)} />
+                                <NavButton size="small" variant="tertiary" icon={<IconEye aria-hidden="true" />} aria-label={'查看 ' + category.name + ' 的链接'} title="查看链接" className="w-7 px-0! text-[#8d9ab0]! hover:text-[#2563eb]" href={'/admin/dashboard/links?category=' + category.id} />
+                                <NavButton size="small" variant="tertiary" icon={<IconPlus aria-hidden="true" />} aria-label={'在 ' + category.name + ' 下添加链接'} title="添加链接" className="w-7 px-0! text-[#8d9ab0]! hover:text-[#2563eb]" href={'/admin/dashboard/link/new?category=' + category.id} />
+                                <NavButton size="small" variant="tertiary" icon={<IconEdit aria-hidden="true" />} aria-label={'编辑 ' + category.name} title="编辑分类" className="w-7 px-0! text-[#8d9ab0]! hover:text-[#2563eb]" href={'/admin/dashboard/category/' + category.id} />
                                 <Button size="small" variant="tertiary" icon={<IconDelete aria-hidden="true" />} aria-label={'删除 ' + category.name} title="删除分类" loading={deletingId === category.id} className="w-7 px-0! text-[#c18c92]! hover:text-[#c95161] hover:bg-[#fff1f3]" onClick={() => confirmDelete(category)} />
                               </div>
                             </td>
@@ -374,12 +374,12 @@ export default function CategoriesPage() {
                             {
                               key: 'view',
                               label: <span className="flex items-center gap-2"><IconEye size={14} aria-hidden="true" />查看链接</span>,
-                              onClick: () => router.push(`/admin/dashboard/links?category=${category.id}`),
+                              onClick: () => navigate(`/admin/dashboard/links?category=${category.id}`),
                             },
                             {
                               key: 'edit',
                               label: <span className="flex items-center gap-2"><IconEdit size={14} aria-hidden="true" />编辑</span>,
-                              onClick: () => router.push(`/admin/dashboard/category/${category.id}`),
+                              onClick: () => navigate(`/admin/dashboard/category/${category.id}`),
                             },
                             {
                               key: 'delete',

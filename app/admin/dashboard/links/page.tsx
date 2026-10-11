@@ -1,7 +1,8 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useAdminNavigation } from '@/app/admin/_components/NavigationProgress';
 import {
   Badge,
   Button,
@@ -78,7 +79,7 @@ function LinksPageInner() {
   const [page, setPage] = useState(1);
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
-  const router = useRouter();
+  const { navigate } = useAdminNavigation();
   // 与 admin.css 中 @media (max-width: 767px) 断点一致：移动端只渲染卡片列表，桌面端只渲染表格
   const isMobile = useMediaQuery('(max-width: 767px)');
 
@@ -638,7 +639,7 @@ function LinksPageInner() {
                         <td className="px-4 py-3 align-middle">
                           <div className="admin-table-actions">
                             <Button size="small" variant="text" icon={<IconExternalOpen size={15} />} aria-label={'打开 ' + link.title} title="打开网站" onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')} />
-                            <Button size="small" variant="text" icon={<IconEdit size={15} />} aria-label={'编辑 ' + link.title} title="编辑链接" onClick={() => router.push('/admin/dashboard/link/' + link.id)} />
+                            <NavButton size="small" variant="text" icon={<IconEdit size={15} />} aria-label={'编辑 ' + link.title} title="编辑链接" href={'/admin/dashboard/link/' + link.id} />
                             <Button size="small" variant="text" icon={<span className="text-[#dc2626]"><IconDelete size={15} /></span>} aria-label={'删除 ' + link.title} title="删除链接" loading={deletingId === link.id} onClick={() => confirmDelete(link)} />
                           </div>
                         </td>
@@ -708,7 +709,7 @@ function LinksPageInner() {
                           {
                             key: 'edit',
                             label: (<span className="flex items-center gap-2"><IconEdit size={14} />编辑</span>),
-                            onClick: () => router.push(`/admin/dashboard/link/${link.id}`),
+                            onClick: () => navigate(`/admin/dashboard/link/${link.id}`),
                           },
                           {
                             key: 'delete',

@@ -38,6 +38,7 @@ async function clearDevLocalAdminFlag() {
   signOutLocalAdmin();
 }
 import { prefetchAdminData } from './_components/adminPrefetch';
+import { AdminNavigationProvider } from './_components/NavigationProgress';
 import { UserContext } from './dashboard/context';
 import AdminBrand from './_components/AdminBrand';
 import './admin.css';
@@ -459,13 +460,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, []);
 
   return (
-    <>
+    <AdminNavigationProvider>
       <ToastProvider />
       {pathname === '/admin' || pathname === '/admin/setup' ? (
         <div className="admin-theme">{children}</div>
       ) : (
         <AuthenticatedLayout>{children}</AuthenticatedLayout>
       )}
-    </>
+    </AdminNavigationProvider>
   );
 }

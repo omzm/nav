@@ -252,3 +252,26 @@ a.admin-cell-title:hover { color: var(--admin-primary); }
 @media (prefers-reduced-motion: reduce) {
   .admin-theme *, .admin-theme *::before, .admin-theme *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* 后台全局导航进度条：页面内跳转 pending 时顶部滑动，避免"点了没反应" */
+.admin-nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+.admin-nav-progress-bar {
+  height: 100%;
+  width: 40%;
+  background: #2563eb;
+  border-radius: 0 2px 2px 0;
+  animation: admin-nav-progress-slide 1s ease-in-out infinite;
+}
+@keyframes admin-nav-progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
