@@ -1,19 +1,103 @@
-<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="60" cy="60" r="58" fill="#e8f4f8" stroke="#c5dde6" stroke-width="2"/>
-  <ellipse cx="60" cy="38" rx="28" ry="24" fill="#4a3728"/>
-  <ellipse cx="60" cy="28" rx="24" ry="16" fill="#5a4535"/>
-  <ellipse cx="60" cy="48" rx="22" ry="24" fill="#fdd9b5"/>
-  <ellipse cx="50" cy="46" rx="3.5" ry="4" fill="#333"/>
-  <ellipse cx="70" cy="46" rx="3.5" ry="4" fill="#333"/>
-  <circle cx="51.5" cy="44.5" r="1.2" fill="#fff"/>
-  <circle cx="71.5" cy="44.5" r="1.2" fill="#fff"/>
-  <path d="M44 39 Q50 36 56 39" fill="none" stroke="#4a3728" stroke-width="1.8" stroke-linecap="round"/>
-  <path d="M64 39 Q70 36 76 39" fill="none" stroke="#4a3728" stroke-width="1.8" stroke-linecap="round"/>
-  <path d="M58 50 Q60 55 62 50" fill="none" stroke="#e0b090" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M50 58 Q60 66 70 58" fill="none" stroke="#c47a5a" stroke-width="2" stroke-linecap="round"/>
-  <circle cx="42" cy="54" r="5" fill="#f8b4b4" opacity="0.35"/>
-  <circle cx="78" cy="54" r="5" fill="#f8b4b4" opacity="0.35"/>
-  <path d="M30 95 Q32 75 60 75 Q88 75 90 95" fill="#5b8cbf"/>
-  <ellipse cx="37" cy="48" rx="5" ry="7" fill="#fdd9b5"/>
-  <ellipse cx="83" cy="48" rx="5" ry="7" fill="#fdd9b5"/>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 128 128"
+     width="128" height="128"
+     fill="none">
+
+  <defs>
+    <linearGradient id="folder" x1="20" y1="48" x2="108" y2="112"
+                    gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD45C"/>
+      <stop offset="1" stop-color="#FF9F1C"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="45" y1="8" x2="82" y2="65"
+                    gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 左侧网站卡片 -->
+  <g transform="rotate(-9 35 43)">
+    <rect x="9" y="20" width="40" height="48" rx="6"
+          fill="#fff" stroke="#F87171" stroke-width="2"/>
+    <path d="M9 26 Q9 20 15 20 H43 Q49 20 49 26 V30 H9Z"
+          fill="#EF4444"/>
+    <circle cx="16" cy="25" r="1.5" fill="#fff"/>
+    <circle cx="22" cy="25" r="1.5" fill="#fff"/>
+    <circle cx="28" cy="25" r="1.5" fill="#fff"/>
+    <rect x="18" y="37" width="22" height="16" rx="4"
+          fill="#FEE2E2"/>
+    <path d="M27 41 L27 49 L34 45Z" fill="#EF4444"/>
+  </g>
+
+  <!-- 右侧网站卡片 -->
+  <g transform="rotate(9 92 43)">
+    <rect x="79" y="20" width="40" height="48" rx="6"
+          fill="#fff" stroke="#34D399" stroke-width="2"/>
+    <path d="M79 26 Q79 20 85 20 H113 Q119 20 119 26 V30 H79Z"
+          fill="#10B981"/>
+    <circle cx="86" cy="25" r="1.5" fill="#fff"/>
+    <circle cx="92" cy="25" r="1.5" fill="#fff"/>
+    <circle cx="98" cy="25" r="1.5" fill="#fff"/>
+    <circle cx="99" cy="46" r="11" fill="#D1FAE5"/>
+    <path d="M93 49 L104 40 L100 50 L94 53Z"
+          fill="#059669"/>
+    <circle cx="99" cy="46" r="2" fill="#fff"/>
+  </g>
+
+  <!-- 中间网页卡片 -->
+  <rect x="39" y="8" width="50" height="60" rx="7"
+        fill="#fff" stroke="#DBEAFE" stroke-width="1.5"/>
+  <path d="M39 15 Q39 8 46 8 H82 Q89 8 89 15 V21 H39Z"
+        fill="url(#blue)"/>
+  <circle cx="47" cy="15" r="1.8" fill="#fff"/>
+  <circle cx="53" cy="15" r="1.8" fill="#fff"/>
+  <circle cx="59" cy="15" r="1.8" fill="#fff"/>
+
+  <!-- 地球图标代表网站 -->
+  <circle cx="64" cy="41" r="15" fill="#DBEAFE"/>
+  <circle cx="64" cy="41" r="10.5"
+          stroke="#2563EB" stroke-width="2"/>
+  <path d="M53.8 41 H74.2 M64 30.5
+           C58 36 58 46 64 51.5
+           C70 46 70 36 64 30.5"
+        stroke="#2563EB" stroke-width="1.7"
+        stroke-linecap="round"/>
+
+  <!-- 文件夹后层 -->
+  <path d="M14 48 Q14 44 19 44 H44
+           L51 51 H107 Q114 51 114 58
+           V99 Q114 106 107 106 H21
+           Q14 106 14 99Z"
+        fill="#F59E0B"/>
+
+  <!-- 文件夹主体 -->
+  <path d="M12 53 Q12 48 18 48 H43
+           Q46 48 49 52 L53 57 H109
+           Q116 57 116 64 V100
+           Q116 108 108 108 H20
+           Q12 108 12 100Z"
+        fill="url(#folder)"/>
+
+  <!-- 文件夹高光 -->
+  <path d="M18 52 H43 Q46 52 49 56 H109"
+        stroke="#FFE9A3" stroke-width="2"
+        stroke-linecap="round"/>
+
+  <!-- 收藏星形 -->
+  <path d="M64 65
+           L69 75 L80 77
+           L72 85 L74 96
+           L64 91 L54 96
+           L56 85 L48 77
+           L59 75 Z"
+        fill="#fff" stroke="#fff"
+        stroke-width="1.5" stroke-linejoin="round"/>
+
+  <!-- 星星闪光 -->
+  <path d="M42 75 L45 78 M86 75 L83 78
+           M43 91 L47 89 M85 89 L89 91"
+        stroke="#FFF1B8" stroke-width="2.5"
+        stroke-linecap="round"/>
+
 </svg>
