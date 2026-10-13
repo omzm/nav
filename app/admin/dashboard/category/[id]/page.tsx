@@ -233,8 +233,8 @@ export default function CategoryForm() {
               </aside>
 
               <div className="admin-form-actions max-sm:flex-col max-sm:items-stretch">
-                <Button onClick={() => router.back()}>取消</Button>
-                <Button type="submit" variant="primary" icon={<IconSave size={15} />} loading={saving}>
+                <Button className="h-11" onClick={() => router.back()}>取消</Button>
+                <Button className="h-11" type="submit" variant="primary" icon={<IconSave size={15} />} loading={saving}>
                   保存
                 </Button>
               </div>
