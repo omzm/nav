@@ -637,9 +637,10 @@ export default function LinkForm() {
             </aside>
 
             <div className="admin-form-actions">
-              <Button onClick={() => router.back()}>取消</Button>
+              <Button className="h-11" onClick={() => router.back()}>取消</Button>
               {!isEdit && (
                 <Button
+                  className="h-11"
                   icon={<IconSave />}
                   loading={saveAndContinueLoading}
                   disabled={saving}
@@ -649,6 +650,7 @@ export default function LinkForm() {
                 </Button>
               )}
               <Button
+                className="h-11"
                 variant="primary"
                 icon={<IconSave />}
                 loading={saving}
