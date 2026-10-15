@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/app/lib/supabase-server';
+import { createServiceSupabaseClient } from '@/app/lib/supabase-service';
 import { getClientIp, isRateLimited } from '../rate-limit';
 
 // 浏览量上报：只记录全站总数（increment_site_view），不做分页面统计，
@@ -11,7 +11,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const supabase = createServerSupabaseClient();
+    // 服务端写入：increment_site_view 已关闭 anon 调用权限，只能走 service_role
+    const supabase = createServiceSupabaseClient();
     const { error } = await supabase.rpc('increment_site_view');
 
     if (error) {

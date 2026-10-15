@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/app/lib/supabase-server';
+import { createServiceSupabaseClient } from '@/app/lib/supabase-service';
 import { getClientIp, isRateLimited } from '../rate-limit';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,13 +27,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
 
-    const supabase = createServerSupabaseClient();
-    // 确认链接存在且公开：RLS 下匿名只能读到公开链接，
-    // 私密链接的点击不计入今日热门，直接忽略（前端 fire-and-forget，不影响体验）
+    // 服务端写入：link_clicks 已关闭匿名插入策略，只能走 service_role。
+    // service_role 绕过 RLS，因此这里显式限定只统计公开链接，
+    // 保持原有语义：私密链接的点击不计入今日热门，直接忽略
+    //（前端 fire-and-forget，不影响体验）
+    const supabase = createServiceSupabaseClient();
     const { data: link, error: linkError } = await supabase
       .from('links')
       .select('id')
       .eq('id', linkId)
+      .eq('is_private', false)
       .maybeSingle();
     if (linkError) {
       console.error('Failed to check link existence:', linkError);
