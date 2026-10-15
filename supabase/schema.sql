@@ -142,11 +142,9 @@ CREATE INDEX IF NOT EXISTS idx_link_clicks_clicked_at_link_id ON link_clicks(cli
 
 ALTER TABLE link_clicks ENABLE ROW LEVEL SECURITY;
 
--- 所有人可写入点击记录
+-- 点击记录只允许服务端写入（service_role 绕过 RLS，经 /api/link-click 限流+校验后插入）。
+-- 匿名直写通道已关闭：防止绕过 API 限流刷点击、操纵今日热门。
 DROP POLICY IF EXISTS "Allow anyone to insert link_clicks" ON link_clicks;
-CREATE POLICY "Allow anyone to insert link_clicks"
-  ON link_clicks FOR INSERT
-  WITH CHECK (true);
 
 -- 点击记录仅管理员可读（今日热门走 SECURITY DEFINER 的 get_today_hot_links 聚合）
 DROP POLICY IF EXISTS "Allow admin to read link_clicks" ON link_clicks;
@@ -402,7 +400,11 @@ REVOKE ALL ON FUNCTION get_nav_private_data(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION reorder_links(uuid[]) FROM PUBLIC;
 REVOKE ALL ON FUNCTION reorder_categories(uuid[]) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION get_today_hot_links(integer) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION increment_site_view() TO anon, authenticated;
+-- 浏览量 RPC 仅服务端调用（service_role），关闭匿名/登录用户直调通道，
+-- 防止绕过 /api/site-view 的限流直接刷浏览量。
+REVOKE ALL ON FUNCTION increment_site_view() FROM PUBLIC;
+REVOKE ALL ON FUNCTION increment_site_view() FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION increment_site_view() TO service_role;
 GRANT EXECUTE ON FUNCTION get_nav_snapshot_data(integer) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_nav_private_data(text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION reorder_links(uuid[]) TO authenticated;
