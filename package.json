@@ -1,12 +1,13 @@
 {
   "name": "nav-website",
-  "version": "1.8.14",
+  "version": "1.8.15",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/migrate.mjs && next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
@@ -22,7 +23,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "16.4.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
