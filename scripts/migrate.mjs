@@ -1,7 +1,7 @@
-// 部署时自动同步数据库结构：在 `next build` 之前跑完。
+// 部署时检查数据库变更：在 `next build` 之前跑完。
 //
-// 声明式：supabase/schema.sql 是幂等的结构声明（IF NOT EXISTS / OR REPLACE），
-// 每次生产部署都完整执行一遍，新库老库自动对齐到最终状态，全程零手工 SQL。
+// 声明式：supabase/schema.sql 是幂等的结构声明。通过 SHA-256 记录文件内容，
+// 只有首次初始化或 schema.sql 内容变化时才执行结构同步，避免每次生产部署重复执行。
 // 只有数据搬运类变更（回填、数据迁移）才需要写 supabase/migrations 下的
 // 单独文件，按文件名顺序执行一次（记录在 schema_migrations 表）。
 //
@@ -19,6 +19,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import pg from 'pg';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -71,30 +72,56 @@ async function main() {
       )
     `);
 
-    // 1. 声明式结构同步：每次部署都跑，幂等
-    // schema.sql 用到 pg_cron 做定时清理，先确保扩展存在
-    await client.query('create extension if not exists pg_cron');
+    // 1. 声明式结构同步：仅首次执行或 schema.sql 内容变化时执行。
+    // 保存文件哈希，而不是只依赖部署版本号，避免无数据库变更时重复执行 DDL。
+    await client.query(`
+      create table if not exists schema_sync_state (
+        name text primary key,
+        sha256 text not null,
+        synced_at timestamptz not null default now()
+      )
+    `);
+
     const schemaSql = await readFile(join(root, 'supabase', 'schema.sql'), 'utf8');
 
     // 安全检查（冒烟检查，防误写不防恶意）：结构声明里不允许删表/删列/清空表/无条件删数据
     if (
-      /(^|\n)\s*drop\s+(table|schema)\s/i.test(schemaSql) ||
-      /(^|\n)\s*truncate(\s+table)?\s/i.test(schemaSql) ||
-      /(^|\n)\s*alter\s+table\s+\w+\s+drop\s+column\s/i.test(schemaSql) ||
-      /(^|\n)\s*delete\s+from\s+\w+\s*;/i.test(schemaSql)
+      /(^|\\n)\\s*drop\\s+(table|schema)\\s/i.test(schemaSql) ||
+      /(^|\\n)\\s*truncate(\\s+table)?\\s/i.test(schemaSql) ||
+      /(^|\\n)\\s*alter\\s+table\\s+\\w+\\s+drop\\s+column\\s/i.test(schemaSql) ||
+      /(^|\\n)\\s*delete\\s+from\\s+\\w+\\s*;/i.test(schemaSql)
     ) {
       throw new Error('schema.sql 中禁止出现 DROP TABLE/SCHEMA / TRUNCATE / DROP COLUMN / 无条件 DELETE，请改用 migration 文件处理');
     }
 
-    console.log('[migrate] 同步表结构：supabase/schema.sql');
-    await client.query('begin');
-    try {
-      await client.query(schemaSql);
-      await client.query('commit');
-      console.log('[migrate] 表结构同步完成');
-    } catch (err) {
-      await client.query('rollback');
-      throw err;
+    const schemaHash = createHash('sha256').update(schemaSql).digest('hex');
+    const { rows: schemaStateRows } = await client.query(
+      'select sha256 from schema_sync_state where name = $1',
+      ['schema.sql']
+    );
+
+    if (schemaStateRows[0]?.sha256 === schemaHash) {
+      console.log('[migrate] schema.sql 未变化，跳过结构同步');
+    } else {
+      // schema.sql 用到 pg_cron 做定时清理，仅在需要同步结构时确保扩展存在。
+      await client.query('create extension if not exists pg_cron');
+      console.log('[migrate] 首次同步或 schema.sql 已变化，执行结构同步');
+      await client.query('begin');
+      try {
+        await client.query(schemaSql);
+        await client.query(
+          `insert into schema_sync_state (name, sha256, synced_at)
+           values ($1, $2, now())
+           on conflict (name) do update
+           set sha256 = excluded.sha256, synced_at = now()`,
+          ['schema.sql', schemaHash]
+        );
+        await client.query('commit');
+        console.log('[migrate] 表结构同步完成');
+      } catch (err) {
+        await client.query('rollback');
+        throw err;
+      }
     }
 
     // 2. 数据迁移：supabase/migrations 下未应用过的 SQL 各跑一次
