@@ -73,34 +73,26 @@ async function main() {
     `);
 
     // 1. 声明式结构同步：仅首次执行或 schema.sql 内容变化时执行。
-    // 保存文件哈希，而不是只依赖部署版本号，避免无数据库变更时重复执行 DDL。
-    await client.query(`
-      create table if not exists schema_sync_state (
-        name text primary key,
-        sha256 text not null,
-        synced_at timestamptz not null default now()
-      )
-    `);
-
+    // 将 SHA-256 哈希记录在现有 schema_migrations 表，避免新增状态表。
     const schemaSql = await readFile(join(root, 'supabase', 'schema.sql'), 'utf8');
 
     // 安全检查（冒烟检查，防误写不防恶意）：结构声明里不允许删表/删列/清空表/无条件删数据
     if (
-      /(^|\\n)\\s*drop\\s+(table|schema)\\s/i.test(schemaSql) ||
-      /(^|\\n)\\s*truncate(\\s+table)?\\s/i.test(schemaSql) ||
-      /(^|\\n)\\s*alter\\s+table\\s+\\w+\\s+drop\\s+column\\s/i.test(schemaSql) ||
-      /(^|\\n)\\s*delete\\s+from\\s+\\w+\\s*;/i.test(schemaSql)
+      /(^|\n)\s*drop\s+(table|schema)\s/i.test(schemaSql) ||
+      /(^|\n)\s*truncate(\s+table)?\s/i.test(schemaSql) ||
+      /(^|\n)\s*alter\s+table\s+\w+\s+drop\s+column\s/i.test(schemaSql) ||
+      /(^|\n)\s*delete\s+from\s+\w+\s*;/i.test(schemaSql)
     ) {
       throw new Error('schema.sql 中禁止出现 DROP TABLE/SCHEMA / TRUNCATE / DROP COLUMN / 无条件 DELETE，请改用 migration 文件处理');
     }
 
     const schemaHash = createHash('sha256').update(schemaSql).digest('hex');
-    const { rows: schemaStateRows } = await client.query(
-      'select sha256 from schema_sync_state where name = $1',
-      ['schema.sql']
+    const schemaHashRecord = `schema.sql:${schemaHash}`;
+    const { rows: schemaHashRows } = await client.query(
+      "select name from schema_migrations where name like 'schema.sql:%' order by applied_at desc limit 1"
     );
 
-    if (schemaStateRows[0]?.sha256 === schemaHash) {
+    if (schemaHashRows[0]?.name === schemaHashRecord) {
       console.log('[migrate] schema.sql 未变化，跳过结构同步');
     } else {
       // schema.sql 用到 pg_cron 做定时清理，仅在需要同步结构时确保扩展存在。
@@ -109,12 +101,10 @@ async function main() {
       await client.query('begin');
       try {
         await client.query(schemaSql);
+        await client.query("delete from schema_migrations where name like 'schema.sql:%'");
         await client.query(
-          `insert into schema_sync_state (name, sha256, synced_at)
-           values ($1, $2, now())
-           on conflict (name) do update
-           set sha256 = excluded.sha256, synced_at = now()`,
-          ['schema.sql', schemaHash]
+          'insert into schema_migrations (name) values ($1)',
+          [schemaHashRecord]
         );
         await client.query('commit');
         console.log('[migrate] 表结构同步完成');
