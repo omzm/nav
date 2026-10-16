@@ -12,8 +12,34 @@ export const ADMIN_EMAIL_KEY = 'admin_email';
  * （Vercel 侧已删除，migrate 里的兼容迁移逻辑也已删除）。
  */
 
+/**
+ * 管理员配置状态三态：
+ * - configured：数据库里有管理员邮箱
+ * - not-configured：数据库正常，但确实没配（全新安装）
+ * - db-error：数据库读取失败（此时不能当成"未配置"，否则会把用户误导进初始化向导）
+ */
+export type AdminConfigStatus = 'configured' | 'not-configured' | 'db-error';
+
+export async function getAdminConfigStatus(): Promise<AdminConfigStatus> {
+  try {
+    const { data, error } = await createServiceSupabaseClient()
+      .from('app_config')
+      .select('value')
+      .eq('key', ADMIN_EMAIL_KEY)
+      .maybeSingle();
+
+    if (error) return 'db-error';
+
+    return (data?.value || '').trim() ? 'configured' : 'not-configured';
+  } catch {
+    return 'db-error';
+  }
+}
+
 /** 从数据库读管理员邮箱；未配置或读不到时返回空字符串。
  * app_config 不对 anon/authenticated 开放读，这里走 service_role（服务端专用）。
+ * 注意：空字符串可能是"未配置"也可能是"读取失败"，需要区分时用 getAdminConfigStatus()。
+ * 登录校验路径沿用空字符串（fail-closed：读不到就拒绝登录）。
  */
 export async function getDbAdminEmail(): Promise<string> {
   try {
@@ -38,7 +64,7 @@ export async function getAdminEmail(): Promise<string> {
 
 /** 管理员是否已配置（数据库里有邮箱） */
 export async function isAdminConfigured(): Promise<boolean> {
-  return (await getAdminEmail()) !== '';
+  return (await getAdminConfigStatus()) === 'configured';
 }
 
 /**

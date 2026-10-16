@@ -57,6 +57,20 @@ html {
   scroll-behavior: smooth;
 }
 
+/* 尊重"减少动态效果"系统偏好：关闭平滑滚动与非必要动画 */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* 渐入动画 */
 @keyframes fade-in {
   from {
