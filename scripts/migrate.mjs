@@ -72,6 +72,11 @@ async function main() {
       )
     `);
 
+    // schema_migrations 位于 public schema，必须启用 RLS（不建 policy，
+    // 仅 postgres / service_role 可访问）；否则任何人拿 anon key 即可公开读写，
+    // Supabase 会报 rls_disabled_in_public 严重告警。幂等，重复执行无副作用。
+    await client.query('alter table schema_migrations enable row level security');
+
     // 1. 声明式结构同步：仅首次执行或 schema.sql 内容变化时执行。
     // 将 SHA-256 哈希记录在现有 schema_migrations 表，避免新增状态表。
     const schemaSql = await readFile(join(root, 'supabase', 'schema.sql'), 'utf8');
