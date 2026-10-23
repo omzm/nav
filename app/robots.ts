@@ -1,8 +1,8 @@
 import type { MetadataRoute } from 'next'
+import { getSiteUrl } from './lib/site-url'
 
-const SITE_URL = 'https://1.145678.xyz'
-
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const siteUrl = await getSiteUrl()
   return {
     rules: {
       userAgent: '*',
@@ -10,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
       // 后台与写入接口不给爬虫
       disallow: ['/admin/', '/api/'],
     },
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    sitemap: `${siteUrl}/sitemap.xml`,
   }
 }
